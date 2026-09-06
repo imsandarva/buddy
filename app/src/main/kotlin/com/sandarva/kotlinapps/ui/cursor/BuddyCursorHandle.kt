@@ -22,7 +22,8 @@ fun BuddyCursorHandle(
     onRelease: () -> Unit,
     label: String,
     modifier: Modifier = Modifier,
-    onGrab: () -> Unit = {}
+    onGrab: () -> Unit = {},
+    onDoubleTap: () -> Unit = {}
 ) {
     var held by remember { mutableStateOf(false) }
     val grab = rememberGrabMotion(held)
@@ -47,6 +48,10 @@ fun BuddyCursorHandle(
                     onRelease = {
                         held = false
                         onRelease()
+                    },
+                    onDoubleTap = {
+                        view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                        onDoubleTap()
                     }
                 )
             }

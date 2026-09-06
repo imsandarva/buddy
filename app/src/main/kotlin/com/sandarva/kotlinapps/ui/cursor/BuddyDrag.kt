@@ -6,24 +6,49 @@ import androidx.compose.foundation.gestures.drag
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.positionChange
+import android.view.ViewConfiguration as AndroidViewConfiguration
 
-/** Instant pickup, then 1:1 finger tracking until lift. */
+/** Instant pickup after slop; a quick second tap asks Buddy. */
 internal suspend fun PointerInputScope.dragBuddyCursor(
     onGrab: () -> Unit,
     onDrag: (Float, Float) -> Unit,
-    onRelease: () -> Unit
+    onRelease: () -> Unit,
+    onDoubleTap: () -> Unit
 ) {
+    var lastTapAt = 0L
+    var lastTap = Offset.Unspecified
+    val tapWindow = AndroidViewConfiguration.getDoubleTapTimeout().toLong()
+    val slop = viewConfiguration.touchSlop
     awaitEachGesture {
         val down = awaitFirstDown()
-        onGrab()
+        var dragged = false
+        var travel = 0f
         try {
             drag(down.id) { change ->
                 val delta = change.positionChange()
                 change.consume()
-                if (delta != Offset.Zero) onDrag(delta.x, delta.y)
+                travel += delta.getDistance()
+                if (!dragged && travel >= slop) {
+                    dragged = true
+                    onGrab()
+                }
+                if (dragged && delta != Offset.Zero) onDrag(delta.x, delta.y)
             }
         } finally {
-            onRelease()
+            if (dragged) {
+                onRelease()
+                lastTapAt = 0L
+            } else {
+                val now = down.uptimeMillis
+                val near = lastTap != Offset.Unspecified && (down.position - lastTap).getDistance() <= slop * 2f
+                if (now - lastTapAt <= tapWindow && near) {
+                    lastTapAt = 0L
+                    onDoubleTap()
+                } else {
+                    lastTapAt = now
+                    lastTap = down.position
+                }
+            }
         }
     }
 }

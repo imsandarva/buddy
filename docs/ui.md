@@ -9,7 +9,7 @@ Buddy opens on a single home surface. `MainActivity` only enables edge-to-edge d
 | `MainActivity.kt` | Window chrome + `setContent { BuddyApp() }` |
 | `ui/BuddyApp.kt` | Theme, session, home, overlay + access resume hook |
 | `ui/home/HomeScreen.kt` | Assembles backdrop, hero, Start / Stop, and quiet actions |
-| `ui/home/AskBuddySheet.kt` | Listening / thinking / type-to-ask |
+| `ui/home/AskBuddySheet.kt` | Listening / thinking / type-to-ask (hosted by the overlay) |
 | `ui/components/BuddyActionButton.kt` | Honey Start and quiet Stop |
 | `session/BuddySessionViewModel.kt` | Facade over hands, eyes, and the Gemini brain |
 | `ui/theme/` | Color, type, motion, Material theme |
@@ -20,7 +20,7 @@ Buddy opens on a single home surface. `MainActivity` only enables edge-to-edge d
 - **Stop buddy** — shown while the overlay is running; removes the cursor.
 - **Watch it move** — flies the overlay along a short demo path (`BuddyCursorController.playDemo()`).
 - **Let me see your screen** — opens Buddy Assistant while the overlay is running.
-- **Ask buddy** — listens (or accepts typed words). Cursor moves (“move up”) run on the phone; other asks close the panel, snapshot the real screen, then Gemini speaks and points.
+- **Ask buddy** — same overlay panel as a double-tap on the cursor. Works from the home screen and other apps. See `docs/ask.md`.
 - **Point at something** — snapshots the active screen and flies to one real control.
 
 See `docs/overlay.md`, `docs/cursor.md`, `docs/eyes.md`, and `docs/brain.md`.

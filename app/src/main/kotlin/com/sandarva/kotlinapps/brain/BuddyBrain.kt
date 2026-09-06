@@ -5,6 +5,7 @@ import android.app.Application
 import android.content.pm.PackageManager
 import androidx.core.content.ContextCompat
 import com.sandarva.kotlinapps.BuildConfig
+import com.sandarva.kotlinapps.R
 import com.sandarva.kotlinapps.accessibility.BuddyScreenEyes
 import com.sandarva.kotlinapps.accessibility.ScreenSnapshot
 import com.sandarva.kotlinapps.debug.BuddyLog
@@ -30,8 +31,9 @@ object BuddyBrain {
     }
 
     fun ask(text: String) { engine?.ask(text) }
-    fun listen() { engine?.listen() }
-    fun listenAfterPrompt() { engine?.listenAfterPrompt() }
+    fun listen() { engine?.openAsk() }
+    fun openAsk() { engine?.openAsk() }
+    fun listenAfterPrompt() { engine?.openAsk() }
     fun cancel() { engine?.cancel() }
 
     class Engine(private val app: Application) {
@@ -55,38 +57,27 @@ object BuddyBrain {
             think(trimmed, settleMs = TREE_SETTLE_MS) { BuddyScreenEyes.snapshot() }
         }
 
-        fun listen() {
-            BuddyLog.d("Brain.listen", "open ask panel")
+        fun listen() = openAsk()
+
+        fun openAsk() {
+            if (BrainSession.phase.value == BrainPhase.Thinking && sessionActive) {
+                BuddyLog.d("Brain.openAsk", "ignored — already thinking")
+                return
+            }
+            val mic = ContextCompat.checkSelfPermission(app, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+            BuddyLog.d("Brain.openAsk", "mic=$mic askOpen=${BrainSession.askOpen.value}")
             cancelJob()
+            voice.cancelListen()
             sessionActive = true
             reopenAskOnFail = true
             val snap = BuddyScreenEyes.snapshot()
             BrainSession.setAskOpen(true)
-            BrainSession.setNote(null)
-            BrainSession.setPhase(BrainPhase.Listening)
-            voice.listen(onText = { think(it) { snap } }, onFailed = ::failListen)
-        }
-
-        fun listenAfterPrompt() {
-            val mic = ContextCompat.checkSelfPermission(app, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
-            BuddyLog.d("Brain.listenAfterPrompt", "mic=$mic")
-            if (!mic) {
-                voice.speak("Open Buddy and allow the microphone first.")
-                return
-            }
-            cancelJob()
-            sessionActive = true
-            reopenAskOnFail = false
-            val snap = BuddyScreenEyes.snapshot()
-            BrainSession.setNote(null)
-            BrainSession.setPhase(BrainPhase.Listening)
-            voice.speak("What do you need?") {
-                if (!sessionActive) return@speak
-                voice.listen(onText = { think(it) { snap } }, onFailed = { msg ->
-                    if (job?.isActive == true) return@listen
-                    voice.speak(msg)
-                    if (sessionActive) BrainSession.setPhase(BrainPhase.Idle)
-                })
+            BrainSession.setNote(if (mic) null else app.getString(R.string.ask_type_only))
+            if (mic) {
+                BrainSession.setPhase(BrainPhase.Listening)
+                voice.listen(onText = { think(it) { snap } }, onFailed = ::failListen)
+            } else {
+                BrainSession.setPhase(BrainPhase.Idle)
             }
         }
 

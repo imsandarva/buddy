@@ -43,7 +43,8 @@ Typed Ask snapshotted **while the panel was open**. The text field’s accessibi
 | `brain/BuddyVoice.kt` | STT + TTS |
 | `brain/BrainSession.kt` | Listening / thinking / ask sheet |
 | `overlay/CursorLanding.kt` | Named spots → 0…1 |
-| `ui/home/AskBuddySheet.kt` | Ask panel (owned overlay — not ModalBottomSheet) |
+| `ui/home/AskBuddySheet.kt` | Ask panel UI |
+| `overlay/AskOverlayWindow.kt` | Hosts that panel over any app |
 | `debug/BuddyLog.kt` | `Buddy===TRACE` logcat lines |
 
 The API key is `gemini.api.key` in `local.properties` (gitignored) → `BuildConfig.GEMINI_API_KEY`. Never commit it.
@@ -53,7 +54,8 @@ Model: `gemini-3.6-flash` (current Flash for new API keys), then `gemini-3.5-fla
 ## How to try it
 
 1. Start the buddy, turn on **Buddy Assistant**, allow the microphone once via **Ask buddy**.
-2. Ask “move up” or “move to the top-left” — the cursor should fly even with no internet.
+2. Leave the app. Double-tap the cursor — the panel should open on the launcher or whatever you opened.
+3. Ask “move up” or “move to the top-left” — the cursor should fly even with no internet.
 3. Ask something on this screen (or type it) — Buddy should speak and point at a real control, not at the ask field.
 4. Open Settings, pull the notification, tap **Ask buddy**. After the shade closes it asks what you need, then points and speaks.
 

@@ -22,13 +22,14 @@
     <string name="ask_body_idle">You can speak, or type a few words.</string>
     <string name="ask_placeholder">Type what you need</string>
     <string name="ask_not_now">Not now</string>
+    <string name="ask_type_only">You can type it — or open Buddy once to allow the microphone.</string>
     <string name="home_footnote_listening">I’m listening.</string>
     <string name="home_footnote_thinking">Give me a moment…</string>
     <string name="home_footnote">Ready when you are.</string>
-    <string name="home_footnote_running">I’m on your screen. Open anything — I’ll stay.</string>
+    <string name="home_footnote_running">I’m on your screen. Double-tap me anywhere — I’ll listen.</string>
     <string name="home_footnote_permission">On the next screen, allow Buddy to appear on top — then come back here.</string>
     <string name="home_footnote_access">On the next screen, turn on Buddy Assistant — then come back here.</string>
-    <string name="buddy_cursor_label">Buddy cursor</string>
+    <string name="buddy_cursor_label">Buddy cursor. Double-tap to ask.</string>
     <string name="overlay_channel_name">Buddy on screen</string>
     <string name="overlay_notification_title">Buddy is with you</string>
     <string name="overlay_notification_text">The cursor is on your screen.</string>

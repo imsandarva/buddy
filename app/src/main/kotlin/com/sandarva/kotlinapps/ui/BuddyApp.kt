@@ -23,7 +23,6 @@ import com.sandarva.kotlinapps.brain.BrainPhase
 import com.sandarva.kotlinapps.debug.BuddyLog
 import com.sandarva.kotlinapps.overlay.BuddyOverlayController
 import com.sandarva.kotlinapps.session.BuddySessionViewModel
-import com.sandarva.kotlinapps.ui.home.AskBuddySheet
 import com.sandarva.kotlinapps.ui.home.HomeScreen
 import com.sandarva.kotlinapps.ui.theme.BuddyColors
 import com.sandarva.kotlinapps.ui.theme.BuddyTheme
@@ -36,7 +35,6 @@ fun BuddyApp(session: BuddySessionViewModel = viewModel()) {
     val canSeeScreen by session.canSeeScreen.collectAsStateWithLifecycle()
     val awaitingAccess by session.awaitingAccess.collectAsStateWithLifecycle()
     val brainPhase by session.brainPhase.collectAsStateWithLifecycle()
-    val brainNote by session.brainNote.collectAsStateWithLifecycle()
     val askOpen by session.askOpen.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val mic = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -65,7 +63,6 @@ fun BuddyApp(session: BuddySessionViewModel = viewModel()) {
                     else mic.launch(Manifest.permission.RECORD_AUDIO)
                 }
             )
-            if (askOpen) AskBuddySheet(brainPhase, brainNote, onDismiss = session::cancelAsk, onAskText = session::askWithText)
         }
     }
 }

@@ -15,7 +15,10 @@ import com.sandarva.kotlinapps.ui.cursor.BuddyCursorHandle
 import com.sandarva.kotlinapps.ui.theme.BuddyTheme
 
 /** Small WRAP_CONTENT window. Drag or animateTo moves the same LayoutParams. */
-class BuddyOverlayWindow(private val context: Context) : BuddyCursorMover {
+class BuddyOverlayWindow(
+    private val context: Context,
+    private val onAsk: () -> Unit = {}
+) : BuddyCursorMover {
     private val windowManager = context.getSystemService(WindowManager::class.java)
     private val owner = OverlayComposeOwner()
     private var view: ComposeView? = null
@@ -49,6 +52,7 @@ class BuddyOverlayWindow(private val context: Context) : BuddyCursorMover {
                         onGrab = { cancelFlight() },
                         onDrag = { dx, dy -> moveBy(dx, dy) },
                         onRelease = { persist() },
+                        onDoubleTap = onAsk,
                         label = context.getString(R.string.buddy_cursor_label)
                     )
                 }
@@ -59,6 +63,13 @@ class BuddyOverlayWindow(private val context: Context) : BuddyCursorMover {
         view = compose
         params = layout
         flight = CursorFlightAnimator(compose, ::currentXY, ::applyPixels)
+    }
+
+    fun raise() {
+        val current = view ?: return
+        val layout = params ?: return
+        windowManager.removeView(current)
+        windowManager.addView(current, layout)
     }
 
     fun dismiss() {

@@ -1,5 +1,7 @@
 package com.sandarva.kotlinapps.ui.home
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -9,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -20,6 +23,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -27,6 +31,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
@@ -36,6 +41,7 @@ import com.sandarva.kotlinapps.brain.BrainPhase
 import com.sandarva.kotlinapps.debug.BuddyLog
 import com.sandarva.kotlinapps.ui.components.QuietTextAction
 import com.sandarva.kotlinapps.ui.theme.BuddyColors
+import com.sandarva.kotlinapps.ui.theme.BuddyMotion
 
 /** Owned panel — not ModalBottomSheet, so dismiss cannot leave a stuck scrim. */
 @Composable
@@ -43,9 +49,13 @@ fun AskBuddySheet(
     phase: BrainPhase,
     note: String?,
     onDismiss: () -> Unit,
-    onAskText: (String) -> Unit
+    onAskText: (String) -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    Box(Modifier.fillMaxSize()) {
+    var shown by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { shown = true }
+    val progress by animateFloatAsState(if (shown) 1f else 0f, tween(420, easing = BuddyMotion.EnterEasing), label = "askEnter")
+    Box(modifier.fillMaxSize().graphicsLayer { alpha = 0.4f + 0.6f * progress }) {
         Box(
             Modifier
                 .fillMaxSize()
@@ -59,8 +69,10 @@ fun AskBuddySheet(
             Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
+                .graphicsLayer { translationY = (1f - progress) * 40f }
                 .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
                 .background(BuddyColors.Ink)
+                .imePadding()
                 .navigationBarsPadding()
                 .padding(horizontal = 28.dp)
                 .padding(top = 12.dp, bottom = 28.dp)

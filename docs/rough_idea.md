@@ -2,5 +2,5 @@ The idea is similar, but not exactly same, to smth like this: {{ https://www.hey
 
  you can know what's that app about by searching it. And my idea is something liek this roughly : {{ i waas thinking if i could build smth like that, but for android phone. it doesn't need to be complex like heyclicky. just a buddy/cursor that can live on your screen and it can help people. cause you know lots of people, specially generation x or millenianls, they  can't even go to some phone's settings and change date & time, etc. i thought probably i can make a simple project that can press button on the phone or teach people saying "click here" do this do that, etc, through a cursor on the screen(so that it'd be easier for people to follow a cursor). etc. are you getting what i'm saying here ?   }} .
 
-Where this is now: an overlay cursor that can be dragged, flown (`fly_to` a named place), or pointed at a real control (`point_to`), with spoken guidance — taps-for-you are later. See `docs/brain.md`.
+Where this is now: an overlay cursor you can double-tap anywhere to ask, then it flies, points, or speaks — taps-for-you are later. See `docs/ask.md` and `docs/brain.md`.
  
