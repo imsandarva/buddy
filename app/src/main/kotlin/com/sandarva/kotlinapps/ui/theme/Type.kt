@@ -30,6 +30,15 @@ val BuddyTypography = Typography(
         platformStyle = Trimmed,
         lineHeightStyle = TightLines
     ),
+    titleLarge = TextStyle(
+        fontFamily = FontFamily.Serif,
+        fontWeight = FontWeight.Light,
+        fontSize = 28.sp,
+        lineHeight = 34.sp,
+        letterSpacing = (-0.3).sp,
+        platformStyle = Trimmed,
+        lineHeightStyle = TightLines
+    ),
     bodyLarge = TextStyle(
         fontFamily = FontFamily.SansSerif,
         fontWeight = FontWeight.Normal,

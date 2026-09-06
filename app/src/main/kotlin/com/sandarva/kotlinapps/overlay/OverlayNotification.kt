@@ -31,6 +31,11 @@ object OverlayNotification {
             Intent(context, BuddyOverlayService::class.java).setAction(BuddyOverlayService.ACTION_POINT),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
+        val ask = PendingIntent.getService(
+            context, 3,
+            Intent(context, BuddyOverlayService::class.java).setAction(BuddyOverlayService.ACTION_ASK),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
         return NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_buddy_status)
             .setContentTitle(context.getString(R.string.overlay_notification_title))
@@ -38,6 +43,7 @@ object OverlayNotification {
             .setContentIntent(openApp)
             .setOngoing(true)
             .setSilent(true)
+            .addAction(0, context.getString(R.string.ask_buddy), ask)
             .addAction(0, context.getString(R.string.point_at_something), point)
             .addAction(0, context.getString(R.string.stop_buddy), stop)
             .build()

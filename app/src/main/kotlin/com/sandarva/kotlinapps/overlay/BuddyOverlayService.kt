@@ -8,6 +8,7 @@ import android.os.IBinder
 import android.os.Looper
 import androidx.core.app.ServiceCompat
 import com.sandarva.kotlinapps.accessibility.BuddyScreenEyes
+import com.sandarva.kotlinapps.brain.BuddyBrain
 
 /** Foreground service that keeps BuddyCursor on screen after the activity leaves. */
 class BuddyOverlayService : Service() {
@@ -24,6 +25,12 @@ class BuddyOverlayService : Service() {
         if (intent?.action == ACTION_POINT) {
             mainHandler.removeCallbacksAndMessages(null)
             mainHandler.postDelayed({ BuddyScreenEyes.pointToGuide() }, SHADE_SETTLE_MS)
+            return START_STICKY
+        }
+        if (intent?.action == ACTION_ASK) {
+            mainHandler.removeCallbacksAndMessages(null)
+            BuddyBrain.ensure(application)
+            mainHandler.postDelayed({ BuddyBrain.listenAfterPrompt() }, SHADE_SETTLE_MS)
             return START_STICKY
         }
         ServiceCompat.startForeground(this, OverlayNotification.ID, OverlayNotification.build(this), fgsType())
@@ -54,6 +61,7 @@ class BuddyOverlayService : Service() {
         const val ACTION_START = "com.sandarva.kotlinapps.overlay.START"
         const val ACTION_STOP = "com.sandarva.kotlinapps.overlay.STOP"
         const val ACTION_POINT = "com.sandarva.kotlinapps.overlay.POINT"
+        const val ACTION_ASK = "com.sandarva.kotlinapps.overlay.ASK"
         private const val SHADE_SETTLE_MS = 320L
     }
 }

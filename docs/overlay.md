@@ -38,7 +38,7 @@ Touches outside the cursor pass through (`FLAG_NOT_FOCUSABLE` + `FLAG_NOT_TOUCH_
 2. If needed, allow **Appear on top** / **Display over other apps**, then return.
 3. The cursor appears on every screen; hold and drag as before.
 4. Tap **Watch it move** to see a programmed flight.
-5. Tap **Let me see your screen** once, then **Point at something** — or use the same action on the notification from another app.
+5. Tap **Let me see your screen**, then **Ask buddy** — or **Ask buddy** on the notification from another app.
 6. Tap **Stop buddy** in the app or in the notification to remove it.
 
-Spoken guidance still comes later. Taps-for-you are later still.
+Taps-for-you are later.

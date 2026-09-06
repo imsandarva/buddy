@@ -34,18 +34,21 @@ fun HomeScreen(
     awaitingPermission: Boolean,
     canSeeScreen: Boolean,
     awaitingAccess: Boolean,
+    listening: Boolean,
+    thinking: Boolean,
     onStartBuddy: () -> Unit,
     onStopBuddy: () -> Unit,
     onWatchMove: () -> Unit,
     onRequestAccess: () -> Unit,
     onPointAtControl: () -> Unit,
+    onAskBuddy: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Box(modifier.fillMaxSize()) {
         AmbientBackdrop(Modifier.fillMaxSize())
         HomeForeground(
-            isRunning, awaitingPermission, canSeeScreen, awaitingAccess,
-            onStartBuddy, onStopBuddy, onWatchMove, onRequestAccess, onPointAtControl,
+            isRunning, awaitingPermission, canSeeScreen, awaitingAccess, listening, thinking,
+            onStartBuddy, onStopBuddy, onWatchMove, onRequestAccess, onPointAtControl, onAskBuddy,
             Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)
         )
     }
@@ -57,11 +60,14 @@ private fun HomeForeground(
     awaitingPermission: Boolean,
     canSeeScreen: Boolean,
     awaitingAccess: Boolean,
+    listening: Boolean,
+    thinking: Boolean,
     onStartBuddy: () -> Unit,
     onStopBuddy: () -> Unit,
     onWatchMove: () -> Unit,
     onRequestAccess: () -> Unit,
     onPointAtControl: () -> Unit,
+    onAskBuddy: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -71,8 +77,8 @@ private fun HomeForeground(
     ) {
         HomeHero(isRunning, Modifier.fillMaxWidth().padding(top = 72.dp))
         HomeCta(
-            isRunning, awaitingPermission, canSeeScreen, awaitingAccess,
-            onStartBuddy, onStopBuddy, onWatchMove, onRequestAccess, onPointAtControl,
+            isRunning, awaitingPermission, canSeeScreen, awaitingAccess, listening, thinking,
+            onStartBuddy, onStopBuddy, onWatchMove, onRequestAccess, onPointAtControl, onAskBuddy,
             Modifier.fillMaxWidth().padding(bottom = 36.dp)
         )
     }
@@ -114,14 +120,19 @@ private fun HomeCta(
     awaitingPermission: Boolean,
     canSeeScreen: Boolean,
     awaitingAccess: Boolean,
+    listening: Boolean,
+    thinking: Boolean,
     onStartBuddy: () -> Unit,
     onStopBuddy: () -> Unit,
     onWatchMove: () -> Unit,
     onRequestAccess: () -> Unit,
     onPointAtControl: () -> Unit,
+    onAskBuddy: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val footnote = when {
+        thinking -> R.string.home_footnote_thinking
+        listening -> R.string.home_footnote_listening
         awaitingPermission -> R.string.home_footnote_permission
         isRunning && awaitingAccess -> R.string.home_footnote_access
         isRunning -> R.string.home_footnote_running
@@ -132,7 +143,7 @@ private fun HomeCta(
             if (isRunning) BuddyActionButton(stringResource(R.string.stop_buddy), BuddyActionStyle.Stop, onStopBuddy)
             else BuddyActionButton(stringResource(R.string.start_your_buddy), BuddyActionStyle.Start, onStartBuddy)
         }
-        if (isRunning) HomeRunningActions(canSeeScreen, onWatchMove, onRequestAccess, onPointAtControl)
+        if (isRunning) HomeRunningActions(canSeeScreen, onWatchMove, onRequestAccess, onPointAtControl, onAskBuddy)
         Spacer(Modifier.height(16.dp))
         FadeSlideIn(400) {
             Text(stringResource(footnote), style = MaterialTheme.typography.bodySmall, color = BuddyColors.Mist, textAlign = TextAlign.Center)
@@ -145,13 +156,18 @@ private fun HomeRunningActions(
     canSeeScreen: Boolean,
     onWatchMove: () -> Unit,
     onRequestAccess: () -> Unit,
-    onPointAtControl: () -> Unit
+    onPointAtControl: () -> Unit,
+    onAskBuddy: () -> Unit
 ) {
     Spacer(Modifier.height(18.dp))
-    FadeSlideIn(360) { QuietTextAction(stringResource(R.string.watch_buddy_move), onWatchMove) }
-    Spacer(Modifier.height(14.dp))
-    FadeSlideIn(390) {
-        if (canSeeScreen) QuietTextAction(stringResource(R.string.point_at_something), onPointAtControl)
+    FadeSlideIn(350) {
+        if (canSeeScreen) QuietTextAction(stringResource(R.string.ask_buddy), onAskBuddy)
         else QuietTextAction(stringResource(R.string.let_me_see_screen), onRequestAccess)
+    }
+    Spacer(Modifier.height(14.dp))
+    FadeSlideIn(370) { QuietTextAction(stringResource(R.string.watch_buddy_move), onWatchMove) }
+    if (canSeeScreen) {
+        Spacer(Modifier.height(14.dp))
+        FadeSlideIn(390) { QuietTextAction(stringResource(R.string.point_at_something), onPointAtControl) }
     }
 }

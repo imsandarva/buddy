@@ -18,6 +18,6 @@ Flight is a quadratic arc (`cursor/CursorArc.kt`) driven by `ValueAnimator`. Gra
 
 ## Wiring now
 
-`BuddyScreenEyes.pointTo(node)` maps a snapshot rect to `animateToPixels` at the center. A later model tool should send `point_to(element_id)`; do not parse `moveBuddyCursor(x,y)` out of spoken text.
+`BuddyScreenEyes.pointTo(node)` maps a snapshot rect to `animateToPixels` at the center. Gemini’s `point_to(element_id)` uses that path; do not parse `moveBuddyCursor(x,y)` out of spoken text.
 
 See `docs/eyes.md`.

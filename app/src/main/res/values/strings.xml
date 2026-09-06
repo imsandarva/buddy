@@ -13,6 +13,16 @@
     <string name="watch_buddy_move">Watch it move</string>
     <string name="let_me_see_screen">Let me see your screen</string>
     <string name="point_at_something">Point at something</string>
+    <string name="ask_buddy">Ask buddy</string>
+    <string name="ask_title_listening">I’m listening.</string>
+    <string name="ask_title_thinking">One moment.</string>
+    <string name="ask_title_idle">What do you need?</string>
+    <string name="ask_body_listening">Say it in your own words — like “change the date.”</string>
+    <string name="ask_body_thinking">I’m looking at what’s on your screen.</string>
+    <string name="ask_body_idle">You can speak, or type a few words.</string>
+    <string name="ask_placeholder">Type what you need</string>
+    <string name="home_footnote_listening">I’m listening.</string>
+    <string name="home_footnote_thinking">Give me a moment…</string>
     <string name="home_footnote">Ready when you are.</string>
     <string name="home_footnote_running">I’m on your screen. Open anything — I’ll stay.</string>
     <string name="home_footnote_permission">On the next screen, allow Buddy to appear on top — then come back here.</string>

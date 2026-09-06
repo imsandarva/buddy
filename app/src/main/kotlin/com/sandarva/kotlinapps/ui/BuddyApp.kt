@@ -1,5 +1,9 @@
 package com.sandarva.kotlinapps.ui
 
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -8,14 +12,17 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sandarva.kotlinapps.accessibility.AccessibilityController
+import com.sandarva.kotlinapps.brain.BrainPhase
 import com.sandarva.kotlinapps.overlay.BuddyOverlayController
 import com.sandarva.kotlinapps.session.BuddySessionViewModel
+import com.sandarva.kotlinapps.ui.home.AskBuddySheet
 import com.sandarva.kotlinapps.ui.home.HomeScreen
 import com.sandarva.kotlinapps.ui.theme.BuddyColors
 import com.sandarva.kotlinapps.ui.theme.BuddyTheme
@@ -27,6 +34,13 @@ fun BuddyApp(session: BuddySessionViewModel = viewModel()) {
     val awaitingPermission by session.awaitingPermission.collectAsStateWithLifecycle()
     val canSeeScreen by session.canSeeScreen.collectAsStateWithLifecycle()
     val awaitingAccess by session.awaitingAccess.collectAsStateWithLifecycle()
+    val brainPhase by session.brainPhase.collectAsStateWithLifecycle()
+    val brainNote by session.brainNote.collectAsStateWithLifecycle()
+    val askOpen by session.askOpen.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val mic = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) session.listenToAsk()
+    }
     HostResumeHook()
     BuddyTheme {
         Box(Modifier.fillMaxSize().background(BuddyColors.Ink)) {
@@ -35,12 +49,20 @@ fun BuddyApp(session: BuddySessionViewModel = viewModel()) {
                 awaitingPermission = awaitingPermission,
                 canSeeScreen = canSeeScreen,
                 awaitingAccess = awaitingAccess,
+                listening = brainPhase == BrainPhase.Listening,
+                thinking = brainPhase == BrainPhase.Thinking,
                 onStartBuddy = session::startBuddy,
                 onStopBuddy = session::stopBuddy,
                 onWatchMove = session::watchBuddyMove,
                 onRequestAccess = session::requestScreenAccess,
-                onPointAtControl = session::pointAtControl
+                onPointAtControl = session::pointAtControl,
+                onAskBuddy = {
+                    if (!canSeeScreen) session.requestScreenAccess()
+                    else if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) session.listenToAsk()
+                    else mic.launch(Manifest.permission.RECORD_AUDIO)
+                }
             )
+            if (askOpen) AskBuddySheet(brainPhase, brainNote, onDismiss = session::cancelAsk, onAskText = session::askWithText)
         }
     }
 }

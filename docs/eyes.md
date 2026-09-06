@@ -1,6 +1,6 @@
 # Screen eyes
 
-The AI (later) does not walk the accessibility tree. It calls this API. The overlay cursor never reads the screen.
+The AI does not walk the accessibility tree. It calls this API. The overlay cursor never reads the screen.
 
 ## API
 
@@ -13,7 +13,7 @@ The AI (later) does not walk the accessibility tree. It calls this API. The over
 | `pointTo(node)` | Fly to a node we already hold |
 | `pointToGuide()` | Debug pick — one teachable control, then `pointTo` |
 
-Pixels stay in the app. A later model tool should send `point_to(element_id)`; we resolve bounds.
+Pixels stay in the app. Gemini’s `point_to(element_id)` resolves through this API. See `docs/brain.md`.
 
 ## Composition
 

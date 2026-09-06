@@ -1,8 +1,17 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
 }
+
+val localProperties = Properties().apply {
+    val file = rootProject.file("local.properties")
+    if (file.exists()) file.inputStream().use(::load)
+}
+val geminiApiKey = localProperties.getProperty("gemini.api.key", "")
+
 android {
     namespace = "com.sandarva.kotlinapps"
     compileSdk = 35
@@ -12,6 +21,7 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
+        buildConfigField("String", "GEMINI_API_KEY", "\"${geminiApiKey.replace("\"", "\\\"")}\"")
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -20,6 +30,7 @@ android {
     kotlinOptions { jvmTarget = "17" }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 dependencies {
@@ -32,4 +43,5 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.3")
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.savedstate:savedstate-ktx:1.2.1")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
 }

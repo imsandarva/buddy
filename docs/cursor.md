@@ -20,7 +20,7 @@ BuddyCursor is the on-screen pointer. After Start, it lives in a system overlay 
 3. Drag → the overlay window follows your finger.
 4. Lift → it stays there.
 5. Tap **Watch it move** → the cursor flies a short path (same API AI will call later).
-6. Tap **Point at something** → the cursor flies to a real on-screen control (eyes → hands).
+6. Tap **Ask buddy** → Gemini speaks and points at a real control (brain → eyes → hands).
 7. Tap **Stop buddy** (or the notification action) → the overlay is removed.
 
 See `docs/cursor-hands.md`.

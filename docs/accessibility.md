@@ -9,6 +9,7 @@ Buddy appears in **Settings → Accessibility → Installed apps** as **Buddy As
 - Prompt to open the Buddy Assistant page (details screen on Android 11+, list otherwise)
 - On-demand snapshot of visible controls
 - **Point at something** (home or notification) flies the overlay to a real node’s center
+- **Ask buddy** sends that snapshot to Gemini, then speaks and points (see `docs/brain.md`)
 
 Performing taps is still later (`canPerformGestures` is declared, unused).
 
