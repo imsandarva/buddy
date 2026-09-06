@@ -14,17 +14,20 @@ import androidx.core.content.ContextCompat
 import com.sandarva.kotlinapps.accessibility.BuddyScreenEyes
 import com.sandarva.kotlinapps.brain.BrainSession
 import com.sandarva.kotlinapps.brain.BuddyBrain
+import com.sandarva.kotlinapps.brain.live.BuddyLive
 import com.sandarva.kotlinapps.debug.BuddyLog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
 /** Foreground service that keeps BuddyCursor on screen after the activity leaves. */
 class BuddyOverlayService : Service() {
     private var cursor: BuddyOverlayWindow? = null
     private var ask: AskOverlayWindow? = null
+    private var live: LiveOverlayWindow? = null
     private val mainHandler = Handler(Looper.getMainLooper())
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
@@ -57,7 +60,9 @@ class BuddyOverlayService : Service() {
         BuddyLog.d("OverlayService", "onDestroy")
         mainHandler.removeCallbacksAndMessages(null)
         scope.cancel()
+        BuddyLive.stop()
         hideAsk()
+        hideLive()
         cursor?.let {
             BuddyCursorController.detach(it)
             it.dismiss()
@@ -69,7 +74,7 @@ class BuddyOverlayService : Service() {
 
     private fun presentCursor() {
         if (cursor != null) return
-        applyFgs(askOpen = false)
+        applyFgs(mic = false)
         val next = BuddyOverlayWindow(this, onAsk = { BuddyBrain.openAsk() }).also { it.show() }
         cursor = next
         BuddyCursorController.attach(next)
@@ -80,9 +85,10 @@ class BuddyOverlayService : Service() {
         if (watchingAsk) return
         watchingAsk = true
         scope.launch {
-            BrainSession.askOpen.collect { open ->
-                applyFgs(open)
-                if (open) showAsk() else hideAsk()
+            combine(BrainSession.askOpen, BrainSession.liveOpen) { askOpen, liveOpen -> askOpen to liveOpen }.collect { (askOpen, liveOpen) ->
+                applyFgs(mic = askOpen || liveOpen)
+                if (askOpen) showAsk() else hideAsk()
+                if (liveOpen) showLive() else hideLive()
             }
         }
     }
@@ -98,12 +104,23 @@ class BuddyOverlayService : Service() {
         ask = null
     }
 
-    private fun applyFgs(askOpen: Boolean) {
-        ServiceCompat.startForeground(this, OverlayNotification.ID, OverlayNotification.build(this), fgsType(askOpen))
+    private fun showLive() {
+        val bar = live ?: LiveOverlayWindow(this).also { live = it }
+        if (!bar.isShowing) bar.show()
+        cursor?.raise()
     }
 
-    private fun fgsType(askOpen: Boolean): Int {
-        val mic = askOpen && ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+    private fun hideLive() {
+        live?.dismiss()
+        live = null
+    }
+
+    private fun applyFgs(mic: Boolean) {
+        val wantMic = mic && ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+        ServiceCompat.startForeground(this, OverlayNotification.ID, OverlayNotification.build(this), fgsType(wantMic))
+    }
+
+    private fun fgsType(mic: Boolean): Int {
         if (Build.VERSION.SDK_INT >= 34) {
             var type = ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
             if (mic) type = type or ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE

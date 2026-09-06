@@ -100,18 +100,18 @@ fun AskBuddySheet(
 @Composable
 private fun AskBuddyBody(phase: BrainPhase, note: String?, onAskText: (String) -> Unit) {
     var draft by remember { mutableStateOf("") }
-    val title = when (phase) {
-        BrainPhase.Listening -> R.string.ask_title_listening
-        BrainPhase.Thinking -> R.string.ask_title_thinking
-        BrainPhase.Idle -> R.string.ask_title_idle
-    }
-    val body = note ?: stringResource(
-        when (phase) {
-            BrainPhase.Listening -> R.string.ask_body_listening
-            BrainPhase.Thinking -> R.string.ask_body_thinking
-            BrainPhase.Idle -> R.string.ask_body_idle
+        val title = when (phase) {
+            BrainPhase.Listening, BrainPhase.Live -> R.string.ask_title_listening
+            BrainPhase.Thinking -> R.string.ask_title_thinking
+            BrainPhase.Idle -> R.string.ask_title_idle
         }
-    )
+        val body = note ?: stringResource(
+            when (phase) {
+                BrainPhase.Listening, BrainPhase.Live -> R.string.ask_body_listening
+                BrainPhase.Thinking -> R.string.ask_body_thinking
+                BrainPhase.Idle -> R.string.ask_body_idle
+            }
+        )
     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         Text(stringResource(title), style = MaterialTheme.typography.titleLarge, color = BuddyColors.Bone, textAlign = TextAlign.Center)
         Spacer(Modifier.height(12.dp))

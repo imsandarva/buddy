@@ -9,6 +9,7 @@ import com.sandarva.kotlinapps.R
 import com.sandarva.kotlinapps.accessibility.BuddyHands
 import com.sandarva.kotlinapps.accessibility.BuddyScreenEyes
 import com.sandarva.kotlinapps.accessibility.ScreenSnapshot
+import com.sandarva.kotlinapps.brain.live.BuddyLive
 import com.sandarva.kotlinapps.debug.BuddyLog
 import com.sandarva.kotlinapps.overlay.BuddyCursorController
 import com.sandarva.kotlinapps.overlay.CursorLanding
@@ -21,20 +22,21 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
- * Brain facade. Snapshot → Gemini tools → speak + fly, point, or a real finger stroke.
- * Live Mode is a later adapter on this same string.
+ * Brain facade. Typed asks use REST. Voice uses Gemini Live, same cursor tools.
  */
 object BuddyBrain {
     @Volatile private var engine: Engine? = null
 
     fun ensure(app: Application): Engine {
         engine?.let { return it }
+        BuddyLive.ensure(app)
         return Engine(app).also { engine = it }
     }
 
     fun ask(text: String) { engine?.ask(text) }
     fun listen() { engine?.openAsk() }
     fun openAsk() { engine?.openAsk() }
+    fun openTypeAsk() { engine?.openTypeAsk() }
     fun listenAfterPrompt() { engine?.openAsk() }
     fun cancel() { engine?.cancel() }
 
@@ -51,24 +53,47 @@ object BuddyBrain {
         fun listen() = openAsk()
 
         fun openAsk() {
+            if (BuddyLive.isActive()) {
+                BuddyLog.d("Brain.openAsk", "toggle live off")
+                cancel()
+                return
+            }
             if (BrainSession.phase.value == BrainPhase.Thinking && sessionActive) {
                 BuddyLog.d("Brain.openAsk", "ignored — already thinking")
                 return
             }
             val mic = ContextCompat.checkSelfPermission(app, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
-            BuddyLog.d("Brain.openAsk", "mic=$mic askOpen=${BrainSession.askOpen.value}")
+            val live = mic && BuildConfig.GEMINI_API_KEY.isNotBlank()
+            BuddyLog.d("Brain.openAsk", "mic=$mic live=$live askOpen=${BrainSession.askOpen.value}")
             cancelJob()
             voice.cancelListen()
+            if (live) {
+                sessionActive = false
+                BuddyLive.ensure(app).start()
+                return
+            }
             sessionActive = true
             reopenAskOnFail = true
             BrainSession.setAskOpen(true)
             BrainSession.setNote(if (mic) null else app.getString(R.string.ask_type_only))
+            BrainSession.setPhase(BrainPhase.Idle)
             if (mic) {
                 BrainSession.setPhase(BrainPhase.Listening)
                 voice.listen(onText = ::heard, onFailed = ::failListen)
-            } else {
-                BrainSession.setPhase(BrainPhase.Idle)
             }
+        }
+
+        fun openTypeAsk() {
+            BuddyLog.d("Brain.openTypeAsk", "from live")
+            BuddyLive.stop()
+            cancelJob()
+            voice.cancelListen()
+            sessionActive = true
+            reopenAskOnFail = true
+            BrainSession.setLiveOpen(false)
+            BrainSession.setAskOpen(true)
+            BrainSession.setPhase(BrainPhase.Idle)
+            BrainSession.setNote(null)
         }
 
         /** Speak or type — same door. The sheet must be gone before eyes or hands run. */
@@ -85,11 +110,12 @@ object BuddyBrain {
         }
 
         fun cancel() {
-            BuddyLog.d("Brain.cancel", "close ask panel sessionActive=$sessionActive")
+            BuddyLog.d("Brain.cancel", "close ask panel sessionActive=$sessionActive live=${BuddyLive.isActive()}")
             sessionActive = false
             reopenAskOnFail = false
             cancelJob()
             voice.cancelAll()
+            BuddyLive.stop()
             BrainSession.reset()
         }
 
@@ -174,63 +200,8 @@ object BuddyBrain {
                 return
             }
             plan.say?.takeIf { it.isNotBlank() }?.let { voice.speak(it) }
-            when (val hand = plan.hand) {
-                is HandPlan.Tap -> doTap(hand.elementId, snapshot)
-                is HandPlan.Hold -> doHold(hand.elementId, snapshot)
-                is HandPlan.Stroke -> doStroke(hand, snapshot)
-                null -> when {
-                    !plan.place.isNullOrBlank() -> fly(plan.place)
-                    !plan.elementId.isNullOrBlank() -> point(plan.elementId, snapshot)
-                }
-            }
+            GuidanceActor.run(plan, snapshot)
             finishTurn()
-        }
-
-        private suspend fun doTap(id: String?, snapshot: ScreenSnapshot) {
-            val node = id?.let { snapshot.node(it) }
-            val ok = if (node != null) BuddyHands.tapAt(node.bounds.centerX, node.bounds.centerY) else BuddyHands.tapHere()
-            BuddyLog.d("Brain.tap", "id=$id found=${node != null} ok=$ok")
-        }
-
-        private suspend fun doHold(id: String?, snapshot: ScreenSnapshot) {
-            val node = id?.let { snapshot.node(it) }
-            val ok = if (node != null) BuddyHands.holdAt(node.bounds.centerX, node.bounds.centerY) else BuddyHands.holdHere()
-            BuddyLog.d("Brain.hold", "id=$id found=${node != null} ok=$ok")
-        }
-
-        private suspend fun doStroke(hand: HandPlan.Stroke, snapshot: ScreenSnapshot) {
-            val from = hand.fromId?.let { snapshot.node(it)?.bounds }?.let { it.centerX to it.centerY }
-            val to = destination(hand, snapshot)
-            val ok = when {
-                from != null && to != null && hand.holdFirst -> BuddyHands.dragFromTo(from.first, from.second, to.first, to.second)
-                from != null && to != null -> BuddyHands.swipeFromTo(from.first, from.second, to.first, to.second)
-                to != null && hand.holdFirst -> BuddyHands.dragTo(to.first, to.second)
-                to != null -> BuddyHands.swipeTo(to.first, to.second)
-                hand.direction != null -> {
-                    val (dx, dy) = directionDelta(hand.direction)
-                    if (hand.holdFirst) BuddyHands.dragHere(dx, dy) else BuddyHands.swipeHere(dx, dy)
-                }
-                else -> false
-            }
-            BuddyLog.d("Brain.stroke", "holdFirst=${hand.holdFirst} from=${hand.fromId} to=${hand.toId}/${hand.toPlace}/${hand.direction} ok=$ok")
-        }
-
-        private fun destination(hand: HandPlan.Stroke, snapshot: ScreenSnapshot): Pair<Float, Float>? {
-            hand.toId?.let { id -> snapshot.node(id)?.bounds?.let { return it.centerX to it.centerY } }
-            hand.toPlace?.let { place ->
-                val xy = CursorLanding.normalized(place) ?: return@let
-                val screen = BuddyCursorController.screenPixels() ?: return@let
-                return screen.first * xy.first to screen.second * xy.second
-            }
-            return null
-        }
-
-        private fun directionDelta(direction: String): Pair<Float, Float> = when (direction.lowercase()) {
-            "left" -> -STROKE_STEP to 0f
-            "right" -> STROKE_STEP to 0f
-            "up" -> 0f to -STROKE_STEP
-            "down" -> 0f to STROKE_STEP
-            else -> 0f to 0f
         }
 
         private fun finishTurn() {
@@ -243,12 +214,6 @@ object BuddyBrain {
             val xy = CursorLanding.normalized(place)
             val ok = xy != null && BuddyCursorController.animateToNormalized(xy.first, xy.second)
             BuddyLog.d("Brain.fly", "place=$place xy=$xy ok=$ok")
-        }
-
-        private fun point(id: String, snapshot: ScreenSnapshot) {
-            val node = snapshot.node(id)
-            val ok = node != null && BuddyScreenEyes.pointTo(node)
-            BuddyLog.d("Brain.point", "id=$id found=${node != null} ok=$ok")
         }
 
         /** Keep the panel as-is if it is open; reopen it after a typed ask so they can see the note. */
@@ -273,7 +238,6 @@ object BuddyBrain {
         companion object {
             /** Let the ask panel leave the accessibility tree before we snapshot. */
             private const val TREE_SETTLE_MS = 320L
-            private const val STROKE_STEP = 0.36f
             private const val OFFLINE_NOTE = "I can’t reach the internet just now. Check the connection and try again."
             private const val THINK_FAIL_NOTE = "I couldn’t think that through just now. Try once more in a moment."
             private const val HANDS_OFF_NOTE = "Turn on Buddy Assistant so I can tap for you."

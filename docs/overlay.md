@@ -23,7 +23,8 @@ Android will not let a normal app keep a window after a force-stop. Minimize / l
 | `overlay/BuddyOverlayController.kt` | Start/stop + resume after Settings |
 | `overlay/BuddyOverlayService.kt` | Foreground service; owns the window lifetime |
 | `overlay/BuddyOverlayWindow.kt` | Small WindowManager view; drag, double-tap, `animateTo`, or pass-through for a stroke |
-| `overlay/AskOverlayWindow.kt` | Full-screen ask panel over any app |
+| `overlay/AskOverlayWindow.kt` | Full-screen type-to-ask panel |
+| `overlay/LiveOverlayWindow.kt` | Compact Gemini Live bar |
 | `overlay/BuddyCursorController.kt` | Hands API attached while the service runs |
 | `overlay/CursorLanding.kt` | Named spots for `fly_to` |
 | `overlay/CursorFlightAnimator.kt` | Arc flight between points |
@@ -32,7 +33,7 @@ Android will not let a normal app keep a window after a force-stop. Minimize / l
 | `overlay/OverlayComposeOwner.kt` | Lifecycle for Compose without an Activity |
 | `ui/cursor/BuddyCursorHandle.kt` | Grab, jiggle, drag deltas |
 
-Touches outside the cursor pass through (`FLAG_NOT_FOCUSABLE` + `FLAG_NOT_TOUCH_MODAL` + `WRAP_CONTENT`). Double-tap the cursor to ask — the ask window is a separate, focusable overlay. See `docs/ask.md`.
+Touches outside the cursor pass through (`FLAG_NOT_FOCUSABLE` + `FLAG_NOT_TOUCH_MODAL` + `WRAP_CONTENT`). Double-tap the cursor to talk live — a small bar appears; type-to-ask is a separate overlay. See `docs/live.md` and `docs/ask.md`.
 
 ## User flow
 

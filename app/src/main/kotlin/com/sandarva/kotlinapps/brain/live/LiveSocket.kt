@@ -1,0 +1,119 @@
+package com.sandarva.kotlinapps.brain.live
+
+import com.sandarva.kotlinapps.debug.BuddyLog
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.Response
+import okhttp3.WebSocket
+import okhttp3.WebSocketListener
+import org.json.JSONObject
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
+
+/** Thin OkHttp WebSocket for Gemini Live. First send must be setup; wait for setupComplete. */
+class LiveSocket(
+    private val apiKey: String,
+    private val listener: Listener,
+    private val http: OkHttpClient = client()
+) {
+    interface Listener {
+        fun onSetupComplete()
+        fun onAudio(pcm: ByteArray)
+        fun onInterrupted()
+        fun onToolCall(calls: List<LiveFunctionCall>)
+        fun onTranscript(text: String, fromUser: Boolean)
+        fun onClosed(reason: String)
+    }
+
+    private var socket: WebSocket? = null
+    private val open = AtomicBoolean(false)
+    private val ready = AtomicBoolean(false)
+    @Volatile private var closed = false
+
+    fun connect() {
+        closed = false
+        val request = Request.Builder().url("${LiveConfig.WS}?key=$apiKey").build()
+        socket = http.newWebSocket(request, object : WebSocketListener() {
+            override fun onOpen(webSocket: WebSocket, response: Response) {
+                BuddyLog.d("Live.socket", "open")
+                open.set(true)
+                webSocket.send(LiveMessages.setup())
+            }
+            override fun onMessage(webSocket: WebSocket, text: String) = handle(text)
+            override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
+                BuddyLog.d("Live.socket", "closing code=$code reason=$reason")
+                webSocket.close(1000, null)
+            }
+            override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
+                BuddyLog.d("Live.socket", "closed code=$code reason=$reason")
+                fail("closed")
+            }
+            override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
+                BuddyLog.e("Live.socket", t.message ?: "fail", t)
+                fail(t.message ?: "connection failed")
+            }
+        })
+    }
+
+    fun send(json: String): Boolean {
+        val ws = socket ?: return false
+        if (!open.get()) return false
+        return ws.send(json)
+    }
+
+    fun close() {
+        closed = true
+        open.set(false)
+        ready.set(false)
+        socket?.close(1000, "bye")
+        socket = null
+    }
+
+    val isReady: Boolean get() = ready.get()
+
+    private fun handle(text: String) {
+        val msg = try { JSONObject(text) } catch (_: Exception) { return }
+        when {
+            msg.has("setupComplete") || msg.has("setup_complete") -> {
+                BuddyLog.d("Live.socket", "setupComplete")
+                ready.set(true)
+                listener.onSetupComplete()
+            }
+            msg.has("toolCall") || msg.has("tool_call") -> {
+                val calls = LiveMessages.parseToolCalls(msg)
+                BuddyLog.d("Live.socket", "toolCall n=${calls.size} names=${calls.map { it.name }}")
+                if (calls.isNotEmpty()) listener.onToolCall(calls)
+            }
+            msg.has("serverContent") -> onServer(msg.optJSONObject("serverContent") ?: return)
+            msg.has("server_content") -> onServer(msg.optJSONObject("server_content") ?: return)
+            msg.has("goAway") -> fail("server asked to disconnect")
+        }
+    }
+
+    private fun onServer(content: JSONObject) {
+        if (content.optBoolean("interrupted")) listener.onInterrupted()
+        val turn = content.optJSONObject("modelTurn") ?: content.optJSONObject("model_turn")
+        val parts = turn?.optJSONArray("parts")
+        LiveMessages.parseAudio(parts).forEach { listener.onAudio(it) }
+        content.optJSONObject("inputTranscription")?.optString("text")?.takeIf { it.isNotBlank() }?.let { listener.onTranscript(it, true) }
+        content.optJSONObject("input_transcription")?.optString("text")?.takeIf { it.isNotBlank() }?.let { listener.onTranscript(it, true) }
+        content.optJSONObject("outputTranscription")?.optString("text")?.takeIf { it.isNotBlank() }?.let { listener.onTranscript(it, false) }
+        content.optJSONObject("output_transcription")?.optString("text")?.takeIf { it.isNotBlank() }?.let { listener.onTranscript(it, false) }
+    }
+
+    private fun fail(reason: String) {
+        if (closed) return
+        closed = true
+        open.set(false)
+        ready.set(false)
+        listener.onClosed(reason)
+    }
+
+    companion object {
+        fun client(): OkHttpClient = OkHttpClient.Builder()
+            .pingInterval(20, TimeUnit.SECONDS)
+            .readTimeout(0, TimeUnit.MILLISECONDS)
+            .connectTimeout(20, TimeUnit.SECONDS)
+            .build()
+    }
+}

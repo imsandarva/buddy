@@ -36,6 +36,7 @@ fun HomeScreen(
     awaitingAccess: Boolean,
     listening: Boolean,
     thinking: Boolean,
+    live: Boolean,
     onStartBuddy: () -> Unit,
     onStopBuddy: () -> Unit,
     onWatchMove: () -> Unit,
@@ -47,7 +48,7 @@ fun HomeScreen(
     Box(modifier.fillMaxSize()) {
         AmbientBackdrop(Modifier.fillMaxSize())
         HomeForeground(
-            isRunning, awaitingPermission, canSeeScreen, awaitingAccess, listening, thinking,
+            isRunning, awaitingPermission, canSeeScreen, awaitingAccess, listening, thinking, live,
             onStartBuddy, onStopBuddy, onWatchMove, onRequestAccess, onPointAtControl, onAskBuddy,
             Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)
         )
@@ -62,6 +63,7 @@ private fun HomeForeground(
     awaitingAccess: Boolean,
     listening: Boolean,
     thinking: Boolean,
+    live: Boolean,
     onStartBuddy: () -> Unit,
     onStopBuddy: () -> Unit,
     onWatchMove: () -> Unit,
@@ -77,7 +79,7 @@ private fun HomeForeground(
     ) {
         HomeHero(isRunning, Modifier.fillMaxWidth().padding(top = 72.dp))
         HomeCta(
-            isRunning, awaitingPermission, canSeeScreen, awaitingAccess, listening, thinking,
+            isRunning, awaitingPermission, canSeeScreen, awaitingAccess, listening, thinking, live,
             onStartBuddy, onStopBuddy, onWatchMove, onRequestAccess, onPointAtControl, onAskBuddy,
             Modifier.fillMaxWidth().padding(bottom = 36.dp)
         )
@@ -122,6 +124,7 @@ private fun HomeCta(
     awaitingAccess: Boolean,
     listening: Boolean,
     thinking: Boolean,
+    live: Boolean,
     onStartBuddy: () -> Unit,
     onStopBuddy: () -> Unit,
     onWatchMove: () -> Unit,
@@ -131,6 +134,7 @@ private fun HomeCta(
     modifier: Modifier = Modifier
 ) {
     val footnote = when {
+        live -> R.string.home_footnote_live
         thinking -> R.string.home_footnote_thinking
         listening -> R.string.home_footnote_listening
         awaitingPermission -> R.string.home_footnote_permission

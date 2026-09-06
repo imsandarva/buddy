@@ -26,10 +26,15 @@
     <string name="home_footnote_listening">I’m listening.</string>
     <string name="home_footnote_thinking">Give me a moment…</string>
     <string name="home_footnote">Ready when you are.</string>
-    <string name="home_footnote_running">I’m on your screen. Double-tap me anywhere — then say move, tap, hold, or drag.</string>
+    <string name="home_footnote_live">We’re talking. Double-tap me when you’re done.</string>
+    <string name="live_title">I’m with you.</string>
+    <string name="live_body">Just talk — I’ll listen, then I’ll move or tap.</string>
+    <string name="live_thats_all">That’s all</string>
+    <string name="live_type_instead">Type instead</string>
     <string name="home_footnote_permission">On the next screen, allow Buddy to appear on top — then come back here.</string>
     <string name="home_footnote_access">On the next screen, turn on Buddy Assistant — then come back here.</string>
-    <string name="buddy_cursor_label">Buddy cursor. Double-tap to ask.</string>
+    <string name="home_footnote_running">I’m on your screen. Double-tap me anywhere — we’ll talk.</string>
+    <string name="buddy_cursor_label">Buddy cursor. Double-tap to talk.</string>
     <string name="overlay_channel_name">Buddy on screen</string>
     <string name="overlay_notification_title">Buddy is with you</string>
     <string name="overlay_notification_text">The cursor is on your screen.</string>

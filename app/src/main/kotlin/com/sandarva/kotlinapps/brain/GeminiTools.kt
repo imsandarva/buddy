@@ -5,23 +5,39 @@ import com.sandarva.kotlinapps.overlay.CursorLanding
 import org.json.JSONArray
 import org.json.JSONObject
 
-/** Gemini tool declarations and parse. The HTTP client stays unaware of cursor meaning. */
+/** Gemini tool declarations and parse. REST and Live share the same functions. */
 object GeminiTools {
     fun body(question: String, catalog: String): String {
-        val say = fn("say", "Speak a short warm instruction. Never include coordinates or ids.", listOf(Arg("text", "Words to say out loud.")), listOf("text"))
-        val point = fn("point_to", "Only point at a visible control. Use when they asked where, not when they asked you to tap.", listOf(Arg("element_id", "Exact element_id from the on-screen list.")), listOf("element_id"))
-        val fly = fn("fly_to", "Fly the buddy cursor to a place on the screen. Use when they ask the buddy itself to move.", listOf(Arg("place", "Where the buddy should go.", CursorLanding.PLACES)), listOf("place"))
-        val tap = fn("tap", "Tap a listed control like a finger. Omit element_id to tap where the buddy is now.", listOf(Arg("element_id", "Exact element_id from the on-screen list.")))
-        val hold = fn("hold", "Press and hold a listed control. Omit element_id to hold where the buddy is now.", listOf(Arg("element_id", "Exact element_id from the on-screen list.")))
-        val swipe = fn("swipe", "A quick finger swipe across the screen.", listOf(Arg("direction", "Swipe direction.", DIRS), Arg("from_element_id", "Optional start control."), Arg("to_element_id", "Optional end control."), Arg("to_place", "Optional named end place.", CursorLanding.PLACES)))
-        val drag = fn("drag", "Press, hold, and slide — to move an icon or a slider.", listOf(Arg("direction", "Drag direction.", DIRS), Arg("from_element_id", "Optional start control."), Arg("to_element_id", "Optional end control."), Arg("to_place", "Optional named end place.", CursorLanding.PLACES)))
         return JSONObject()
             .put("system_instruction", JSONObject().put("parts", JSONArray().put(JSONObject().put("text", GuidancePrompt.SYSTEM))))
             .put("contents", JSONArray().put(JSONObject().put("role", "user").put("parts", JSONArray().put(JSONObject().put("text", GuidancePrompt.userMessage(question, catalog))))))
-            .put("tools", JSONArray().put(JSONObject().put("functionDeclarations", JSONArray().put(say).put(point).put(fly).put(tap).put(hold).put(swipe).put(drag))))
+            .put("tools", JSONArray().put(JSONObject().put("functionDeclarations", functionDeclarations(includeSay = true))))
             .put("toolConfig", JSONObject().put("functionCallingConfig", JSONObject().put("mode", "ANY")))
             .put("generationConfig", JSONObject().put("temperature", 0.2))
             .toString()
+    }
+
+    fun functionDeclarations(includeSay: Boolean): JSONArray {
+        val list = JSONArray()
+        if (includeSay) list.put(fn("say", "Speak a short warm instruction. Never include coordinates or ids.", listOf(Arg("text", "Words to say out loud.")), listOf("text")))
+        list.put(fn("point_to", "Only point at a visible control. Use when they asked where, not when they asked you to tap.", listOf(Arg("element_id", "Exact element_id from the on-screen list.")), listOf("element_id")))
+        list.put(fn("fly_to", "Fly the buddy cursor to a place on the screen. Use when they ask the buddy itself to move.", listOf(Arg("place", "Where the buddy should go.", CursorLanding.PLACES)), listOf("place")))
+        list.put(fn("tap", "Tap a listed control like a finger. Omit element_id to tap where the buddy is now.", listOf(Arg("element_id", "Exact element_id from the on-screen list."))))
+        list.put(fn("hold", "Press and hold a listed control. Omit element_id to hold where the buddy is now.", listOf(Arg("element_id", "Exact element_id from the on-screen list."))))
+        list.put(fn("swipe", "A quick finger swipe across the screen.", listOf(Arg("direction", "Swipe direction.", DIRS), Arg("from_element_id", "Optional start control."), Arg("to_element_id", "Optional end control."), Arg("to_place", "Optional named end place.", CursorLanding.PLACES))))
+        list.put(fn("drag", "Press, hold, and slide — to move an icon or a slider.", listOf(Arg("direction", "Drag direction.", DIRS), Arg("from_element_id", "Optional start control."), Arg("to_element_id", "Optional end control."), Arg("to_place", "Optional named end place.", CursorLanding.PLACES))))
+        return list
+    }
+
+    fun planFromCall(name: String, args: JSONObject): GuidancePlan = when (name) {
+        "say" -> GuidancePlan(args.optString("text").ifBlank { null }, null, null)
+        "point_to" -> GuidancePlan(null, args.optString("element_id").ifBlank { null }, null)
+        "fly_to" -> GuidancePlan(null, null, args.optString("place").ifBlank { null })
+        "tap" -> GuidancePlan(null, null, null, HandPlan.Tap(args.optString("element_id").ifBlank { null }))
+        "hold" -> GuidancePlan(null, null, null, HandPlan.Hold(args.optString("element_id").ifBlank { null }))
+        "swipe" -> GuidancePlan(null, null, null, stroke(args, holdFirst = false))
+        "drag" -> GuidancePlan(null, null, null, stroke(args, holdFirst = true))
+        else -> GuidancePlan(null, null, null)
     }
 
     fun parse(raw: String): GuidancePlan {

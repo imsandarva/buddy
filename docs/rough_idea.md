@@ -2,5 +2,5 @@ The idea is similar, but not exactly same, to smth like this: {{ https://www.hey
 
  you can know what's that app about by searching it. And my idea is something liek this roughly : {{ i waas thinking if i could build smth like that, but for android phone. it doesn't need to be complex like heyclicky. just a buddy/cursor that can live on your screen and it can help people. cause you know lots of people, specially generation x or millenianls, they  can't even go to some phone's settings and change date & time, etc. i thought probably i can make a simple project that can press button on the phone or teach people saying "click here" do this do that, etc, through a cursor on the screen(so that it'd be easier for people to follow a cursor). etc. are you getting what i'm saying here ?   }} .
 
-Where this is now: an overlay cursor you can double-tap anywhere to ask. It flies, points, speaks, and can tap, hold, swipe, or drag like a finger. See `docs/ask.md`, `docs/brain.md`, and `docs/hands.md`.
+Where this is now: overlay cursor + accessibility eyes + hands. Voice is Gemini Live (same cursor tools). Typed asks still use the chat API + on-screen list. See `docs/live.md`, `docs/ask.md`, and `docs/brain.md`.
  

@@ -9,7 +9,7 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.util.concurrent.TimeUnit
 
-/** Thin Gemini Developer API client. Tools only — no Live, no Computer Use. */
+/** Thin Gemini Developer API client. Turn-based tools only — Live is a WebSocket adapter. */
 class GeminiClient(
     private val apiKey: String,
     private val http: OkHttpClient = defaultHttp()
