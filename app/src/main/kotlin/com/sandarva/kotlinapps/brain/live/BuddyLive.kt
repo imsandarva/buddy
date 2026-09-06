@@ -63,20 +63,13 @@ object BuddyLive {
             val next = LiveSocket(BuildConfig.GEMINI_API_KEY, object : LiveSocket.Listener {
                 override fun onSetupComplete() {
                     if (id != gen) return
-                    scope.launch {
-                        pushCatalog()
-                        startMic()
-                    }
+                    startMic()
+                    scope.launch { pushCatalog() } // realtime text — does not hold the spoken turn open
                 }
                 override fun onAudio(pcm: ByteArray) { if (id == gen) speaker.play(pcm) }
                 override fun onInterrupted() { if (id == gen) speaker.interrupt() }
                 override fun onTurnComplete() { if (id == gen) speaker.endUtterance() }
                 override fun onToolCall(calls: List<LiveFunctionCall>) { if (id == gen) scope.launch { runTools(calls) } }
-                override fun onTranscript(text: String, fromUser: Boolean) {
-                    if (id != gen) return
-                    BuddyLog.d("Live.transcript", "user=$fromUser text=\"${text.take(80)}\"")
-                    if (fromUser) BrainSession.setNote(text)
-                }
                 override fun onClosed(reason: String) {
                     if (id != gen) return
                     BuddyLog.d("Live.closed", reason)

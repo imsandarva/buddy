@@ -8,24 +8,47 @@ Live is a **brain adapter**. Eyes and hands do not change.
 
 ## What Live is
 
-A stateful WebSocket (`BidiGenerateContent`) to the Gemini Developer API. You talk; Gemini talks back with native audio. When it wants the buddy to move or tap, it calls the same functions: `point_to`, `fly_to`, `tap`, `hold`, `swipe`, `drag`. There is no `say` tool — the model’s own voice is the speech.
+A stateful WebSocket (`BidiGenerateContent`) to the Gemini Developer API. **Mic PCM goes straight to Gemini; Gemini PCM comes straight back.** There is no Android speech-to-text step, no chat REST hop, and no captions. When it wants the buddy to move or tap, it calls the same functions: `point_to`, `fly_to`, `tap`, `hold`, `swipe`, `drag`. There is no `say` tool — the model’s own voice is the speech.
 
 | | Chat REST | Live |
 |--|-----------|------|
-| Model | `gemini-3.5-flash-lite` | `gemini-2.5-flash-native-audio-preview-12-2025` |
+| Model | `gemini-3.5-flash-lite` | `gemini-3.1-flash-live-preview` |
 | Transport | HTTP `generateContent` | WebSocket `BidiGenerateContent` |
-| Voice in | Android `SpeechRecognizer` | 16 kHz PCM mic stream |
-| Voice out | Android TTS | 24 kHz PCM from Gemini |
-| Screen | Accessibility catalog in the prompt | Catalog after setup + in each tool result |
+| Voice in | Android `SpeechRecognizer` | 16 kHz PCM mic stream (no STT) |
+| Voice out | Android TTS | 24 kHz PCM from Gemini (no captions) |
+| Screen | Accessibility catalog in the prompt | Catalog as `realtimeInput` text after mic is open |
 | Tools | `say` + cursor tools | Cursor tools only |
 
-Not Computer Use. Not a screenshot stream yet. Not ElevenLabs. Not ChatGPT.
+Not Computer Use. Not video Live. Not ElevenLabs. Not ChatGPT.
+
+## Audio only — not screen-share video
+
+Gemini Live **can** take video, but it is not a native camera or screen-share codec. The API wants JPEG/PNG frames on `realtimeInput.video` at **at most 1 frame per second**. That is still a screenshot stream, billed as video tokens, and it makes the turn heavier — it does not make replies faster.
+
+We do **not** send those frames. Eyes stay the accessibility SCREEN list (labels and ids, no pixels). Typed ask is the same. If we ever add Live video, it would be a MediaProjection JPEG at ≤1 fps on the same socket, next to the mic — not a separate “video Live” product.
+
+## Why “I talked, then waited forever”
+
+The official Gemini app feels instant because the **server** decides the end of your sentence (VAD) and starts speaking. We were adding seconds on our side:
+
+1. **Wrong model + thinking.** `gemini-2.5-flash-native-audio` thinks dynamically by default. Live now uses `gemini-3.1-flash-live-preview` with `thinkingLevel: minimal` — Google’s low-latency Live model.
+2. **Open client turn.** The SCREEN list used to go as `clientContent` with `turnComplete: false`. Mixing that with mic audio makes the server wait on a turn that never closes. SCREEN now goes as `realtimeInput` text — same path as audio, no held turn. Industry clients (Google’s GenAI SDK) use `send_realtime_input` for mid-talk context; `clientContent` is for seeding history only.
+3. **Slow VAD.** Default silence before “they finished talking” is long. Setup now sets `endOfSpeechSensitivity: HIGH` and `silenceDurationMs: 220` so a breath is ok, but we do not sit on a full extra second. Google’s own example uses 100 ms; 220 ms is kinder for people who pause while they find the words.
+4. **Late first word.** Mic chunks are 20 ms (Live best practice is 20–40 ms). Speaker preroll is ~60 ms and the track buffer ~160 ms, so the first syllable is not sitting in a 400 ms queue.
+
+We still do **not** request transcripts. Those arrive late and make the bar look idle.
+
+Long pauses after “tap Wi‑Fi” can still be a tree walk or a tool, not the voice path. See “Why the cursor felt hung”.
 
 ## How to talk
 
 1. Start the buddy, turn on **Buddy Assistant**, allow the microphone once.
 2. Double-tap the cursor (or **Ask buddy**). A small bar appears at the bottom — the rest of the screen stays open so a tap can reach an app.
-3. Talk. Gemini answers out loud. Ask it to open Calculator, move, tap, hold, or drag.
+3. Talk right away. You will not see your words or Buddy’s words as text — you only hear each other. Ask it to open Calculator, move, tap, hold, or drag.
+
+## Not speech-to-text, then chat
+
+Live is **audio in, audio out** on one socket — the same shape as the official Gemini app. We used to also ask Gemini for transcripts and paint them on the bar. That extra job is billed and delivered late, so it *looked* like we waited for STT before thinking. We do not request `inputAudioTranscription` / `outputAudioTranscription`. The mic opens as soon as `setupComplete` arrives; the screen list is sent after, so talking is not blocked on a tree walk.
 4. **That’s all** or a second double-tap ends the talk. **Type instead** opens the old sheet (REST).
 
 The full ask sheet covers the screen, so Live never uses it. That was the bug when a spoken tap hit the sheet.
@@ -44,7 +67,7 @@ Gemini generates PCM **faster than realtime**. The official Gemini app buffers t
 2. **Start the track empty** with a tiny hardware buffer — underruns sound like old-TV static.
 3. **Parse huge JSON on the WebSocket reader** — the next audio frame waited, then arrived in a burst.
 
-Playback is now a jitter buffer: preroll ~120 ms, never drop, blocking `AudioTrack` writes, decode on a worker. Barge-in flush happens only on the speaker thread.
+Playback is now a jitter buffer: preroll ~60 ms, never drop, blocking `AudioTrack` writes, decode on a worker. Barge-in flush happens only on the speaker thread.
 
 Buddy’s own voice used to leak into the mic (USAGE_ASSISTANT vs VOICE_COMMUNICATION). The server then sent `interrupted` and we flushed mid-sentence. Mic and speaker now share one audio session with echo cancel.
 
@@ -54,7 +77,7 @@ Setup JSON must stay on fields this `v1beta` socket actually knows. Extra keys s
 
 Live tools ran on the main thread: a full accessibility walk, then fly + tap (up to ~2.4 s), then another walk. The overlay could not move or take taps. Tools now run on a background dispatcher; window moves stay on main. A live SCREEN list is capped so the model can call the next tool sooner.
 
-The API itself is live — long pauses after “tap Wi‑Fi” are usually us waiting on the tree or the player, not Gemini being “slow”.
+A spoken tap that then sits still is usually the tree or the tool, not VAD. Voice gap after they stop talking should now be a short silence (about 220 ms) plus model start, not a multi-second think.
 
 ## Composition
 

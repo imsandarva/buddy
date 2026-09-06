@@ -5,14 +5,11 @@ import android.graphics.PixelFormat
 import android.view.Gravity
 import android.view.WindowManager
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.lifecycle.setViewTreeViewModelStoreOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
-import com.sandarva.kotlinapps.brain.BrainSession
 import com.sandarva.kotlinapps.brain.BuddyBrain
 import com.sandarva.kotlinapps.debug.BuddyLog
 import com.sandarva.kotlinapps.ui.home.LiveBuddyBar
@@ -42,10 +39,8 @@ class LiveOverlayWindow(private val context: Context) {
             setViewTreeViewModelStoreOwner(nextOwner)
             setViewTreeSavedStateRegistryOwner(nextOwner)
             setContent {
-                val note by BrainSession.note.collectAsStateWithLifecycle()
                 BuddyTheme {
                     LiveBuddyBar(
-                        note = note,
                         onStop = { BuddyBrain.cancel() },
                         onTypeInstead = { BuddyBrain.openTypeAsk() },
                         modifier = Modifier.fillMaxWidth()

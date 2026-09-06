@@ -15,21 +15,20 @@ object LiveMessages {
             .put("model", "models/${LiveConfig.MODEL}")
             .put("generationConfig", JSONObject()
                 .put("responseModalities", JSONArray().put("AUDIO"))
-                .put("speechConfig", JSONObject().put("voiceConfig", JSONObject().put("prebuiltVoiceConfig", JSONObject().put("voiceName", LiveConfig.VOICE)))))
+                .put("speechConfig", JSONObject().put("voiceConfig", JSONObject().put("prebuiltVoiceConfig", JSONObject().put("voiceName", LiveConfig.VOICE))))
+                .put("thinkingConfig", JSONObject().put("thinkingLevel", "minimal")))
+            .put("realtimeInputConfig", JSONObject().put("automaticActivityDetection", vad()))
             .put("systemInstruction", JSONObject().put("parts", JSONArray().put(JSONObject().put("text", GuidancePrompt.LIVE))))
-            .put("tools", JSONArray().put(JSONObject().put("functionDeclarations", GeminiTools.functionDeclarations(includeSay = false))))
-            .put("inputAudioTranscription", JSONObject())
-            .put("outputAudioTranscription", JSONObject()))
+            .put("tools", JSONArray().put(JSONObject().put("functionDeclarations", GeminiTools.functionDeclarations(includeSay = false)))))
         .toString()
 
     fun audio(pcm: ByteArray): String = JSONObject()
         .put("realtimeInput", JSONObject().put("audio", blob(pcm, "${LiveConfig.PCM};rate=${LiveConfig.IN_HZ}")))
         .toString()
 
+    /** realtimeInput text is the Live path for mid-session context — clientContent holds the turn open. */
     fun catalog(text: String): String = JSONObject()
-        .put("clientContent", JSONObject()
-            .put("turns", JSONArray().put(JSONObject().put("role", "user").put("parts", JSONArray().put(JSONObject().put("text", "SCREEN:\n$text")))))
-            .put("turnComplete", false))
+        .put("realtimeInput", JSONObject().put("text", "SCREEN:\n$text"))
         .toString()
 
     fun toolResponse(id: String, name: String, result: String, screen: String): String = JSONObject()
@@ -71,4 +70,11 @@ object LiveMessages {
     private fun blob(pcm: ByteArray, mime: String) = JSONObject()
         .put("mimeType", mime)
         .put("data", Base64.encodeToString(pcm, Base64.NO_WRAP))
+
+    private fun vad() = JSONObject()
+        .put("disabled", false)
+        .put("startOfSpeechSensitivity", "START_SENSITIVITY_HIGH")
+        .put("endOfSpeechSensitivity", "END_SENSITIVITY_HIGH")
+        .put("prefixPaddingMs", LiveConfig.VAD_PREFIX_MS)
+        .put("silenceDurationMs", LiveConfig.VAD_SILENCE_MS)
 }

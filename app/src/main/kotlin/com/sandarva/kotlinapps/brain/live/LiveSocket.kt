@@ -23,7 +23,6 @@ class LiveSocket(
         fun onAudio(pcm: ByteArray)
         fun onInterrupted()
         fun onToolCall(calls: List<LiveFunctionCall>)
-        fun onTranscript(text: String, fromUser: Boolean)
         fun onTurnComplete()
         fun onClosed(reason: String)
     }
@@ -121,10 +120,6 @@ class LiveSocket(
         if (content.optBoolean("turnComplete") || content.optBoolean("turn_complete") || content.optBoolean("generationComplete") || content.optBoolean("generation_complete")) {
             listener.onTurnComplete()
         }
-        content.optJSONObject("inputTranscription")?.optString("text")?.takeIf { it.isNotBlank() }?.let { listener.onTranscript(it, true) }
-        content.optJSONObject("input_transcription")?.optString("text")?.takeIf { it.isNotBlank() }?.let { listener.onTranscript(it, true) }
-        content.optJSONObject("outputTranscription")?.optString("text")?.takeIf { it.isNotBlank() }?.let { listener.onTranscript(it, false) }
-        content.optJSONObject("output_transcription")?.optString("text")?.takeIf { it.isNotBlank() }?.let { listener.onTranscript(it, false) }
     }
 
     private fun fail(reason: String) {

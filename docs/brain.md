@@ -26,7 +26,7 @@ Sliding the buddy around is on-device (`BuddyMoveIntent`) — “move up”, “
 
 Typed send cancels leftover listening so a later STT miss cannot overwrite a real error.
 
-Voice **talk** is Gemini Live (native audio). Voice **type** is still REST + Android TTS. Gemini only sees text on the REST path; Live hears PCM.
+Voice **talk** is Gemini Live: raw mic PCM in, raw voice PCM out — no speech-to-text API, no captions on the bar, no screen-share video. Gemini’s “video Live” is JPEG frames at ≤1 fps, not a native share; we send the accessibility SCREEN list as realtime text instead. Voice **type** is still REST + Android TTS.
 
 Live replies arrive as binary JSON frames on the WebSocket. If those frames are ignored, `setupComplete` never lands and the session falls back to the type sheet. Speech is played through a jitter buffer (never drop, clocked at 24 kHz); cursor tools run off the main thread. See `docs/live.md`.
 
@@ -62,7 +62,7 @@ Typed Ask snapshotted **while the panel was open**. The text field’s accessibi
 
 The API key is `gemini.api.key` in `local.properties` (gitignored) → `BuildConfig.GEMINI_API_KEY`. Never commit it.
 
-Model (REST): `gemini-3.5-flash-lite` only. Model (Live): `gemini-2.5-flash-native-audio-preview-12-2025`.
+Model (REST): `gemini-3.5-flash-lite` only. Model (Live): `gemini-3.1-flash-live-preview` with `thinkingLevel: minimal` and a short server VAD (220 ms silence).
 
 ## How to try it
 
