@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Buddy</string>
+    <string name="accessibility_service_label">Buddy Assistant</string>
+    <string name="accessibility_service_description">Buddy helps you navigate your phone by seeing what is on screen and guiding you step by step. It can highlight where to tap and help with settings and everyday tasks.</string>
+</resources>

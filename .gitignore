@@ -1,0 +1,45 @@
+# Gradle
+.gradle/
+build/
+**/build/
+
+# Local machine config (SDK path — different per developer)
+local.properties
+
+# Android Studio / IntelliJ
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Kotlin
+.kotlin/
+
+# Generated / compiled
+*.apk
+*.aab
+*.ap_
+*.dex
+*.class
+out/
+
+# Native build
+.externalNativeBuild/
+.cxx/
+
+# Signing keys — never commit these
+*.jks
+*.keystore
+keystore.properties
+
+# Logs & captures
+*.log
+captures/
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Misc
+*.swp
+*~
