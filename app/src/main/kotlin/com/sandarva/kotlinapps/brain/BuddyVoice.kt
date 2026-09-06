@@ -10,6 +10,7 @@ import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
+import com.sandarva.kotlinapps.debug.BuddyLog
 import java.util.Locale
 
 /** On-device speak and listen. Gemini never hears raw audio in this path. */
@@ -20,35 +21,51 @@ class BuddyVoice(private val context: Context) {
     private var recognizer: SpeechRecognizer? = null
     private var onHeard: ((String) -> Unit)? = null
     private var onListenFailed: ((String) -> Unit)? = null
+    @Volatile private var accepting = false
+    private var speakGen = 0
 
     init {
         tts = TextToSpeech(context.applicationContext) { status ->
             ready = status == TextToSpeech.SUCCESS
+            BuddyLog.d("Voice.ttsInit", "ready=$ready status=$status")
             if (ready) tts?.language = Locale.getDefault()
         }
     }
 
     fun speak(text: String, then: (() -> Unit)? = null) {
         val engine = tts
+        BuddyLog.d("Voice.speak", "ready=$ready text=\"${text.take(80)}\" then=${then != null}")
         if (!ready || engine == null) { then?.invoke(); return }
+        val gen = ++speakGen
         if (then == null) {
             engine.speak(text, TextToSpeech.QUEUE_FLUSH, null, "buddy-say")
             return
         }
         engine.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
             override fun onStart(id: String?) = Unit
-            override fun onDone(id: String?) { main.post(then) }
-            @Deprecated("Deprecated in Java") override fun onError(id: String?) { main.post(then) }
+            override fun onDone(id: String?) {
+                main.post {
+                    if (gen != speakGen) BuddyLog.d("Voice.speakDone", "ignored stale gen=$gen current=$speakGen")
+                    else then()
+                }
+            }
+            @Deprecated("Deprecated in Java")
+            override fun onError(id: String?) {
+                main.post { if (gen == speakGen) then() }
+            }
         })
         engine.speak(text, TextToSpeech.QUEUE_FLUSH, null, "buddy-say")
     }
 
     fun listen(onText: (String) -> Unit, onFailed: (String) -> Unit) {
+        accepting = true
         onHeard = onText
         onListenFailed = onFailed
+        BuddyLog.d("Voice.listen", "available=${SpeechRecognizer.isRecognitionAvailable(context)}")
         main.post {
+            if (!accepting) return@post
             if (!SpeechRecognizer.isRecognitionAvailable(context)) {
-                onFailed("I couldn’t hear you on this phone. Type it instead.")
+                if (accepting) onFailed("I couldn’t hear you on this phone. Type it instead.")
                 return@post
             }
             val next = recognizer ?: SpeechRecognizer.createSpeechRecognizer(context).also { recognizer = it }
@@ -57,15 +74,23 @@ class BuddyVoice(private val context: Context) {
         }
     }
 
-    fun stopListening() {
-        main.post { recognizer?.stopListening() }
+    fun cancelAll() {
+        BuddyLog.d("Voice.cancelAll", "acceptingWas=$accepting")
+        accepting = false
+        onHeard = null
+        onListenFailed = null
+        speakGen += 1
+        main.post {
+            recognizer?.cancel()
+            tts?.stop()
+        }
     }
 
     fun release() {
+        cancelAll()
         main.post {
             recognizer?.destroy()
             recognizer = null
-            tts?.stop()
             tts?.shutdown()
             tts = null
         }
@@ -78,16 +103,22 @@ class BuddyVoice(private val context: Context) {
     }
 
     private val listener = object : RecognitionListener {
-        override fun onReadyForSpeech(params: Bundle?) = Unit
-        override fun onBeginningOfSpeech() = Unit
+        override fun onReadyForSpeech(params: Bundle?) = BuddyLog.d("Voice.stt", "readyForSpeech")
+        override fun onBeginningOfSpeech() = BuddyLog.d("Voice.stt", "beginning")
         override fun onRmsChanged(rmsdB: Float) = Unit
         override fun onBufferReceived(buffer: ByteArray?) = Unit
-        override fun onEndOfSpeech() = Unit
+        override fun onEndOfSpeech() = BuddyLog.d("Voice.stt", "endOfSpeech")
         override fun onError(error: Int) {
+            BuddyLog.d("Voice.sttError", "code=$error accepting=$accepting")
+            if (!accepting) return
+            accepting = false
             onListenFailed?.invoke("I missed that. Try again, or type it.")
         }
         override fun onResults(results: Bundle?) {
             val text = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()?.trim().orEmpty()
+            BuddyLog.d("Voice.sttResults", "accepting=$accepting text=\"${text.take(80)}\"")
+            if (!accepting) return
+            accepting = false
             if (text.isBlank()) onListenFailed?.invoke("I missed that. Try again, or type it.")
             else onHeard?.invoke(text)
         }

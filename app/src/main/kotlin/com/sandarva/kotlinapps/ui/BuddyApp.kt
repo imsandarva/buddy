@@ -20,6 +20,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sandarva.kotlinapps.accessibility.AccessibilityController
 import com.sandarva.kotlinapps.brain.BrainPhase
+import com.sandarva.kotlinapps.debug.BuddyLog
 import com.sandarva.kotlinapps.overlay.BuddyOverlayController
 import com.sandarva.kotlinapps.session.BuddySessionViewModel
 import com.sandarva.kotlinapps.ui.home.AskBuddySheet
@@ -39,6 +40,7 @@ fun BuddyApp(session: BuddySessionViewModel = viewModel()) {
     val askOpen by session.askOpen.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val mic = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        BuddyLog.d("BuddyApp.mic", "granted=$granted")
         if (granted) session.listenToAsk()
     }
     HostResumeHook()
@@ -57,6 +59,7 @@ fun BuddyApp(session: BuddySessionViewModel = viewModel()) {
                 onRequestAccess = session::requestScreenAccess,
                 onPointAtControl = session::pointAtControl,
                 onAskBuddy = {
+                    BuddyLog.d("BuddyApp.askTap", "canSee=$canSeeScreen askOpen=$askOpen")
                     if (!canSeeScreen) session.requestScreenAccess()
                     else if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) session.listenToAsk()
                     else mic.launch(Manifest.permission.RECORD_AUDIO)

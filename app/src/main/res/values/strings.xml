@@ -21,6 +21,7 @@
     <string name="ask_body_thinking">I’m looking at what’s on your screen.</string>
     <string name="ask_body_idle">You can speak, or type a few words.</string>
     <string name="ask_placeholder">Type what you need</string>
+    <string name="ask_not_now">Not now</string>
     <string name="home_footnote_listening">I’m listening.</string>
     <string name="home_footnote_thinking">Give me a moment…</string>
     <string name="home_footnote">Ready when you are.</string>

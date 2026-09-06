@@ -7,6 +7,7 @@ import androidx.core.content.ContextCompat
 import com.sandarva.kotlinapps.BuildConfig
 import com.sandarva.kotlinapps.accessibility.BuddyScreenEyes
 import com.sandarva.kotlinapps.accessibility.ScreenSnapshot
+import com.sandarva.kotlinapps.debug.BuddyLog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -35,49 +36,58 @@ object BuddyBrain {
         private val voice = BuddyVoice(app)
         private val gemini = GeminiClient(BuildConfig.GEMINI_API_KEY)
         private var job: Job? = null
+        @Volatile private var sessionActive = false
 
         fun ask(text: String) {
             val trimmed = text.trim()
+            BuddyLog.d("Brain.ask", "len=${trimmed.length} sessionActive=$sessionActive")
             if (trimmed.isBlank()) return
-            if (BuildConfig.GEMINI_API_KEY.isBlank()) {
-                fail("I don’t have a way to think yet.")
-                return
-            }
+            sessionActive = true
             runGuide(trimmed, BuddyScreenEyes.snapshot())
         }
 
         fun listen() {
+            BuddyLog.d("Brain.listen", "open ask panel")
             cancelJob()
+            sessionActive = true
             val snap = BuddyScreenEyes.snapshot()
             BrainSession.setAskOpen(true)
             BrainSession.setNote(null)
             BrainSession.setPhase(BrainPhase.Listening)
-            voice.listen(onText = { runGuide(it, snap) }, onFailed = ::fail)
+            voice.listen(onText = { runGuide(it, snap) }, onFailed = ::failQuiet)
         }
 
         fun listenAfterPrompt() {
-            if (ContextCompat.checkSelfPermission(app, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            val mic = ContextCompat.checkSelfPermission(app, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+            BuddyLog.d("Brain.listenAfterPrompt", "mic=$mic")
+            if (!mic) {
                 voice.speak("Open Buddy and allow the microphone first.")
                 return
             }
             cancelJob()
+            sessionActive = true
             val snap = BuddyScreenEyes.snapshot()
             BrainSession.setNote(null)
             BrainSession.setPhase(BrainPhase.Listening)
             voice.speak("What do you need?") {
-                voice.listen(onText = { runGuide(it, snap) }, onFailed = { voice.speak(it); BrainSession.setPhase(BrainPhase.Idle) })
+                if (!sessionActive) return@speak
+                voice.listen(onText = { runGuide(it, snap) }, onFailed = { voice.speak(it); if (sessionActive) BrainSession.setPhase(BrainPhase.Idle) })
             }
         }
 
         fun cancel() {
+            BuddyLog.d("Brain.cancel", "close ask panel sessionActive=$sessionActive")
+            sessionActive = false
             cancelJob()
-            voice.stopListening()
+            voice.cancelAll()
             BrainSession.reset()
         }
 
         private fun runGuide(question: String, snapshot: ScreenSnapshot) {
+            BuddyLog.d("Brain.runGuide", "q=\"${question.take(80)}\" nodes=${snapshot.nodes.size} pkg=${snapshot.packageName} keyBlank=${BuildConfig.GEMINI_API_KEY.isBlank()}")
+            if (!sessionActive) return
             if (BuildConfig.GEMINI_API_KEY.isBlank()) {
-                fail("I don’t have a way to think yet.")
+                failQuiet("I don’t have a way to think yet.")
                 return
             }
             cancelJob()
@@ -85,27 +95,37 @@ object BuddyBrain {
             BrainSession.setNote(null)
             job = scope.launch {
                 try {
-                    apply(gemini.guide(question, GuidanceCatalog.format(snapshot)), snapshot)
-                } catch (_: Exception) {
-                    fail("I couldn’t think that through just now. Try once more in a moment.")
+                    val plan = gemini.guide(question, GuidanceCatalog.format(snapshot))
+                    BuddyLog.d("Brain.plan", "say=\"${plan.say?.take(80)}\" elementId=${plan.elementId}")
+                    apply(plan, snapshot)
+                } catch (error: Exception) {
+                    BuddyLog.e("Brain.guideFail", error.message ?: "unknown", error)
+                    failQuiet("I couldn’t think that through just now. Try once more in a moment.")
                 }
             }
         }
 
         private fun apply(plan: GuidancePlan, snapshot: ScreenSnapshot) {
+            if (!sessionActive) {
+                BuddyLog.d("Brain.apply", "ignored — session already closed")
+                return
+            }
             plan.elementId?.let { id ->
                 val node = snapshot.node(id)
-                if (node != null) BuddyScreenEyes.pointTo(node) else BuddyScreenEyes.pointTo(id)
+                val ok = if (node != null) BuddyScreenEyes.pointTo(node) else BuddyScreenEyes.pointTo(id)
+                BuddyLog.d("Brain.point", "id=$id found=${node != null} ok=$ok")
             }
             plan.say?.takeIf { it.isNotBlank() }?.let { voice.speak(it) }
-            BrainSession.setPhase(BrainPhase.Idle)
-            BrainSession.setAskOpen(false)
+            sessionActive = false
+            BrainSession.reset()
         }
 
-        private fun fail(message: String) {
+        /** Keep the panel as-is if it is open; never reopen it after the user closed it. */
+        private fun failQuiet(message: String) {
+            BuddyLog.d("Brain.failQuiet", "sessionActive=$sessionActive askOpen=${BrainSession.askOpen.value} msg=$message")
+            if (!sessionActive) return
             BrainSession.setPhase(BrainPhase.Idle)
             BrainSession.setNote(message)
-            BrainSession.setAskOpen(true)
         }
 
         private fun cancelJob() { job?.cancel(); job = null }

@@ -9,6 +9,7 @@ import android.os.Looper
 import androidx.core.app.ServiceCompat
 import com.sandarva.kotlinapps.accessibility.BuddyScreenEyes
 import com.sandarva.kotlinapps.brain.BuddyBrain
+import com.sandarva.kotlinapps.debug.BuddyLog
 
 /** Foreground service that keeps BuddyCursor on screen after the activity leaves. */
 class BuddyOverlayService : Service() {
@@ -18,7 +19,9 @@ class BuddyOverlayService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        BuddyLog.d("OverlayService", "onStartCommand action=${intent?.action} window=${window != null}")
         if (intent?.action == ACTION_STOP) {
+            BuddyLog.d("OverlayService", "ACTION_STOP → stopSelf")
             stopSelf()
             return START_NOT_STICKY
         }
@@ -44,6 +47,7 @@ class BuddyOverlayService : Service() {
     }
 
     override fun onDestroy() {
+        BuddyLog.d("OverlayService", "onDestroy")
         mainHandler.removeCallbacksAndMessages(null)
         window?.let {
             BuddyCursorController.detach(it)

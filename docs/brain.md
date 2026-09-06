@@ -28,11 +28,12 @@ Voice in is on-device `SpeechRecognizer`. Voice out is on-device TTS. Gemini onl
 | `brain/GuidancePlan.kt` | `say` + `element_id` |
 | `brain/BuddyVoice.kt` | STT + TTS |
 | `brain/BrainSession.kt` | Listening / thinking / ask sheet |
-| `ui/home/AskBuddySheet.kt` | Ask surface |
+| `ui/home/AskBuddySheet.kt` | Ask panel (owned overlay — not ModalBottomSheet) |
+| `debug/BuddyLog.kt` | `Buddy===TRACE` logcat lines |
 
 The API key is `gemini.api.key` in `local.properties` (gitignored) → `BuildConfig.GEMINI_API_KEY`. Never commit it.
 
-Model: `gemini-2.5-flash`, then `gemini-2.0-flash` if the first call fails.
+Model: `gemini-3.6-flash` (current Flash for new API keys), then `gemini-3.5-flash-lite` if that call fails. Older 2.x Flash IDs return 404 for new users.
 
 ## How to try it
 

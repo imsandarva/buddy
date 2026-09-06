@@ -1,5 +1,6 @@
 package com.sandarva.kotlinapps.brain
 
+import com.sandarva.kotlinapps.debug.BuddyLog
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -15,10 +16,17 @@ object BrainSession {
     private val _askOpen = MutableStateFlow(false)
     val askOpen: StateFlow<Boolean> = _askOpen.asStateFlow()
 
-    fun setPhase(value: BrainPhase) { _phase.value = value }
+    fun setPhase(value: BrainPhase) {
+        if (_phase.value != value) BuddyLog.d("BrainSession.phase", "${_phase.value} -> $value")
+        _phase.value = value
+    }
     fun setNote(value: String?) { _note.value = value }
-    fun setAskOpen(value: Boolean) { _askOpen.value = value }
+    fun setAskOpen(value: Boolean) {
+        if (_askOpen.value != value) BuddyLog.d("BrainSession.askOpen", "${_askOpen.value} -> $value")
+        _askOpen.value = value
+    }
     fun reset() {
+        BuddyLog.d("BrainSession.reset", "wasOpen=${_askOpen.value} phase=${_phase.value}")
         _phase.value = BrainPhase.Idle
         _note.value = null
         _askOpen.value = false

@@ -1,5 +1,6 @@
 package com.sandarva.kotlinapps.brain
 
+import com.sandarva.kotlinapps.debug.BuddyLog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
@@ -19,8 +20,10 @@ class GeminiClient(
         var lastError: Exception? = null
         for (model in MODELS) {
             try {
+                BuddyLog.d("Gemini.post", "model=$model catalogChars=${catalog.length}")
                 return@withContext parse(post(model, question, catalog))
             } catch (error: Exception) {
+                BuddyLog.e("Gemini.postFail", "model=$model ${error.message}", error)
                 lastError = error
             }
         }
@@ -37,7 +40,8 @@ class GeminiClient(
             .build()
         http.newCall(request).execute().use { response ->
             val text = response.body?.string().orEmpty()
-            if (!response.isSuccessful) throw IllegalStateException("gemini ${response.code}")
+            BuddyLog.d("Gemini.response", "model=$model code=${response.code} body=${text.take(400)}")
+            if (!response.isSuccessful) throw IllegalStateException("gemini ${response.code} ${text.take(180)}")
             return text
         }
     }
@@ -82,7 +86,7 @@ class GeminiClient(
 
     companion object {
         private val JSON = "application/json; charset=utf-8".toMediaType()
-        private val MODELS = listOf("gemini-2.5-flash", "gemini-2.0-flash")
+        private val MODELS = listOf("gemini-3.6-flash", "gemini-3.5-flash-lite")
 
         fun defaultHttp(): OkHttpClient = OkHttpClient.Builder()
             .connectTimeout(20, TimeUnit.SECONDS)
