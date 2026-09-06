@@ -35,6 +35,7 @@ class LiveOverlayWindow(private val context: Context) {
         ).apply { gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL }
         nextOwner.start()
         val compose = ComposeView(context).apply {
+            hideFromBuddyEyes()
             setViewTreeLifecycleOwner(nextOwner)
             setViewTreeViewModelStoreOwner(nextOwner)
             setViewTreeSavedStateRegistryOwner(nextOwner)

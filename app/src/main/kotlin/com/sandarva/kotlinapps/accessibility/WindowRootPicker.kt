@@ -8,32 +8,35 @@ import android.view.accessibility.AccessibilityWindowInfo
 import com.sandarva.kotlinapps.debug.BuddyLog
 
 /**
- * The overlay is often the “active” window after a double-tap, so we never
- * snapshot only that — TalkBack-style: every real app window, skip our chrome.
+ * TalkBack-style: the windows the person can actually see.
+ * Skip Buddy chrome. Skip the thin status/nav strips. Keep a pulled-down shade.
  */
 class WindowRootPicker(private val service: AccessibilityService) {
     fun roots(): List<AccessibilityNodeInfo> {
         val self = service.packageName
         val metrics = service.resources.displayMetrics
+        val screenW = metrics.widthPixels
+        val screenH = metrics.heightPixels
         val windows = allWindows()
-        val candidates = ArrayList<Candidate>(8)
+        val apps = ArrayList<Candidate>(8)
+        val shade = ArrayList<Candidate>(2)
         for (window in windows) {
             if (!readable(window.type)) continue
             val root = window.root ?: continue
             val pkg = root.packageName?.toString().orEmpty()
-            if (isSystemUi(pkg) || isOwnOverlay(window, pkg, self, metrics.widthPixels, metrics.heightPixels)) {
-                recycle(root)
-                continue
+            if (pkg == self) { recycle(root); continue }
+            when {
+                isCoveringShade(window, pkg, screenW, screenH) -> shade += Candidate(pkg, root)
+                isSystemUi(pkg) -> recycle(root)
+                else -> apps += Candidate(pkg, root)
             }
-            candidates += Candidate(pkg, root)
         }
-        if (candidates.isEmpty()) addFallback(candidates, self)
-        val foreign = candidates.any { it.pkg.isNotBlank() && it.pkg != self }
-        val chosen = if (foreign) {
-            candidates.filter { it.pkg == self }.forEach { recycle(it.root) }
-            candidates.filter { it.pkg != self }
-        } else candidates
-        BuddyLog.d("Eyes.windows", "raw=${windows.size} kept=${chosen.size} pkgs=${chosen.map { it.pkg }} self=$self")
+        val chosen = if (shade.isNotEmpty()) {
+            apps.forEach { recycle(it.root) }
+            shade
+        } else apps
+        if (chosen.isEmpty()) addFallback(chosen, self, screenW, screenH)
+        BuddyLog.d("Eyes.windows", "raw=${windows.size} kept=${chosen.size} pkgs=${chosen.map { it.pkg }} shade=${shade.size} self=$self")
         return chosen.map { it.root }
     }
 
@@ -53,24 +56,28 @@ class WindowRootPicker(private val service: AccessibilityService) {
         return merged
     }
 
-    private fun addFallback(into: ArrayList<Candidate>, self: String) {
+    private fun addFallback(into: ArrayList<Candidate>, self: String, screenW: Int, screenH: Int) {
         val root = service.rootInActiveWindow ?: return
         val pkg = root.packageName?.toString().orEmpty()
-        if (isSystemUi(pkg) || pkg == self) {
-            recycle(root)
-            return
-        }
+        if (pkg == self) { recycle(root); return }
+        if (isSystemUi(pkg) && !isLarge(root, screenW, screenH)) { recycle(root); return }
         into += Candidate(pkg, root)
     }
 
     private fun readable(type: Int): Boolean =
         type == AccessibilityWindowInfo.TYPE_APPLICATION || type == AccessibilityWindowInfo.TYPE_SYSTEM
 
-    private fun isOwnOverlay(window: AccessibilityWindowInfo, pkg: String, self: String, screenW: Int, screenH: Int): Boolean {
-        if (pkg != self) return false
+    private fun isCoveringShade(window: AccessibilityWindowInfo, pkg: String, screenW: Int, screenH: Int): Boolean {
+        if (!isSystemUi(pkg)) return false
         val box = Rect()
         window.getBoundsInScreen(box)
-        return box.width() < screenW * 0.4f && box.height() < screenH * 0.4f
+        return box.height() > screenH * SHADE_MIN_H && box.width() > screenW * SHADE_MIN_W
+    }
+
+    private fun isLarge(root: AccessibilityNodeInfo, screenW: Int, screenH: Int): Boolean {
+        val box = Rect()
+        root.getBoundsInScreen(box)
+        return box.height() > screenH * SHADE_MIN_H && box.width() > screenW * SHADE_MIN_W
     }
 
     private fun isSystemUi(pkg: String) = pkg == "com.android.systemui" || pkg.endsWith(".systemui")
@@ -81,4 +88,9 @@ class WindowRootPicker(private val service: AccessibilityService) {
     }
 
     private data class Candidate(val pkg: String, val root: AccessibilityNodeInfo)
+
+    companion object {
+        private const val SHADE_MIN_H = 0.35f
+        private const val SHADE_MIN_W = 0.55f
+    }
 }

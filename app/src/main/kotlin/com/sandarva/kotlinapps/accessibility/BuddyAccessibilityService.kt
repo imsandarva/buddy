@@ -9,6 +9,7 @@ import com.sandarva.kotlinapps.debug.BuddyLog
 /** System service — composition only. Walking lives in the reader; strokes live in the hands API. */
 class BuddyAccessibilityService : AccessibilityService() {
     private val reader by lazy { AccessibilityTreeReader(this) }
+    private val tracker by lazy { ScreenSceneTracker(packageName) { reader.snapshot() } }
     private val player by lazy { GesturePlayer(this) }
 
     override fun onServiceConnected() {
@@ -19,9 +20,9 @@ class BuddyAccessibilityService : AccessibilityService() {
             AccessibilityServiceInfo.FLAG_INCLUDE_NOT_IMPORTANT_VIEWS or
             AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS
         serviceInfo = info
-        BuddyScreenEyes.attach(reader)
+        BuddyScreenEyes.attach(reader, tracker)
         BuddyHands.attach(player)
-        AccessibilitySession.setBound(true)
+        AccessibilitySession.bind(this)
         AccessibilitySession.setEnabled(true)
         AccessibilitySession.setAwaitingGrant(false)
         BuddyLog.d("Eyes.service", "connected flags=${serviceInfo.flags} windows=${windows?.size}")
@@ -38,7 +39,7 @@ class BuddyAccessibilityService : AccessibilityService() {
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        // Snapshot on demand. Do not walk the tree on every window event.
+        if (event != null) BuddyScreenEyes.onWindowEvent(event)
     }
 
     override fun onInterrupt() = Unit
@@ -46,6 +47,6 @@ class BuddyAccessibilityService : AccessibilityService() {
     private fun releaseEyes() {
         BuddyHands.detach(player)
         BuddyScreenEyes.detach(reader)
-        AccessibilitySession.setBound(false)
+        AccessibilitySession.unbind(this)
     }
 }

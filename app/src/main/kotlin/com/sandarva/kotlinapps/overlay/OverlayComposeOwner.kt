@@ -1,5 +1,6 @@
 package com.sandarva.kotlinapps.overlay
 
+import android.view.View
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
@@ -36,4 +37,9 @@ class OverlayComposeOwner : LifecycleOwner, ViewModelStoreOwner, SavedStateRegis
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
         store.clear()
     }
+}
+
+/** Buddy chrome is not the user's screen. Hide it from our own eyes. */
+fun View.hideFromBuddyEyes() {
+    importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
 }

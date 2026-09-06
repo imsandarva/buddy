@@ -42,6 +42,7 @@ class AskOverlayWindow(private val context: Context) {
         }
         nextOwner.start()
         val compose = ComposeView(context).apply {
+            hideFromBuddyEyes()
             isFocusable = true
             isFocusableInTouchMode = true
             setViewTreeLifecycleOwner(nextOwner)

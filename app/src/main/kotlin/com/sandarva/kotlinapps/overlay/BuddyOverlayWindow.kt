@@ -18,6 +18,7 @@ import com.sandarva.kotlinapps.ui.theme.BuddyTheme
 /** Small WRAP_CONTENT window. Drag or animateTo moves the same LayoutParams. */
 class BuddyOverlayWindow(
     private val context: Context,
+    private val windowType: Int = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
     private val onAsk: () -> Unit = {}
 ) : BuddyCursorMover {
     private val windowManager = context.getSystemService(WindowManager::class.java)
@@ -35,7 +36,7 @@ class BuddyOverlayWindow(
         val layout = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.WRAP_CONTENT,
-            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+            windowType,
             overlayFlags(),
             PixelFormat.TRANSLUCENT
         ).apply {
@@ -44,6 +45,7 @@ class BuddyOverlayWindow(
             y = (screen.second * start.yFraction).toInt()
         }
         val compose = ComposeView(context).apply {
+            hideFromBuddyEyes()
             setViewTreeLifecycleOwner(owner)
             setViewTreeViewModelStoreOwner(owner)
             setViewTreeSavedStateRegistryOwner(owner)

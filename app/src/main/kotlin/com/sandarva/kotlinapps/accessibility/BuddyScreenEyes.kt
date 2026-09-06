@@ -1,17 +1,49 @@
 package com.sandarva.kotlinapps.accessibility
 
+import android.os.Handler
+import android.os.Looper
+import android.view.accessibility.AccessibilityEvent
 import com.sandarva.kotlinapps.debug.BuddyLog
 import com.sandarva.kotlinapps.overlay.BuddyCursorController
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
-/** Eyes API. The brain (AI later) asks for a snapshot or `pointTo`; it never walks the tree. */
+/** Eyes API. The brain asks for a snapshot or `pointTo`; it never walks the tree. */
 object BuddyScreenEyes {
-    @Volatile
-    private var reader: ScreenReader? = null
+    private val main = Handler(Looper.getMainLooper())
+    @Volatile private var reader: ScreenReader? = null
+    @Volatile private var tracker: ScreenSceneTracker? = null
+    private val idle = MutableSharedFlow<ScreenSnapshot>(replay = 0)
 
-    fun attach(next: ScreenReader) { reader = next }
-    fun detach(current: ScreenReader) { if (reader === current) reader = null }
+    fun attach(next: ScreenReader, watch: ScreenSceneTracker) {
+        reader = next
+        tracker = watch
+    }
 
-    fun snapshot(): ScreenSnapshot = reader?.snapshot() ?: ScreenSnapshot.Empty
+    fun detach(current: ScreenReader) {
+        if (reader !== current) return
+        tracker?.release()
+        tracker = null
+        reader = null
+    }
+
+    val scenes: SharedFlow<ScreenSnapshot> get() = tracker?.scenes ?: idle
+
+    fun setWatching(on: Boolean) { tracker?.setWatching(on) }
+
+    fun onWindowEvent(event: AccessibilityEvent) { tracker?.onEvent(event) }
+
+    fun snapshot(): ScreenSnapshot {
+        val current = reader ?: return ScreenSnapshot.Empty
+        if (Looper.myLooper() == Looper.getMainLooper()) return current.snapshot()
+        val latch = CountDownLatch(1)
+        val box = arrayOfNulls<ScreenSnapshot>(1)
+        main.post { box[0] = current.snapshot(); latch.countDown() }
+        latch.await(800, TimeUnit.MILLISECONDS)
+        return box[0] ?: ScreenSnapshot.Empty
+    }
 
     fun pointTo(id: String): Boolean = snapshot().node(id)?.let { pointTo(it) } ?: false
 
@@ -20,6 +52,5 @@ object BuddyScreenEyes {
         return BuddyCursorController.animateToPixels(node.bounds.centerX, node.bounds.centerY)
     }
 
-    /** Debug path: pick one visible control and fly there. */
     fun pointToGuide(): Boolean = GuidePicker.choose(snapshot())?.let { pointTo(it) } ?: false
 }

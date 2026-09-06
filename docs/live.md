@@ -27,6 +27,19 @@ Gemini Live **can** take video, but it is not a native camera or screen-share co
 
 We do **not** send those frames. Eyes stay the accessibility SCREEN list (labels and ids, no pixels). Typed ask is the same. If we ever add Live video, it would be a MediaProjection JPEG at ≤1 fps on the same socket, next to the mic — not a separate “video Live” product.
 
+## It must see what the user sees
+
+The small bar at the bottom while you talk is **our** live chrome (“I’m with you”, **That’s all**, **Type instead**). It is not the type sheet, and it must not become the SCREEN list. The type sheet is a different full-screen overlay and stays closed during Live.
+
+Two things used to make the model describe the Buddy app while you were on the home screen:
+
+1. **A frozen first look.** SCREEN was sent once at `setupComplete`. If talk started in Buddy, then you pressed Home, the model still had the Buddy buttons. Industry voice agents (TalkBack-style window follow, Gemini Live `realtimeInput` text) push a new scene when the foreground app changes.
+2. **Our chrome in the tree.** The live bar is full width, so the old “skip only small overlay windows” rule kept it. Eyes now skip **every** window from our package, hide overlay views from accessibility, and watch `TYPE_WINDOW_STATE_CHANGED` / `TYPE_WINDOWS_CHANGED` (debounced ~280 ms) so the latest SCREEN is the launcher or the app under the bar.
+
+After you install this, toggle **Buddy Assistant** off and on once so the new window events are registered.
+
+The live bar is our chrome. The notification shade is theirs. Eyes read the shade when it covers the screen, and the cursor stays above it (accessibility overlay) so it does not slip behind the panel.
+
 ## Why “I talked, then waited forever”
 
 The official Gemini app feels instant because the **server** decides the end of your sentence (VAD) and starts speaking. We were adding seconds on our side:
@@ -83,7 +96,8 @@ A spoken tap that then sits still is usually the tree or the tool, not VAD. Voic
 
 | File | Role |
 |------|------|
-| `brain/live/BuddyLive.kt` | Session facade — start / stop / tools |
+| `brain/live/BuddyLive.kt` | Session facade — start / stop / tools / follow screen |
+| `accessibility/ScreenSceneTracker.kt` | Debounced window follow while Live is on |
 | `brain/live/LiveSocket.kt` | OkHttp WebSocket (text + binary JSON, decode off the reader) |
 | `brain/live/LiveMessages.kt` | Setup, audio, catalog, toolResponse JSON |
 | `brain/live/LiveAudio.kt` | Shared session + AEC / NS / AGC |

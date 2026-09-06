@@ -26,7 +26,7 @@ Sliding the buddy around is on-device (`BuddyMoveIntent`) — “move up”, “
 
 Typed send cancels leftover listening so a later STT miss cannot overwrite a real error.
 
-Voice **talk** is Gemini Live: raw mic PCM in, raw voice PCM out — no speech-to-text API, no captions on the bar, no screen-share video. Gemini’s “video Live” is JPEG frames at ≤1 fps, not a native share; we send the accessibility SCREEN list as realtime text instead. Voice **type** is still REST + Android TTS.
+Voice **talk** is Gemini Live: raw mic PCM in, raw voice PCM out — no speech-to-text API, no captions on the bar, no screen-share video. Gemini’s “video Live” is JPEG frames at ≤1 fps, not a native share; we send the accessibility SCREEN list as realtime text instead, and we send it again when they change screens so the model sees the home screen, the notification shade, or the app in front of them — never the Buddy talk bar. Voice **type** is still REST + Android TTS.
 
 Live replies arrive as binary JSON frames on the WebSocket. If those frames are ignored, `setupComplete` never lands and the session falls back to the type sheet. Speech is played through a jitter buffer (never drop, clocked at 24 kHz); cursor tools run off the main thread. See `docs/live.md`.
 
@@ -50,7 +50,7 @@ Typed Ask snapshotted **while the panel was open**. The text field’s accessibi
 | `brain/GuidancePlan.kt` | `say` + `element_id` + `place` + `hand` |
 | `brain/HandPlan.kt` | Tap / hold / stroke from the model |
 | `brain/GuidanceActor.kt` | Shared tap / fly / point executor |
-| `brain/live/` | Gemini Live WebSocket + jitter-buffered speaker + AEC mic |
+| `brain/live/` | Gemini Live WebSocket + jitter-buffered speaker + AEC mic + screen follow |
 | `brain/BuddyHandIntent.kt` | On-device “tap / hold / swipe left” |
 | `brain/Reachability.kt` | Online check + network-error detect |
 | `brain/BuddyVoice.kt` | STT + TTS |

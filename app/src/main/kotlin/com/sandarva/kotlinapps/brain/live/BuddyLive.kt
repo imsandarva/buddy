@@ -3,6 +3,8 @@ package com.sandarva.kotlinapps.brain.live
 import android.app.Application
 import com.sandarva.kotlinapps.BuildConfig
 import com.sandarva.kotlinapps.accessibility.BuddyScreenEyes
+import com.sandarva.kotlinapps.accessibility.ScreenSnapshot
+import com.sandarva.kotlinapps.accessibility.sceneKey
 import com.sandarva.kotlinapps.brain.BrainPhase
 import com.sandarva.kotlinapps.brain.BrainSession
 import com.sandarva.kotlinapps.brain.GeminiTools
@@ -12,6 +14,7 @@ import com.sandarva.kotlinapps.brain.Reachability
 import com.sandarva.kotlinapps.debug.BuddyLog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
@@ -42,6 +45,8 @@ object BuddyLive {
         @Volatile var active = false
             private set
         private var gen = 0
+        @Volatile private var lastScene = ""
+        private var followJob: Job? = null
 
         fun start() {
             if (active) return
@@ -59,12 +64,16 @@ object BuddyLive {
             BrainSession.setLiveOpen(true)
             BrainSession.setPhase(BrainPhase.Live)
             BrainSession.setNote(null)
+            lastScene = ""
+            BuddyScreenEyes.setWatching(true)
             BuddyLog.d("Live.start", "model=${LiveConfig.MODEL}")
             val next = LiveSocket(BuildConfig.GEMINI_API_KEY, object : LiveSocket.Listener {
                 override fun onSetupComplete() {
                     if (id != gen) return
                     startMic()
-                    scope.launch { pushCatalog() } // realtime text — does not hold the spoken turn open
+                    scope.launch { pushCatalog() }
+                    followJob?.cancel()
+                    followJob = scope.launch { followScreen(id) }
                 }
                 override fun onAudio(pcm: ByteArray) { if (id == gen) speaker.play(pcm) }
                 override fun onInterrupted() { if (id == gen) speaker.interrupt() }
@@ -96,6 +105,9 @@ object BuddyLive {
             BuddyLog.d("Live.stop", "user=$user")
             gen += 1
             active = false
+            BuddyScreenEyes.setWatching(false)
+            lastScene = ""
+            followJob?.cancel(); followJob = null
             mic?.stop(); mic = null
             speaker.stop()
             audio?.release(); audio = null
@@ -119,14 +131,25 @@ object BuddyLive {
                 BuddyLog.d("Live.tool", "name=${call.name} id=${call.id}")
                 val result = GuidanceActor.run(plan, snap)
                 delay(TREE_SETTLE_MS)
-                val screen = GuidanceCatalog.format(BuddyScreenEyes.snapshot(), LIVE_CATALOG)
-                socket?.send(LiveMessages.toolResponse(call.id, call.name, result, screen))
+                val after = BuddyScreenEyes.snapshot()
+                lastScene = after.sceneKey()
+                socket?.send(LiveMessages.toolResponse(call.id, call.name, result, GuidanceCatalog.format(after, LIVE_CATALOG)))
             }
         }
 
-        private fun pushCatalog() {
-            val catalog = GuidanceCatalog.format(BuddyScreenEyes.snapshot(), LIVE_CATALOG)
-            BuddyLog.d("Live.catalog", "chars=${catalog.length}")
+        private suspend fun followScreen(id: Int) {
+            BuddyScreenEyes.scenes.collect { snap ->
+                if (id != gen || !active || socket?.isReady != true) return@collect
+                pushCatalog(snap)
+            }
+        }
+
+        private fun pushCatalog(snap: ScreenSnapshot = BuddyScreenEyes.snapshot()) {
+            val key = snap.sceneKey()
+            if (key == lastScene) return
+            lastScene = key
+            val catalog = GuidanceCatalog.format(snap, LIVE_CATALOG)
+            BuddyLog.d("Live.catalog", "pkg=${snap.packageName} nodes=${snap.nodes.size} chars=${catalog.length}")
             socket?.send(LiveMessages.catalog(catalog))
         }
 

@@ -11,6 +11,7 @@ import android.os.IBinder
 import android.os.Looper
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
+import com.sandarva.kotlinapps.accessibility.AccessibilitySession
 import com.sandarva.kotlinapps.accessibility.BuddyScreenEyes
 import com.sandarva.kotlinapps.brain.BrainSession
 import com.sandarva.kotlinapps.brain.BuddyBrain
@@ -63,27 +64,24 @@ class BuddyOverlayService : Service() {
         BuddyLive.stop()
         hideAsk()
         hideLive()
-        cursor?.let {
-            BuddyCursorController.detach(it)
-            it.dismiss()
-        }
+        CursorSurface.release()
         cursor = null
         OverlaySession.setActive(false)
         super.onDestroy()
     }
 
     private fun presentCursor() {
-        if (cursor != null) return
         applyFgs(mic = false)
-        val next = BuddyOverlayWindow(this, onAsk = { BuddyBrain.openAsk() }).also { it.show() }
-        cursor = next
-        BuddyCursorController.attach(next)
+        cursor = CursorSurface.ensure(this)
         OverlaySession.setActive(true)
     }
 
     private fun watchAsk() {
         if (watchingAsk) return
         watchingAsk = true
+        scope.launch {
+            AccessibilitySession.bound.collect { if (OverlaySession.active.value || cursor != null) presentCursor() }
+        }
         scope.launch {
             combine(BrainSession.askOpen, BrainSession.liveOpen) { askOpen, liveOpen -> askOpen to liveOpen }.collect { (askOpen, liveOpen) ->
                 applyFgs(mic = askOpen || liveOpen)
@@ -96,7 +94,7 @@ class BuddyOverlayService : Service() {
     private fun showAsk() {
         val panel = ask ?: AskOverlayWindow(this).also { ask = it }
         if (!panel.isShowing) panel.show()
-        cursor?.raise()
+        CursorSurface.current()?.raise()
     }
 
     private fun hideAsk() {
@@ -107,7 +105,7 @@ class BuddyOverlayService : Service() {
     private fun showLive() {
         val bar = live ?: LiveOverlayWindow(this).also { live = it }
         if (!bar.isShowing) bar.show()
-        cursor?.raise()
+        CursorSurface.current()?.raise()
     }
 
     private fun hideLive() {
