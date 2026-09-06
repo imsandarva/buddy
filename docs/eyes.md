@@ -9,7 +9,7 @@ The AI does not walk the accessibility tree. It calls this API. The overlay curs
 | Call | Use |
 |------|-----|
 | `snapshot()` | Visible nodes on **the user’s** screen: `{ id, label, bounds, clickable }` |
-| `scenes` | While Live is on, a fresh snapshot when they change apps or windows |
+| `scenes` | While Live is on, a fresh snapshot when they change apps, windows, or pages (drawer swipe) |
 | `pointTo(id)` | Fresh snapshot, then fly the tip to that node’s center |
 | `pointTo(node)` | Fly to a node we already hold |
 | `pointToGuide()` | Debug pick — one teachable control, then `pointTo` |
@@ -44,7 +44,7 @@ Pixels stay in the app. Gemini’s `point_to(element_id)` resolves through this 
 - Full-screen chrome is skipped
 - Same-label children inside a clickable parent are collapsed to the parent
 - Typed ask: the panel is closed first so the catalog is not the ask field
-- Live: SCREEN is pushed again when they leave Buddy, open the launcher, or switch apps — the model must see what they see **now**, not what was open when talk started
+- Live: SCREEN is pushed again when they leave Buddy, open the launcher, switch apps, **or swipe to another page** in the same app (app drawer). Window-only events miss that — TalkBack watches scroll and content, then we wait ~380 ms for the page to settle. The scene key includes labels, because launcher pages reuse the same view ids with different app names.
 
 Ids prefer the short view id (`date_time_settings`), then a slug of the label. Duplicates get `_2`.
 

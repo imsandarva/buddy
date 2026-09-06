@@ -9,8 +9,8 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 
 /**
- * Follows the screen the person is looking at.
- * Live turns this on; window events from our own chrome are ignored.
+ * Follows what the person is looking at — new apps, and new pages inside the same app
+ * (app drawer swipe is the same window; TalkBack watches scroll + content for that).
  */
 class ScreenSceneTracker(
     private val selfPackage: String,
@@ -34,7 +34,7 @@ class ScreenSceneTracker(
         if (!watching || !isSceneEvent(event)) return
         val pkg = event.packageName?.toString().orEmpty()
         if (pkg == selfPackage) return
-        schedule(SETTLE_MS)
+        schedule(if (isPageTurn(event)) PAGE_SETTLE_MS else WINDOW_SETTLE_MS)
     }
 
     fun release() {
@@ -59,12 +59,32 @@ class ScreenSceneTracker(
     }
 
     companion object {
-        private const val SETTLE_MS = 280L
+        /** Wait for a swipe/page animation to finish before reading the new icons. */
+        private const val PAGE_SETTLE_MS = 380L
+        private const val WINDOW_SETTLE_MS = 220L
+
         private fun isSceneEvent(event: AccessibilityEvent): Boolean {
             val t = event.eventType
-            return t == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED || t == AccessibilityEvent.TYPE_WINDOWS_CHANGED
+            return t == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED ||
+                t == AccessibilityEvent.TYPE_WINDOWS_CHANGED ||
+                t == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED ||
+                t == AccessibilityEvent.TYPE_VIEW_SCROLLED
+        }
+
+        private fun isPageTurn(event: AccessibilityEvent): Boolean {
+            val t = event.eventType
+            return t == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED || t == AccessibilityEvent.TYPE_VIEW_SCROLLED
         }
     }
 }
 
-fun ScreenSnapshot.sceneKey(): String = "${packageName.orEmpty()}|${nodes.joinToString { it.id }}"
+/** Labels matter — launcher pages reuse the same view ids with different app names. */
+fun ScreenSnapshot.sceneKey(): String = buildString(nodes.size * 24) {
+    append(packageName.orEmpty())
+    for (node in nodes) {
+        append('|')
+        append(node.id)
+        append('=')
+        append(node.label)
+    }
+}

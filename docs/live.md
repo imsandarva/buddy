@@ -34,7 +34,7 @@ The small bar at the bottom while you talk is **our** live chrome (“I’m with
 Two things used to make the model describe the Buddy app while you were on the home screen:
 
 1. **A frozen first look.** SCREEN was sent once at `setupComplete`. If talk started in Buddy, then you pressed Home, the model still had the Buddy buttons. Industry voice agents (TalkBack-style window follow, Gemini Live `realtimeInput` text) push a new scene when the foreground app changes.
-2. **Our chrome in the tree.** The live bar is full width, so the old “skip only small overlay windows” rule kept it. Eyes now skip **every** window from our package, hide overlay views from accessibility, and watch `TYPE_WINDOW_STATE_CHANGED` / `TYPE_WINDOWS_CHANGED` (debounced ~280 ms) so the latest SCREEN is the launcher or the app under the bar.
+2. **Our chrome in the tree.** The live bar is full width, so the old “skip only small overlay windows” rule kept it. Eyes now skip **every** window from our package, hide overlay views from accessibility, and watch window, content, and scroll events so the latest SCREEN is the launcher page, the shade, or the app under the bar — not the last page they swiped away from.
 
 After you install this, toggle **Buddy Assistant** off and on once so the new window events are registered.
 
