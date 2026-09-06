@@ -12,6 +12,7 @@ import com.sandarva.kotlinapps.accessibility.ScreenSnapshot
 import com.sandarva.kotlinapps.debug.BuddyLog
 import com.sandarva.kotlinapps.overlay.BuddyCursorController
 import com.sandarva.kotlinapps.overlay.CursorLanding
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -45,18 +46,7 @@ object BuddyBrain {
         @Volatile private var sessionActive = false
         @Volatile private var reopenAskOnFail = false
 
-        fun ask(text: String) {
-            val trimmed = text.trim()
-            BuddyLog.d("Brain.ask", "len=${trimmed.length} sessionActive=$sessionActive")
-            if (trimmed.isBlank()) return
-            sessionActive = true
-            reopenAskOnFail = true
-            voice.cancelListen()
-            // The ask panel covers the screen; eyes must see the real controls, not the typed field.
-            BrainSession.setAskOpen(false)
-            BrainSession.setNote(null)
-            think(trimmed, settleMs = TREE_SETTLE_MS) { BuddyScreenEyes.snapshot() }
-        }
+        fun ask(text: String) = heard(text)
 
         fun listen() = openAsk()
 
@@ -71,15 +61,27 @@ object BuddyBrain {
             voice.cancelListen()
             sessionActive = true
             reopenAskOnFail = true
-            val early = BuddyScreenEyes.snapshot()
             BrainSession.setAskOpen(true)
             BrainSession.setNote(if (mic) null else app.getString(R.string.ask_type_only))
             if (mic) {
                 BrainSession.setPhase(BrainPhase.Listening)
-                voice.listen(onText = { think(it) { richerSnap(early) } }, onFailed = ::failListen)
+                voice.listen(onText = ::heard, onFailed = ::failListen)
             } else {
                 BrainSession.setPhase(BrainPhase.Idle)
             }
+        }
+
+        /** Speak or type — same door. The sheet must be gone before eyes or hands run. */
+        private fun heard(text: String) {
+            val trimmed = text.trim()
+            BuddyLog.d("Brain.heard", "len=${trimmed.length} sessionActive=$sessionActive askOpen=${BrainSession.askOpen.value}")
+            if (trimmed.isBlank()) return
+            sessionActive = true
+            reopenAskOnFail = true
+            voice.cancelListen()
+            BrainSession.setAskOpen(false)
+            BrainSession.setNote(null)
+            think(trimmed)
         }
 
         fun cancel() {
@@ -91,13 +93,15 @@ object BuddyBrain {
             BrainSession.reset()
         }
 
-        private fun think(question: String, settleMs: Long = 0, snapshot: () -> ScreenSnapshot) {
+        private fun think(question: String) {
             if (!sessionActive) return
             voice.cancelListen()
             cancelJob()
             BrainSession.setPhase(BrainPhase.Thinking)
             BrainSession.setNote(null)
             job = scope.launch {
+                delay(TREE_SETTLE_MS)
+                if (!sessionActive) return@launch
                 if (tryLocalMove(question)) return@launch
                 if (tryLocalHand(question)) return@launch
                 if (BuildConfig.GEMINI_API_KEY.isBlank()) {
@@ -108,25 +112,20 @@ object BuddyBrain {
                     failQuiet(OFFLINE_NOTE)
                     return@launch
                 }
-                if (settleMs > 0) delay(settleMs)
-                if (!sessionActive) return@launch
-                val snap = GuidanceCatalog.forModel(snapshot(), question)
+                val snap = GuidanceCatalog.forModel(BuddyScreenEyes.snapshot(), question)
                 BuddyLog.d("Brain.runGuide", "q=\"${question.take(80)}\" nodes=${snap.nodes.size} pkg=${snap.packageName} ids=${snap.nodes.take(12).joinToString { it.id }} hands=${BuddyCursorController.isAttached()}")
                 try {
                     val plan = gemini.guide(question, GuidanceCatalog.format(snap))
                     BuddyLog.d("Brain.plan", "say=\"${plan.say?.take(80)}\" place=${plan.place} elementId=${plan.elementId} hand=${plan.hand}")
                     apply(plan, snap)
+                } catch (error: CancellationException) {
+                    BuddyLog.d("Brain.guideCancel", "job cancelled — not a think failure")
+                    throw error
                 } catch (error: Exception) {
                     BuddyLog.e("Brain.guideFail", error.message ?: "unknown", error)
                     failQuiet(if (Reachability.isNetworkFailure(error)) OFFLINE_NOTE else THINK_FAIL_NOTE)
                 }
             }
-        }
-
-        /** Prefer the live tree (launcher under the ask overlay) over a tap-time empty snap. */
-        private fun richerSnap(early: ScreenSnapshot): ScreenSnapshot {
-            val live = BuddyScreenEyes.snapshot()
-            return if (live.nodes.size >= early.nodes.size) live else early
         }
 
         private suspend fun tryLocalHand(question: String): Boolean {

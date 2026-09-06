@@ -60,7 +60,11 @@ fun AskBuddySheet(
             Modifier
                 .fillMaxSize()
                 .background(BuddyColors.Ink.copy(alpha = 0.46f))
-                .clickable(remember { MutableInteractionSource() }, null) {
+                .clickable(
+                    enabled = phase != BrainPhase.Thinking,
+                    indication = null,
+                    interactionSource = remember { MutableInteractionSource() }
+                ) {
                     BuddyLog.d("AskPanel", "scrim tap → dismiss")
                     onDismiss()
                 }

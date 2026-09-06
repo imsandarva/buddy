@@ -30,6 +30,8 @@ The window slides in a straight line with a drag or swipe so the tip stays on th
 - “Tap Wi‑Fi” / “hold that icon” / “drag this to the trash” goes to Gemini (`tap`, `hold`, `swipe`, `drag`), then `BuddyHands` on **that** snapshot.
 - `point_to` still only flies. Use it when they asked *where*, not *do it*.
 
+The ask panel is a full-screen overlay. A stroke while it is still up hits the sheet, not the app (and a scrim tap used to cancel the job). Speak and type both close the panel and wait a beat before hands run.
+
 Needs **Let me see your screen** (Buddy Assistant). `canPerformGestures` is on.
 
 See `docs/brain.md` and `docs/accessibility.md`.

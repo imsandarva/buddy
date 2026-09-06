@@ -19,7 +19,7 @@ Sliding the buddy around is on-device (`BuddyMoveIntent`) — “move up”, “
 
 1. If they asked the buddy itself to move, fly or nudge locally and speak. No network.
 2. If they asked to tap / hold / swipe / drag *here*, do that locally. No network.
-3. If the ask panel is covering the screen (typed ask), close it and wait a beat so the accessibility tree is the real screen — not the typed field.
+3. Spoken or typed: close the ask panel first and wait a beat. A voice tap used to land on the still-open sheet (scrim dismiss → job cancel). The sheet must be gone before eyes or hands run.
 4. Snapshot the screen they are looking at (`GuidanceCatalog` — ids and labels, no pixels), including the launcher under the overlay. Strip a node whose label is the question itself.
 5. If the radio is down, say so — do not wait on DNS. Otherwise send the user’s words + that list to Gemini Flash.
 6. Speak `say`. Then fly, point, or perform the hand stroke on **that** snapshot.
