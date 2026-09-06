@@ -26,7 +26,7 @@ Pixels stay in the app. Gemini’s `point_to(element_id)` resolves through this 
 | `accessibility/ScreenSnapshot.kt` | Immutable `ScreenNode` / bounds |
 | `accessibility/ScreenTreeWalker.kt` | Walk + recycle live nodes |
 | `accessibility/AccessibilityTreeReader.kt` | Bound to the system service |
-| `accessibility/WindowRootPicker.kt` | Foreign app windows only — never our package |
+| `accessibility/WindowRootPicker.kt` | The front content window — Buddy chrome skipped, Buddy activity kept |
 | `accessibility/ScreenSceneTracker.kt` | Debounced follow while Live is watching |
 | `accessibility/GuidePicker.kt` | Chooses one control for the debug tap |
 | `accessibility/AccessibilitySession.kt` | Bound / granted / awaiting |
@@ -35,8 +35,9 @@ Pixels stay in the app. Gemini’s `point_to(element_id)` resolves through this 
 
 ## What is snapshotted
 
-- Every **other** app window, not only the “active” one (the overlay is often active after a double-tap)
-- **Never our package** — cursor, live bar, type sheet, and the Buddy activity are chrome, not the screen they asked about
+- The **front** content window (focused / active / top layer) — not a union of the launcher plus whatever is open
+- **Buddy chrome** is skipped (cursor, live pill, ask sheet). The **Buddy activity** is kept when it is in front — opening Buddy is a new screen
+- Live used to ignore window events from our package, so opening Buddy left the last app-drawer SCREEN frozen. Scene follow now watches those events too
 - A **pulled-down notification / quick-settings shade** is what they see — we read that System UI window and skip the thin status/nav strips so the model is not blind there
 - Overlay views also set `IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS` so we do not announce ourselves
 - System UI is skipped

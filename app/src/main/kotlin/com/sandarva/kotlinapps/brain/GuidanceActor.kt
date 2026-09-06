@@ -4,6 +4,7 @@ import com.sandarva.kotlinapps.accessibility.BuddyHands
 import com.sandarva.kotlinapps.accessibility.BuddyScreenEyes
 import com.sandarva.kotlinapps.accessibility.BuddyType
 import com.sandarva.kotlinapps.accessibility.FieldTarget
+import com.sandarva.kotlinapps.accessibility.HandReach
 import com.sandarva.kotlinapps.accessibility.ScreenSnapshot
 import com.sandarva.kotlinapps.debug.BuddyLog
 import com.sandarva.kotlinapps.overlay.BuddyCursorController
@@ -104,5 +105,5 @@ object GuidanceActor {
         else -> 0f to 0f
     }
 
-    private const val STEP = 0.36f
+    private const val STEP = HandReach.DRAG
 }

@@ -10,7 +10,7 @@ Buddy opens on a single home surface. `MainActivity` only enables edge-to-edge d
 | `ui/BuddyApp.kt` | Theme, session, home, overlay + access resume hook |
 | `ui/home/HomeScreen.kt` | Assembles backdrop, hero, Start / Stop, and quiet actions |
 | `ui/home/AskBuddySheet.kt` | Type-to-ask panel (typed REST path) |
-| `ui/home/LiveBuddyBar.kt` | Compact live talk chrome |
+| `ui/home/LiveBuddyBar.kt` | Compact live talk pill |
 | `ui/components/BuddyActionButton.kt` | Honey Start and quiet Stop |
 | `session/BuddySessionViewModel.kt` | Facade over hands, eyes, and the Gemini brain |
 | `ui/theme/` | Color, type, motion, Material theme |

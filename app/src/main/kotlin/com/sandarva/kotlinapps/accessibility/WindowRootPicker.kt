@@ -8,8 +8,9 @@ import android.view.accessibility.AccessibilityWindowInfo
 import com.sandarva.kotlinapps.debug.BuddyLog
 
 /**
- * TalkBack-style: the windows the person can actually see.
- * Skip Buddy chrome. Skip the thin status/nav strips. Keep a pulled-down shade.
+ * TalkBack-style: the one screen the person is looking at.
+ * Skip Buddy chrome (overlays, the live pill). Keep the Buddy activity when it is in front.
+ * Do not union the launcher under an open app — that is how we used to “see” the drawer after opening Buddy.
  */
 class WindowRootPicker(private val service: AccessibilityService) {
     fun roots(): List<AccessibilityNodeInfo> {
@@ -24,20 +25,20 @@ class WindowRootPicker(private val service: AccessibilityService) {
             if (!readable(window.type)) continue
             val root = window.root ?: continue
             val pkg = root.packageName?.toString().orEmpty()
-            if (pkg == self) { recycle(root); continue }
+            if (isChrome(window, pkg, screenW, screenH)) { recycle(root); continue }
             when {
-                isCoveringShade(window, pkg, screenW, screenH) -> shade += Candidate(pkg, root)
+                isCoveringShade(window, pkg, screenW, screenH) -> shade += candidate(window, pkg, root)
                 isSystemUi(pkg) -> recycle(root)
-                else -> apps += Candidate(pkg, root)
+                else -> apps += candidate(window, pkg, root)
             }
         }
         val chosen = if (shade.isNotEmpty()) {
             apps.forEach { recycle(it.root) }
             shade
-        } else apps
-        if (chosen.isEmpty()) addFallback(chosen, self, screenW, screenH)
-        BuddyLog.d("Eyes.windows", "raw=${windows.size} kept=${chosen.size} pkgs=${chosen.map { it.pkg }} shade=${shade.size} self=$self")
-        return chosen.map { it.root }
+        } else pickFront(apps)
+        val result = chosen.ifEmpty { fallback(screenW, screenH) }
+        BuddyLog.d("Eyes.windows", "raw=${windows.size} kept=${result.size} pkgs=${result.map { it.pkg }} shade=${shade.size} self=$self")
+        return result.map { it.root }
     }
 
     private fun allWindows(): List<AccessibilityWindowInfo> {
@@ -56,16 +57,43 @@ class WindowRootPicker(private val service: AccessibilityService) {
         return merged
     }
 
-    private fun addFallback(into: ArrayList<Candidate>, self: String, screenW: Int, screenH: Int) {
+    private fun pickFront(apps: ArrayList<Candidate>): List<Candidate> {
+        if (apps.isEmpty()) return emptyList()
+        val focused = apps.filter { it.focused }
+        val pool = focused.ifEmpty { apps.filter { it.active } }.ifEmpty { apps }
+        val top = pool.maxByOrNull { it.layer } ?: return emptyList()
+        val keep = apps.filter { it.pkg == top.pkg }
+        apps.filter { it.pkg != top.pkg }.forEach { recycle(it.root) }
+        return keep
+    }
+
+    private fun fallback(screenW: Int, screenH: Int): List<Candidate> {
+        val into = ArrayList<Candidate>(1)
+        addFallback(into, screenW, screenH)
+        return into
+    }
+
+    private fun addFallback(into: ArrayList<Candidate>, screenW: Int, screenH: Int) {
         val root = service.rootInActiveWindow ?: return
         val pkg = root.packageName?.toString().orEmpty()
-        if (pkg == self) { recycle(root); return }
         if (isSystemUi(pkg) && !isLarge(root, screenW, screenH)) { recycle(root); return }
-        into += Candidate(pkg, root)
+        into += Candidate(pkg, root, 0, focused = true, active = true)
     }
 
     private fun readable(type: Int): Boolean =
         type == AccessibilityWindowInfo.TYPE_APPLICATION || type == AccessibilityWindowInfo.TYPE_SYSTEM
+
+    /** Overlays and slim Buddy chrome — not the Buddy home screen. */
+    private fun isChrome(window: AccessibilityWindowInfo, pkg: String, screenW: Int, screenH: Int): Boolean {
+        if (window.type == AccessibilityWindowInfo.TYPE_ACCESSIBILITY_OVERLAY) return true
+        if (window.type == AccessibilityWindowInfo.TYPE_INPUT_METHOD) return true
+        if (pkg != service.packageName) return false
+        val box = Rect()
+        window.getBoundsInScreen(box)
+        val shortBar = box.height() < screenH * CHROME_H && box.width() > screenW * CHROME_W
+        val tiny = box.width() < screenW * TINY_W && box.height() < screenH * TINY_H
+        return shortBar || tiny
+    }
 
     private fun isCoveringShade(window: AccessibilityWindowInfo, pkg: String, screenW: Int, screenH: Int): Boolean {
         if (!isSystemUi(pkg)) return false
@@ -82,15 +110,28 @@ class WindowRootPicker(private val service: AccessibilityService) {
 
     private fun isSystemUi(pkg: String) = pkg == "com.android.systemui" || pkg.endsWith(".systemui")
 
+    private fun candidate(window: AccessibilityWindowInfo, pkg: String, root: AccessibilityNodeInfo) =
+        Candidate(pkg, root, window.layer, window.isFocused, window.isActive)
+
     private fun recycle(node: AccessibilityNodeInfo) {
         @Suppress("DEPRECATION")
         node.recycle()
     }
 
-    private data class Candidate(val pkg: String, val root: AccessibilityNodeInfo)
+    private data class Candidate(
+        val pkg: String,
+        val root: AccessibilityNodeInfo,
+        val layer: Int,
+        val focused: Boolean,
+        val active: Boolean
+    )
 
     companion object {
         private const val SHADE_MIN_H = 0.35f
         private const val SHADE_MIN_W = 0.55f
+        private const val CHROME_H = 0.34f
+        private const val CHROME_W = 0.40f
+        private const val TINY_W = 0.28f
+        private const val TINY_H = 0.22f
     }
 }

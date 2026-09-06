@@ -4,8 +4,6 @@ import android.content.Context
 import android.graphics.PixelFormat
 import android.view.Gravity
 import android.view.WindowManager
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
 import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.lifecycle.setViewTreeViewModelStoreOwner
@@ -15,11 +13,12 @@ import com.sandarva.kotlinapps.debug.BuddyLog
 import com.sandarva.kotlinapps.ui.home.LiveBuddyBar
 import com.sandarva.kotlinapps.ui.theme.BuddyTheme
 
-/** Small bottom bar while Gemini Live is on. The rest of the screen stays tappable. */
-class LiveOverlayWindow(private val context: Context) {
+/** Compact live pill. WRAP_CONTENT so only the pill eats touches — not a full-width sheet. */
+class LiveOverlayWindow(private val context: Context) : OverlayChrome.Layer {
     private val windowManager = context.getSystemService(WindowManager::class.java)
     private var owner: OverlayComposeOwner? = null
     private var view: ComposeView? = null
+    private var params: WindowManager.LayoutParams? = null
     val isShowing: Boolean get() = view != null
 
     fun show() {
@@ -27,7 +26,7 @@ class LiveOverlayWindow(private val context: Context) {
         val nextOwner = OverlayComposeOwner()
         owner = nextOwner
         val layout = WindowManager.LayoutParams(
-            WindowManager.LayoutParams.MATCH_PARENT,
+            WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             liveFlags(),
@@ -43,25 +42,34 @@ class LiveOverlayWindow(private val context: Context) {
                 BuddyTheme {
                     LiveBuddyBar(
                         onStop = { BuddyBrain.cancel() },
-                        onTypeInstead = { BuddyBrain.openTypeAsk() },
-                        modifier = Modifier.fillMaxWidth()
+                        onTypeInstead = { BuddyBrain.openTypeAsk() }
                     )
                 }
             }
         }
         windowManager.addView(compose, layout)
         view = compose
+        params = layout
+        OverlayChrome.attach(this)
         BuddyLog.d("LiveOverlay", "show")
     }
 
     fun dismiss() {
+        OverlayChrome.detach(this)
         val current = view ?: return
         current.disposeComposition()
         windowManager.removeView(current)
         view = null
+        params = null
         owner?.dispose()
         owner = null
         BuddyLog.d("LiveOverlay", "dismiss")
+    }
+
+    override fun setPassthrough(on: Boolean) {
+        val layout = params ?: return
+        val host = view ?: return
+        windowManager.applyPassthrough(host, layout, on, liveFlags())
     }
 
     private fun liveFlags(): Int =

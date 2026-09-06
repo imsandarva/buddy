@@ -13,7 +13,6 @@ import kotlinx.coroutines.flow.asSharedFlow
  * (app drawer swipe is the same window; TalkBack watches scroll + content for that).
  */
 class ScreenSceneTracker(
-    private val selfPackage: String,
     private val snapshot: () -> ScreenSnapshot
 ) {
     private val main = Handler(Looper.getMainLooper())
@@ -32,8 +31,6 @@ class ScreenSceneTracker(
 
     fun onEvent(event: AccessibilityEvent) {
         if (!watching || !isSceneEvent(event)) return
-        val pkg = event.packageName?.toString().orEmpty()
-        if (pkg == selfPackage) return
         schedule(if (isPageTurn(event)) PAGE_SETTLE_MS else WINDOW_SETTLE_MS)
     }
 

@@ -10,7 +10,7 @@ import com.sandarva.kotlinapps.debug.BuddyLog
 /** System service — composition only. Walking lives in the reader; strokes and typing attach here. */
 class BuddyAccessibilityService : AccessibilityService() {
     private val reader by lazy { AccessibilityTreeReader(this) }
-    private val tracker by lazy { ScreenSceneTracker(packageName) { reader.snapshot() } }
+        private val tracker by lazy { ScreenSceneTracker { reader.snapshot() } }
     private val player by lazy { GesturePlayer(this) }
     private val writer by lazy { FieldWriter(this) }
 

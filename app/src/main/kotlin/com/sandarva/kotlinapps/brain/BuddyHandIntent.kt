@@ -1,5 +1,7 @@
 package com.sandarva.kotlinapps.brain
 
+import com.sandarva.kotlinapps.accessibility.HandReach
+
 /**
  * On-device finger verbs at the current tip.
  * “Tap here” / “hold this” / “drag left” do not need Gemini or a snapshot.
@@ -63,5 +65,5 @@ object BuddyHandIntent {
         Dir(Regex("""\b(up|upward|upwards)\b"""), 0f, -STEP, "Okay — I’ll swipe up.", "Okay — I’ll drag up."),
         Dir(Regex("""\b(down|downward|downwards)\b"""), 0f, STEP, "Okay — I’ll swipe down.", "Okay — I’ll drag down.")
     )
-    private const val STEP = 0.36f
+    private const val STEP = HandReach.DRAG
 }

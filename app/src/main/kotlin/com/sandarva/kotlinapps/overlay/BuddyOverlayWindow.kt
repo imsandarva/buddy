@@ -20,7 +20,7 @@ class BuddyOverlayWindow(
     private val context: Context,
     private val windowType: Int = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
     private val onAsk: () -> Unit = {}
-) : BuddyCursorMover {
+) : BuddyCursorMover, OverlayChrome.Layer {
     private val windowManager = context.getSystemService(WindowManager::class.java)
     private val owner = OverlayComposeOwner()
     private var view: ComposeView? = null
@@ -66,6 +66,7 @@ class BuddyOverlayWindow(
         view = compose
         params = layout
         flight = CursorFlightAnimator(compose, ::currentXY, ::applyPixels)
+        OverlayChrome.attach(this)
     }
 
     fun raise() {
@@ -76,6 +77,7 @@ class BuddyOverlayWindow(
     }
 
     fun dismiss() {
+        OverlayChrome.detach(this)
         cancelFlight()
         OverlaySession.setPressing(false)
         flight = null
@@ -128,10 +130,7 @@ class BuddyOverlayWindow(
     override fun setPassthrough(on: Boolean) {
         val layout = params ?: return
         val host = view ?: return
-        // Android 12+ drops touches through an opaque SAW; fade just enough to stay trusted.
-        layout.flags = if (on) overlayFlags() or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE else overlayFlags()
-        layout.alpha = if (on) PASS_ALPHA else 1f
-        host.post { if (params === layout && view === host) windowManager.updateViewLayout(host, layout) }
+        windowManager.applyPassthrough(host, layout, on, overlayFlags())
     }
 
     override fun animateToNormalized(x: Float, y: Float) {
@@ -221,10 +220,5 @@ class BuddyOverlayWindow(
             WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) flags = flags or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
         return flags
-    }
-
-    companion object {
-        /** At or below [WindowManager.LayoutParams] maximum obscuring opacity so pass-through taps reach the app. */
-        private const val PASS_ALPHA = 0.79f
     }
 }

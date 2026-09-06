@@ -10,7 +10,7 @@ The AI does not inject touches. It calls this API. Finger-like strokes use `Acce
 |------|-----|
 | `tapHere()` / `holdHere()` | Stroke at the current tip |
 | `tapAt(x, y)` / `holdAt(x, y)` | Fly there, then tap or long-press |
-| `swipeHere(dx, dy)` | Quick slide from the tip (`0…1` of the display) |
+| `swipeHere(dx, dy)` | Page swipe across most of the display (launcher pages, not a short flick) |
 | `dragHere(dx, dy)` | Long-press, then slide — rearrange / sliders |
 | `swipeTo` / `dragTo` | From the tip to a pixel |
 | `swipeFromTo` / `dragFromTo` | Fly to the start, then stroke to the end |
@@ -20,7 +20,9 @@ A tap is a short dwell. A hold uses `ViewConfiguration.getLongPressTimeout()` pl
 
 ## Overlay pass-through
 
-The buddy window sits on the tip, so a raw gesture would hit the cursor. Before each stroke the overlay sets `FLAG_NOT_TOUCHABLE` and fades to `0.79` alpha (Android 12+ will drop touches through an opaque system-alert window). The cursor stays visible and presses. Flags restore in `finally`.
+Every Buddy overlay sits above the app, so a raw gesture would hit us. Before each stroke `OverlayChrome` sets `FLAG_NOT_TOUCHABLE` on the cursor, the live pill, and the ask sheet (Voice Access does the same). A tap that used to land on “I’m with you” now reaches the button underneath. Flags restore in `finally`.
+
+A directional swipe is a **page pull** — about 76% of the screen, ~460 ms — so an app-drawer page actually turns. A short flick from the tip cannot do that.
 
 The window slides in a straight line with a drag or swipe so the tip stays on the stroke.
 

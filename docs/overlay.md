@@ -25,7 +25,8 @@ Android will not let a normal app keep a window after a force-stop. Minimize / l
 | `overlay/CursorSurface.kt` | Picks accessibility overlay vs appear-on-top |
 | `overlay/BuddyOverlayWindow.kt` | Small WindowManager view; drag, double-tap, `animateTo`, or pass-through for a stroke |
 | `overlay/AskOverlayWindow.kt` | Full-screen type-to-ask panel |
-| `overlay/LiveOverlayWindow.kt` | Compact Gemini Live bar |
+| `overlay/LiveOverlayWindow.kt` | Compact Gemini Live pill |
+| `overlay/OverlayChrome.kt` | Pass-through for cursor + live + ask during a stroke |
 | `overlay/BuddyCursorController.kt` | Hands API attached while the service runs |
 | `overlay/CursorLanding.kt` | Named spots for `fly_to` |
 | `overlay/CursorFlightAnimator.kt` | Arc flight between points |
@@ -34,7 +35,7 @@ Android will not let a normal app keep a window after a force-stop. Minimize / l
 | `overlay/OverlayComposeOwner.kt` | Lifecycle for Compose without an Activity |
 | `ui/cursor/BuddyCursorHandle.kt` | Grab, jiggle, drag deltas |
 
-Touches outside the cursor pass through (`FLAG_NOT_FOCUSABLE` + `FLAG_NOT_TOUCH_MODAL` + `WRAP_CONTENT`). Double-tap the cursor to talk live — a small bar appears; type-to-ask is a separate overlay. Cursor, live bar, and ask sheet hide from accessibility (`hideFromBuddyEyes`) so they are never “what is on screen.” See `docs/live.md` and `docs/ask.md`.
+Touches outside the cursor pass through (`FLAG_NOT_FOCUSABLE` + `FLAG_NOT_TOUCH_MODAL` + `WRAP_CONTENT`). Double-tap the cursor to talk live — a small pill appears; type-to-ask is a separate overlay. During a stroke, `OverlayChrome` makes every Buddy window pass through so the finger hits the app. Cursor, live pill, and ask sheet hide from accessibility (`hideFromBuddyEyes`) so they are never “what is on screen.” The Buddy **activity** is the screen when they open this app. See `docs/live.md` and `docs/ask.md`.
 
 ## User flow
 

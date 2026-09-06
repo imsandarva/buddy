@@ -14,7 +14,7 @@ The AI does not move the window. It calls this API. Finger drag uses the same wi
 | `nudgeNormalized(dx, dy)` | Slide from the current spot (`0…1`) |
 | `slideToPixels(x, y, ms, onLanded?)` | Straight follow for a drag stroke |
 | `tipPixels()` / `screenPixels()` | Where the tip is now |
-| `setPassthrough(on)` | Let a gesture hit the app under the cursor |
+| `setPassthrough(on)` | Cursor pass-through; hands use `OverlayChrome` for every Buddy window |
 | `playDemo()` | Short hello path — **Watch it move** |
 | `cancelFlight()` | Grab or a new command wins |
 | `isAttached()` | Overlay window is live |

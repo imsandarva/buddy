@@ -29,12 +29,12 @@ We do **not** send those frames. Eyes stay the accessibility SCREEN list (labels
 
 ## It must see what the user sees
 
-The small bar at the bottom while you talk is **our** live chrome (“I’m with you”, **That’s all**, **Type instead**). It is not the type sheet, and it must not become the SCREEN list. The type sheet is a different full-screen overlay and stays closed during Live.
+The small pill at the bottom while you talk is **our** live chrome (“I’m with you”, **That’s all**, **Type instead**). It is WRAP_CONTENT — not a full-width sheet — so buttons beside and above it stay tappable. During a Buddy tap, the pill goes pass-through with the rest of `OverlayChrome`. It is not the type sheet, and it must not become the SCREEN list.
 
 Two things used to make the model describe the Buddy app while you were on the home screen:
 
 1. **A frozen first look.** SCREEN was sent once at `setupComplete`. If talk started in Buddy, then you pressed Home, the model still had the Buddy buttons. Industry voice agents (TalkBack-style window follow, Gemini Live `realtimeInput` text) push a new scene when the foreground app changes.
-2. **Our chrome in the tree.** The live bar is full width, so the old “skip only small overlay windows” rule kept it. Eyes now skip **every** window from our package, hide overlay views from accessibility, and watch window, content, and scroll events so the latest SCREEN is the launcher page, the shade, or the app under the bar — not the last page they swiped away from.
+2. **Our chrome in the tree.** Eyes skip overlay chrome (cursor, live pill, ask sheet) and still read the **Buddy activity** when it is in front. Skipping the whole package made opening Buddy look like the previous app drawer. Scene follow also listens to our package’s window events, so the SCREEN list updates when they come home to Buddy.
 
 After you install this, toggle **Buddy Assistant** off and on once so the new window events are registered.
 
@@ -105,8 +105,9 @@ A spoken tap that then sits still is usually the tree or the tool, not VAD. Voic
 | `brain/live/LiveSpeaker.kt` | 24 kHz jitter-buffered playback |
 | `brain/live/LiveConfig.kt` | Model, rates, voice (`Aoede`) |
 | `brain/GuidanceActor.kt` | Shared executor for REST and Live |
-| `overlay/LiveOverlayWindow.kt` | Compact bottom bar |
-| `ui/home/LiveBuddyBar.kt` | Live chrome |
+| `overlay/LiveOverlayWindow.kt` | WRAP_CONTENT live pill + chrome pass-through |
+| `ui/home/LiveBuddyBar.kt` | Compact live pill |
+| `overlay/OverlayChrome.kt` | All Buddy overlays pass through during a stroke |
 
 API key is still `gemini.api.key` in `local.properties`. The socket uses `?key=` on the Gemini Live URL.
 

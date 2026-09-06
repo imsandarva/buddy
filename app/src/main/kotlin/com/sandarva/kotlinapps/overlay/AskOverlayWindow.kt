@@ -20,10 +20,11 @@ import com.sandarva.kotlinapps.ui.home.AskBuddySheet
 import com.sandarva.kotlinapps.ui.theme.BuddyTheme
 
 /** Full-screen overlay ask panel. Lives in the service so it works over the launcher and other apps. */
-class AskOverlayWindow(private val context: Context) {
+class AskOverlayWindow(private val context: Context) : OverlayChrome.Layer {
     private val windowManager = context.getSystemService(WindowManager::class.java)
     private var owner: OverlayComposeOwner? = null
     private var view: ComposeView? = null
+    private var params: WindowManager.LayoutParams? = null
     val isShowing: Boolean get() = view != null
 
     fun show() {
@@ -64,15 +65,25 @@ class AskOverlayWindow(private val context: Context) {
         }
         windowManager.addView(compose, layout)
         view = compose
+        params = layout
+        OverlayChrome.attach(this)
         BuddyLog.d("AskOverlay", "show")
     }
 
+    override fun setPassthrough(on: Boolean) {
+        val layout = params ?: return
+        val host = view ?: return
+        windowManager.applyPassthrough(host, layout, on, askFlags())
+    }
+
     fun dismiss() {
+        OverlayChrome.detach(this)
         val current = view ?: return
         hideKeyboard(current)
         current.disposeComposition()
         windowManager.removeView(current)
         view = null
+        params = null
         owner?.dispose()
         owner = null
         BuddyLog.d("AskOverlay", "dismiss")

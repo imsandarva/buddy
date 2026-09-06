@@ -67,8 +67,8 @@ class GesturePlayer(private val service: AccessibilityService) {
 
     companion object {
         private const val TAP_MS = 60L
-        private const val SWIPE_MS = 280L
-        private const val DRAG_MS = 420L
+        private const val SWIPE_MS = 460L
+        private const val DRAG_MS = 520L
         private const val HOLD_PAD_MS = 140L
         private const val EDGE = 3f
     }

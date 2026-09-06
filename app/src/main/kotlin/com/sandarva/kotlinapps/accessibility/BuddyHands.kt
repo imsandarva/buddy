@@ -2,6 +2,7 @@ package com.sandarva.kotlinapps.accessibility
 
 import com.sandarva.kotlinapps.debug.BuddyLog
 import com.sandarva.kotlinapps.overlay.BuddyCursorController
+import com.sandarva.kotlinapps.overlay.OverlayChrome
 import com.sandarva.kotlinapps.overlay.OverlaySession
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -12,7 +13,7 @@ import kotlin.coroutines.resume
 
 /**
  * Hands API. The brain asks for a tap, hold, swipe, or drag.
- * The overlay must go pass-through so the stroke hits the app, not the buddy window.
+ * Every Buddy overlay must go pass-through so the stroke hits the app, not us.
  */
 object BuddyHands {
     @Volatile private var player: GesturePlayer? = null
@@ -43,11 +44,18 @@ object BuddyHands {
     }
 
     private suspend fun slideHere(dxNorm: Float, dyNorm: Float, kind: Kind): Boolean {
-        val (x0, y0) = BuddyCursorController.tipPixels() ?: return false
         val screen = BuddyCursorController.screenPixels() ?: return false
-        val x1 = (x0 + screen.first * dxNorm).coerceIn(8f, screen.first - 8f)
-        val y1 = (y0 + screen.second * dyNorm).coerceIn(8f, screen.second - 8f)
-        return stroke(x0, y0, x1, y1, kind)
+        val tip = BuddyCursorController.tipPixels()
+        return if (kind == Kind.Swipe) {
+            val span = HandReach.pageSwipe(screen.first, screen.second, dxNorm, dyNorm, tip)
+            if (!land(span.x0, span.y0)) return false
+            stroke(span.x0, span.y0, span.x1, span.y1, kind)
+        } else {
+            val (x0, y0) = tip ?: return false
+            val x1 = (x0 + screen.first * dxNorm).coerceIn(8f, screen.first - 8f)
+            val y1 = (y0 + screen.second * dyNorm).coerceIn(8f, screen.second - 8f)
+            stroke(x0, y0, x1, y1, kind)
+        }
     }
 
     private suspend fun atTip(block: suspend (Float, Float) -> Boolean): Boolean {
@@ -74,7 +82,7 @@ object BuddyHands {
         }
         BuddyLog.d("Hands.stroke", "kind=$kind from=$x0,$y0 to=$x1,$y1")
         OverlaySession.setPressing(true)
-        BuddyCursorController.setPassthrough(true)
+        OverlayChrome.setPassthrough(true)
         return try {
             delay(PASSTHROUGH_MS)
             val ok = supervisorScope {
@@ -94,7 +102,7 @@ object BuddyHands {
             BuddyLog.d("Hands.stroke", "kind=$kind ok=$ok")
             ok
         } finally {
-            BuddyCursorController.setPassthrough(false)
+            OverlayChrome.setPassthrough(false)
             OverlaySession.setPressing(false)
         }
     }
@@ -111,6 +119,6 @@ object BuddyHands {
     private const val LAND_SETTLE_MS = 40L
     private const val FLIGHT_TIMEOUT_MS = 2400L
     private const val PASSTHROUGH_MS = 48L
-    private const val SWIPE_FOLLOW_MS = 280L
-    private const val DRAG_FOLLOW_MS = 420L
+    private const val SWIPE_FOLLOW_MS = 460L
+    private const val DRAG_FOLLOW_MS = 520L
 }

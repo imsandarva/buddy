@@ -23,7 +23,8 @@ Buddy appears in **Settings → Accessibility → Installed apps** as **Buddy As
 | `accessibility/FieldWriter.kt` | Live field find + set-text / IME / paste |
 | `accessibility/GesturePlayer.kt` | `dispatchGesture` + result callback |
 | `accessibility/GestureStrokes.kt` | Finger-like `GestureDescription`s |
-| `accessibility/WindowRootPicker.kt` | Foreign app windows only (never our package) |
+| `accessibility/WindowRootPicker.kt` | Front content window; skip chrome, keep Buddy activity |
+| `overlay/OverlayChrome.kt` | Pass-through for every Buddy overlay during a stroke |
 | `accessibility/ScreenSceneTracker.kt` | Follows the user’s screen while Live is on |
 | `accessibility/AccessibilityController.kt` | Grant check + settings |
 | `accessibility/AccessibilitySession.kt` | Bound / awaiting grant |
