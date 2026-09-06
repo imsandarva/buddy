@@ -16,7 +16,7 @@ Sliding the buddy around is on-device (`BuddyMoveIntent`) — “move up”, “
 
 1. If they asked the buddy itself to move, fly or nudge locally and speak. No network.
 2. If the ask panel is covering the screen (typed ask), close it and wait a beat so the accessibility tree is the real screen — not the typed field.
-3. Snapshot the active screen (`GuidanceCatalog` — ids and labels, no pixels). Strip a node whose label is the question itself (the ask-field echo).
+3. Snapshot the screen they are looking at (`GuidanceCatalog` — ids and labels, no pixels), including the launcher under the overlay. Strip a node whose label is the question itself.
 4. If the radio is down, say so — do not wait on DNS. Otherwise send the user’s words + that list to Gemini Flash.
 5. Speak `say`. If they asked the buddy to move, fly to `place`. Otherwise fly to `element_id` from **that** snapshot.
 
@@ -49,7 +49,7 @@ Typed Ask snapshotted **while the panel was open**. The text field’s accessibi
 
 The API key is `gemini.api.key` in `local.properties` (gitignored) → `BuildConfig.GEMINI_API_KEY`. Never commit it.
 
-Model: `gemini-3.6-flash` (current Flash for new API keys), then `gemini-3.5-flash-lite` if that call fails. Older 2.x Flash IDs return 404 for new users.
+Model: `gemini-3.5-flash-lite` only.
 
 ## How to try it
 

@@ -15,17 +15,8 @@ class GeminiClient(
     private val http: OkHttpClient = defaultHttp()
 ) {
     suspend fun guide(question: String, catalog: String): GuidancePlan = withContext(Dispatchers.IO) {
-        var lastError: Exception? = null
-        for (model in MODELS) {
-            try {
-                BuddyLog.d("Gemini.post", "model=$model catalogChars=${catalog.length}")
-                return@withContext GeminiTools.parse(post(model, question, catalog))
-            } catch (error: Exception) {
-                BuddyLog.e("Gemini.postFail", "model=$model ${error.message}", error)
-                lastError = error
-            }
-        }
-        throw lastError ?: IllegalStateException("empty")
+        BuddyLog.d("Gemini.post", "model=$MODEL catalogChars=${catalog.length}")
+        return@withContext GeminiTools.parse(post(MODEL, question, catalog))
     }
 
     private fun post(model: String, question: String, catalog: String): String {
@@ -46,7 +37,7 @@ class GeminiClient(
 
     companion object {
         private val JSON = "application/json; charset=utf-8".toMediaType()
-        private val MODELS = listOf("gemini-3.6-flash", "gemini-3.5-flash-lite")
+        private const val MODEL = "gemini-3.5-flash-lite"
 
         fun defaultHttp(): OkHttpClient = OkHttpClient.Builder()
             .connectTimeout(20, TimeUnit.SECONDS)

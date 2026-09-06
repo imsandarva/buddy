@@ -43,7 +43,7 @@ class ScreenTreeWalker(
     }
 
     private fun labelOf(node: AccessibilityNodeInfo, viewId: String?): String? {
-        val raw = sequenceOf(node.text, node.contentDescription, hintOf(node))
+        val raw = sequenceOf(node.text, node.contentDescription, hintOf(node), tooltipOf(node), stateOf(node))
             .map { it?.toString()?.trim() }
             .firstOrNull { !it.isNullOrBlank() }
         if (!raw.isNullOrBlank()) return raw.take(80)
@@ -53,6 +53,12 @@ class ScreenTreeWalker(
 
     private fun hintOf(node: AccessibilityNodeInfo): CharSequence? =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) node.hintText else null
+
+    private fun tooltipOf(node: AccessibilityNodeInfo): CharSequence? =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) node.tooltipText else null
+
+    private fun stateOf(node: AccessibilityNodeInfo): CharSequence? =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) node.stateDescription else null
 
     private fun uniqueId(viewId: String?, label: String): String {
         val base = viewId?.takeIf { it.isNotBlank() } ?: slug(label)
@@ -81,7 +87,7 @@ class ScreenTreeWalker(
     }
 
     companion object {
-        private const val MAX_NODES = 72
+        private const val MAX_NODES = 160
         private const val MAX_DEPTH = 28
 
         fun shortViewId(raw: String?): String? = raw?.substringAfterLast('/')?.takeIf { it.isNotBlank() }

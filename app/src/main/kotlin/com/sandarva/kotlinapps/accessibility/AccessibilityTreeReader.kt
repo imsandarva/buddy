@@ -2,8 +2,8 @@ package com.sandarva.kotlinapps.accessibility
 
 import android.accessibilityservice.AccessibilityService
 import android.view.accessibility.AccessibilityNodeInfo
-import android.view.accessibility.AccessibilityWindowInfo
 import com.sandarva.kotlinapps.R
+import com.sandarva.kotlinapps.debug.BuddyLog
 
 fun interface ScreenReader {
     fun snapshot(): ScreenSnapshot
@@ -11,43 +11,32 @@ fun interface ScreenReader {
 
 /** Eyes implementation bound to the live accessibility service. */
 class AccessibilityTreeReader(private val service: AccessibilityService) : ScreenReader {
+    private val picker = WindowRootPicker(service)
+
     override fun snapshot(): ScreenSnapshot {
         val metrics = service.resources.displayMetrics
         val walker = ScreenTreeWalker(metrics.widthPixels, metrics.heightPixels, service.getString(R.string.buddy_cursor_label))
-        val roots = preferredRoots()
-        if (roots.isEmpty()) return ScreenSnapshot.Empty
-        val nodes = ArrayList<ScreenNode>(48)
+        val roots = picker.roots()
+        if (roots.isEmpty()) {
+            BuddyLog.d("Eyes.snapshot", "empty — no readable windows")
+            return ScreenSnapshot.Empty
+        }
+        val nodes = ArrayList<ScreenNode>(80)
         var pkg: String? = null
+        var pkgNodes = -1
         for (root in roots) {
             val (nextPkg, nextNodes) = walker.collect(root)
-            if (pkg == null) pkg = nextPkg
+            if (nextPkg != null && nextNodes.size > pkgNodes && nextPkg != service.packageName) {
+                pkg = nextPkg
+                pkgNodes = nextNodes.size
+            } else if (pkg == null) pkg = nextPkg
             nodes += nextNodes
             recycle(root)
         }
-        return ScreenSnapshot(pkg, nodes.distinctBy { it.id })
+        val snap = ScreenSnapshot(pkg, nodes.distinctBy { it.id })
+        BuddyLog.d("Eyes.snapshot", "pkg=${snap.packageName} nodes=${snap.nodes.size} ids=${snap.nodes.take(16).joinToString { it.id }}")
+        return snap
     }
-
-    private fun preferredRoots(): List<AccessibilityNodeInfo> {
-        val windows = service.windows
-        if (windows.isNullOrEmpty()) return listOfNotNull(service.rootInActiveWindow)
-        val apps = ArrayList<Pair<Boolean, AccessibilityNodeInfo>>(windows.size)
-        for (window in windows) {
-            if (window.type != AccessibilityWindowInfo.TYPE_APPLICATION) continue
-            val root = window.root ?: continue
-            val pkg = root.packageName?.toString().orEmpty()
-            if (isSystemUi(pkg)) {
-                recycle(root)
-                continue
-            }
-            apps += window.isActive to root
-        }
-        val active = apps.filter { it.first }
-        val chosen = active.ifEmpty { apps }
-        if (active.isNotEmpty()) apps.filter { !it.first }.forEach { recycle(it.second) }
-        return chosen.map { it.second }
-    }
-
-    private fun isSystemUi(pkg: String) = pkg == "com.android.systemui" || pkg.endsWith(".systemui")
 
     private fun recycle(node: AccessibilityNodeInfo) {
         @Suppress("DEPRECATION")

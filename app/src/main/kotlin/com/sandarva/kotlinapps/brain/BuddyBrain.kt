@@ -70,12 +70,12 @@ object BuddyBrain {
             voice.cancelListen()
             sessionActive = true
             reopenAskOnFail = true
-            val snap = BuddyScreenEyes.snapshot()
+            val early = BuddyScreenEyes.snapshot()
             BrainSession.setAskOpen(true)
             BrainSession.setNote(if (mic) null else app.getString(R.string.ask_type_only))
             if (mic) {
                 BrainSession.setPhase(BrainPhase.Listening)
-                voice.listen(onText = { think(it) { snap } }, onFailed = ::failListen)
+                voice.listen(onText = { think(it) { richerSnap(early) } }, onFailed = ::failListen)
             } else {
                 BrainSession.setPhase(BrainPhase.Idle)
             }
@@ -119,6 +119,12 @@ object BuddyBrain {
                     failQuiet(if (Reachability.isNetworkFailure(error)) OFFLINE_NOTE else THINK_FAIL_NOTE)
                 }
             }
+        }
+
+        /** Prefer the live tree (launcher under the ask overlay) over a tap-time empty snap. */
+        private fun richerSnap(early: ScreenSnapshot): ScreenSnapshot {
+            val live = BuddyScreenEyes.snapshot()
+            return if (live.nodes.size >= early.nodes.size) live else early
         }
 
         private fun tryLocalMove(question: String): Boolean {

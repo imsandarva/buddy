@@ -18,6 +18,7 @@ Performing taps is still later (`canPerformGestures` is declared, unused).
 | File | Role |
 |------|------|
 | `accessibility/BuddyAccessibilityService.kt` | System service; attaches eyes when enabled |
+| `accessibility/WindowRootPicker.kt` | Which windows to walk (skip our overlay) |
 | `accessibility/AccessibilityController.kt` | Grant check + settings |
 | `accessibility/AccessibilitySession.kt` | Bound / awaiting grant |
 | `res/xml/accessibility_service_config.xml` | Read tree, interactive windows, view ids |
@@ -34,7 +35,7 @@ See `docs/eyes.md` for the snapshot API.
 ## Capabilities enabled
 
 - `canRetrieveWindowContent` — read the on-screen UI tree.
-- `flagRetrieveInteractiveWindows` — snapshot the active app, not the shade.
+- `flagRetrieveInteractiveWindows` — read every interactive window, including the launcher under the overlay.
 - `flagReportViewIds` — stable ids when the app provides them.
 - `canPerformGestures` — tap/swipe later.
 
@@ -42,4 +43,4 @@ See `docs/eyes.md` for the snapshot API.
 
 - Rebuild and reinstall after manifest or service changes for the entry to appear in Settings.
 - Snapshots run only when asked. Window events are ignored so the service stays cheap.
-- Do not snapshot while the ask panel is covering the screen — the catalog becomes the panel (and the typed question).
+- The overlay is often the active window after a tap. Eyes skip our chrome and still read the launcher or the app underneath.

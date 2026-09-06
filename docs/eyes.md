@@ -25,6 +25,7 @@ Pixels stay in the app. Gemini’s `point_to(element_id)` resolves through this 
 | `accessibility/ScreenSnapshot.kt` | Immutable `ScreenNode` / bounds |
 | `accessibility/ScreenTreeWalker.kt` | Walk + recycle live nodes |
 | `accessibility/AccessibilityTreeReader.kt` | Bound to the system service |
+| `accessibility/WindowRootPicker.kt` | Which windows to walk |
 | `accessibility/GuidePicker.kt` | Chooses one control for the debug tap |
 | `accessibility/AccessibilitySession.kt` | Bound / granted / awaiting |
 | `accessibility/AccessibilityController.kt` | Reads Settings, opens Buddy Assistant |
@@ -32,7 +33,9 @@ Pixels stay in the app. Gemini’s `point_to(element_id)` resolves through this 
 
 ## What is snapshotted
 
-- Application windows only, active first; System UI is skipped
+- Every real app window, not only the “active” one (the overlay is often active after a double-tap)
+- Our own overlay (the cursor, and the ask panel when another app is visible) is skipped
+- System UI is skipped
 - Visible nodes with a label (text, description, hint, or a clickable view id)
 - The Buddy cursor label is skipped
 - Full-screen chrome is skipped
@@ -45,6 +48,6 @@ Ids prefer the short view id (`date_time_settings`), then a slug of the label. D
 
 1. Start the buddy, then tap **Let me see your screen** and turn on **Buddy Assistant**.
 2. **Point at something** in the app flies to a control on this screen.
-3. Open Settings (leave Buddy). In the notification, tap **Point at something** — after the shade closes, the cursor flies to a row such as Date & time.
+3. Go to the home screen or app drawer. Double-tap the cursor and ask it to point at an app — it should fly to that icon.
 
 See `docs/accessibility.md` and `docs/cursor-hands.md`.
