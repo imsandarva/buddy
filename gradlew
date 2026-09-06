@@ -89,6 +89,38 @@ APP_BASE_NAME=${0##*/}
 APP_HOME=$( cd -P "${APP_HOME:-./}" > /dev/null && printf '%s
 ' "$PWD" ) || exit
 
+# Cursor sandbox remaps GRADLE_USER_HOME to /tmp/cursor-sandbox-cache/... so the
+# wrapper re-downloads Gradle even when ~/.gradle already has the distribution.
+# Keep the hash dir writable (for .lck) and symlink the unpacked tree + .ok marker.
+if [ -n "${GRADLE_USER_HOME:-}" ] && [ -d "${HOME}/.gradle/wrapper/dists" ]; then
+    case "$GRADLE_USER_HOME" in
+        "${HOME}/.gradle"|"${HOME}/.gradle/") ;;
+        *)
+            mkdir -p "$GRADLE_USER_HOME/wrapper/dists"
+            for dist in "${HOME}/.gradle/wrapper/dists"/gradle-*; do
+                [ -d "$dist" ] || continue
+                name=${dist##*/}
+                dest_root="$GRADLE_USER_HOME/wrapper/dists/$name"
+                if [ -L "$dest_root" ]; then rm -f "$dest_root"; fi
+                mkdir -p "$dest_root"
+                for hash in "$dist"/*; do
+                    [ -d "$hash" ] || continue
+                    dest_hash="$dest_root/${hash##*/}"
+                    mkdir -p "$dest_hash"
+                    for item in "$hash"/*; do
+                        [ -e "$item" ] || continue
+                        base=${item##*/}
+                        case "$base" in *.lck) continue ;; esac
+                        if [ ! -e "$dest_hash/$base" ]; then
+                            ln -s "$item" "$dest_hash/$base" 2>/dev/null || true
+                        fi
+                    done
+                done
+            done
+            ;;
+    esac
+fi
+
 # Use the maximum available, or set MAX_FD != -1 to use that value.
 MAX_FD=maximum
 

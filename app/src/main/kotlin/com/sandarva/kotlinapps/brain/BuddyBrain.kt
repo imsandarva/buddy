@@ -10,6 +10,7 @@ import com.sandarva.kotlinapps.accessibility.BuddyHands
 import com.sandarva.kotlinapps.accessibility.BuddyScreenEyes
 import com.sandarva.kotlinapps.accessibility.BuddyType
 import com.sandarva.kotlinapps.accessibility.ScreenSnapshot
+import com.sandarva.kotlinapps.accessibility.awaitReadableSnapshot
 import com.sandarva.kotlinapps.brain.live.BuddyLive
 import com.sandarva.kotlinapps.debug.BuddyLog
 import com.sandarva.kotlinapps.overlay.BuddyCursorController
@@ -140,7 +141,7 @@ object BuddyBrain {
                     failQuiet(OFFLINE_NOTE)
                     return@launch
                 }
-                val snap = GuidanceCatalog.forModel(BuddyScreenEyes.snapshot(), question)
+                val snap = GuidanceCatalog.forModel(awaitReadableSnapshot(), question)
                 BuddyLog.d("Brain.runGuide", "q=\"${question.take(80)}\" nodes=${snap.nodes.size} pkg=${snap.packageName} ids=${snap.nodes.take(12).joinToString { it.id }} hands=${BuddyCursorController.isAttached()}")
                 try {
                     val plan = gemini.guide(question, GuidanceCatalog.format(snap))

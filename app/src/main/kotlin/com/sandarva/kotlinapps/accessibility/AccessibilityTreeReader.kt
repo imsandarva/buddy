@@ -1,7 +1,6 @@
 package com.sandarva.kotlinapps.accessibility
 
 import android.accessibilityservice.AccessibilityService
-import android.view.accessibility.AccessibilityNodeInfo
 import com.sandarva.kotlinapps.R
 import com.sandarva.kotlinapps.debug.BuddyLog
 
@@ -24,22 +23,19 @@ class AccessibilityTreeReader(private val service: AccessibilityService) : Scree
         val nodes = ArrayList<ScreenNode>(80)
         var pkg: String? = null
         var pkgNodes = -1
+        var children = 0
         for (root in roots) {
+            children += root.childCount
             val (nextPkg, nextNodes) = walker.collect(root)
             if (nextPkg != null && nextNodes.size > pkgNodes && nextPkg != service.packageName) {
                 pkg = nextPkg
                 pkgNodes = nextNodes.size
             } else if (pkg == null) pkg = nextPkg
             nodes += nextNodes
-            recycle(root)
+            AccessibilityNodes.recycle(root)
         }
         val snap = ScreenSnapshot(pkg, nodes.distinctBy { it.id })
-        BuddyLog.d("Eyes.snapshot", "pkg=${snap.packageName} nodes=${snap.nodes.size} ids=${snap.nodes.take(16).joinToString { it.id }}")
+        BuddyLog.d("Eyes.snapshot", "pkg=${snap.packageName} nodes=${snap.nodes.size} children=$children ids=${snap.nodes.take(16).joinToString { it.id }}")
         return snap
-    }
-
-    private fun recycle(node: AccessibilityNodeInfo) {
-        @Suppress("DEPRECATION")
-        node.recycle()
     }
 }

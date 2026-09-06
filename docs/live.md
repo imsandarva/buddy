@@ -92,12 +92,15 @@ Live tools ran on the main thread: a full accessibility walk, then fly + tap (up
 
 A spoken tap that then sits still is usually the tree or the tool, not VAD. Voice gap after they stop talking should now be a short silence (about 220 ms) plus model start, not a multi-second think.
 
+After a tap that opens another app, the first accessibility tree is often empty (`Eyes.snapshot … nodes=0`). We wait and retry (same idea as UI Automator’s new-window wait) so the tool’s SCREEN list is the new app, not “(nothing readable)”.
+
 ## Composition
 
 | File | Role |
 |------|------|
 | `brain/live/BuddyLive.kt` | Session facade — start / stop / tools / follow screen |
 | `accessibility/ScreenSceneTracker.kt` | Debounced window follow while Live is on |
+| `accessibility/ScreenReady.kt` | Wait for a readable in-app tree after a tool |
 | `brain/live/LiveSocket.kt` | OkHttp WebSocket (text + binary JSON, decode off the reader) |
 | `brain/live/LiveMessages.kt` | Setup, audio, catalog, toolResponse JSON |
 | `brain/live/LiveAudio.kt` | Shared session + AEC / NS / AGC |

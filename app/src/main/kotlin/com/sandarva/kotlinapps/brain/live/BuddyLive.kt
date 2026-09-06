@@ -4,6 +4,7 @@ import android.app.Application
 import com.sandarva.kotlinapps.BuildConfig
 import com.sandarva.kotlinapps.accessibility.BuddyScreenEyes
 import com.sandarva.kotlinapps.accessibility.ScreenSnapshot
+import com.sandarva.kotlinapps.accessibility.awaitReadableSnapshot
 import com.sandarva.kotlinapps.accessibility.sceneKey
 import com.sandarva.kotlinapps.brain.BrainPhase
 import com.sandarva.kotlinapps.brain.BrainSession
@@ -71,7 +72,7 @@ object BuddyLive {
                 override fun onSetupComplete() {
                     if (id != gen) return
                     startMic()
-                    scope.launch { pushCatalog() }
+                    scope.launch { pushCatalog(awaitReadableSnapshot()) }
                     followJob?.cancel()
                     followJob = scope.launch { followScreen(id) }
                 }
@@ -131,7 +132,7 @@ object BuddyLive {
                 BuddyLog.d("Live.tool", "name=${call.name} id=${call.id}")
                 val result = GuidanceActor.run(plan, snap)
                 delay(TREE_SETTLE_MS)
-                val after = BuddyScreenEyes.snapshot()
+                val after = awaitReadableSnapshot()
                 lastScene = after.sceneKey()
                 socket?.send(LiveMessages.toolResponse(call.id, call.name, result, GuidanceCatalog.format(after, LIVE_CATALOG)))
             }
@@ -166,7 +167,7 @@ object BuddyLive {
         }
 
         companion object {
-            private const val TREE_SETTLE_MS = 220L
+            private const val TREE_SETTLE_MS = 400L
             private const val SETUP_WAIT_MS = 12_000L
             private const val LIVE_CATALOG = 72
         }

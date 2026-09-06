@@ -52,7 +52,7 @@ class FieldWriter(private val service: AccessibilityService) {
             if (imeCommit(text)) return true
             return paste(node, text)
         } finally {
-            recycle(node)
+            AccessibilityNodes.recycle(node)
         }
     }
 
@@ -65,7 +65,7 @@ class FieldWriter(private val service: AccessibilityService) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && imeAction()) return true
             return node?.performAction(AccessibilityNodeInfo.ACTION_CLICK) == true
         } finally {
-            if (node != null) recycle(node)
+            if (node != null) AccessibilityNodes.recycle(node)
         }
     }
 
@@ -112,19 +112,19 @@ class FieldWriter(private val service: AccessibilityService) {
         for (root in roots) collect(root, fields)
         val tip = BuddyCursorController.tipPixels()
         val hit = pick(fields, target, tip)
-        val keep = hit?.let { AccessibilityNodeInfo.obtain(it.node) }
-        for (field in fields) recycle(field.node)
-        for (root in roots) recycle(root)
+        val keep = hit?.let { AccessibilityNodes.copy(it.node) }
+        for (field in fields) AccessibilityNodes.recycle(field.node)
+        for (root in roots) AccessibilityNodes.recycle(root)
         return keep
     }
 
     private fun collect(node: AccessibilityNodeInfo, into: ArrayList<LiveField>) {
-        if (node.isVisibleToUser && canType(node)) {
+        if (canType(node)) {
             node.getBoundsInScreen(box)
             if (box.width() >= 8 && box.height() >= 8) {
                 val viewId = ScreenTreeWalker.shortViewId(node.viewIdResourceName)
                 into += LiveField(
-                    node = AccessibilityNodeInfo.obtain(node),
+                    node = AccessibilityNodes.copy(node),
                     id = viewId?.takeIf { it.isNotBlank() } ?: ScreenTreeWalker.slug(labelOf(node, viewId)),
                     viewId = viewId,
                     bounds = ScreenBounds(box.left, box.top, box.right, box.bottom),
@@ -134,9 +134,9 @@ class FieldWriter(private val service: AccessibilityService) {
         }
         val count = node.childCount
         for (i in 0 until count) {
-            val child = node.getChild(i) ?: continue
+            val child = AccessibilityNodes.child(node, i) ?: continue
             collect(child, into)
-            recycle(child)
+            AccessibilityNodes.recycle(child)
         }
     }
 
@@ -180,11 +180,6 @@ class FieldWriter(private val service: AccessibilityService) {
         val run = Runnable { if (cont.isActive) cont.resume(block()) }
         if (Looper.myLooper() == Looper.getMainLooper()) run.run() else main.post(run)
         cont.invokeOnCancellation { main.removeCallbacks(run) }
-    }
-
-    private fun recycle(node: AccessibilityNodeInfo) {
-        @Suppress("DEPRECATION")
-        node.recycle()
     }
 
     private data class LiveField(

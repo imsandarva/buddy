@@ -24,8 +24,10 @@ Buddy appears in **Settings → Accessibility → Installed apps** as **Buddy As
 | `accessibility/GesturePlayer.kt` | `dispatchGesture` + result callback |
 | `accessibility/GestureStrokes.kt` | Finger-like `GestureDescription`s |
 | `accessibility/WindowRootPicker.kt` | Front content window; skip chrome, keep Buddy activity |
+| `accessibility/AccessibilityNodes.kt` | Prefetch a complete tree; do not recycle on API 33+ |
+| `accessibility/ScreenReady.kt` | Wait for controls after an app switch |
 | `overlay/OverlayChrome.kt` | Pass-through for every Buddy overlay during a stroke |
-| `accessibility/ScreenSceneTracker.kt` | Follows the user’s screen while Live is on |
+| `accessibility/ScreenSceneTracker.kt` | Follows the user’s screen while Live is on; retries an empty in-app tree |
 | `accessibility/AccessibilityController.kt` | Grant check + settings |
 | `accessibility/AccessibilitySession.kt` | Bound / awaiting grant |
 | `res/xml/accessibility_service_config.xml` | Read tree, interactive windows, view ids |
@@ -52,6 +54,7 @@ See `docs/eyes.md` for the snapshot API.
 
 - Rebuild and reinstall after manifest or service changes for the entry to appear in Settings.
 - Snapshots stay on demand unless Live is watching — then window, content, and scroll events (debounced) refresh the SCREEN list so the model follows a new app **and** a new page in the same app (app drawer swipe).
+- Opening an app used to send `On screen: (nothing readable)` because the first tree after `WINDOW_STATE_CHANGED` is empty and Compose nodes were dropped. Eyes now prefetch, wait, and keep on-screen controls so Gemini can see inside the app.
 - The overlay is often the active window after a tap. Eyes skip **all** of our package and still read the launcher or the app underneath.
 - Pulling down the shade is a covering System UI window. Eyes keep that panel (Wi‑Fi, tiles, notifications) and skip the slim status bar. The cursor uses `TYPE_ACCESSIBILITY_OVERLAY` while Buddy Assistant is on so it stays above the shade.
 - Rebuild and toggle **Buddy Assistant** after service-config changes so `typeWindowsChanged` is delivered.

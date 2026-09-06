@@ -4,7 +4,7 @@ import android.graphics.Rect
 import android.os.Build
 import android.view.accessibility.AccessibilityNodeInfo
 
-/** Walks a live tree into value objects, then recycles every node. */
+/** Walks a live tree into value objects. Recycle is only for pre-API 33 pools. */
 class ScreenTreeWalker(
     private val screenW: Int,
     private val screenH: Int,
@@ -24,23 +24,36 @@ class ScreenTreeWalker(
         consider(node, into)
         val count = node.childCount
         for (i in 0 until count) {
-            val child = node.getChild(i) ?: continue
+            val child = AccessibilityNodes.child(node, i) ?: continue
             walk(child, into, depth + 1)
-            recycle(child)
+            AccessibilityNodes.recycle(child)
         }
     }
 
     private fun consider(node: AccessibilityNodeInfo, into: ArrayList<ScreenNode>) {
-        if (!node.isVisibleToUser) return
+        if (!shown(node)) return
         node.getBoundsInScreen(rect)
         val bounds = ScreenBounds(rect.left, rect.top, rect.right, rect.bottom)
         if (bounds.width < 8 || bounds.height < 8) return
-        if (isChrome(bounds)) return
         val viewId = shortViewId(node.viewIdResourceName)
         val editable = node.isEditable || node.actionList.any { it.id == AccessibilityNodeInfo.ACTION_SET_TEXT }
-        val label = labelOf(node, viewId) ?: if (editable) "text field" else return
+        val clickable = node.isClickable || node.isCheckable
+        val label = labelOf(node, viewId) ?: when {
+            editable -> "text field"
+            clickable -> viewId?.replace('_', ' ') ?: roleLabel(node)
+            else -> return
+        }
+        if (isBlankChrome(bounds, clickable, editable)) return
         if (label.equals(skipLabel, ignoreCase = true)) return
-        into += ScreenNode(uniqueId(viewId, label), label, bounds, node.isClickable, viewId, editable)
+        into += ScreenNode(uniqueId(viewId, label), label, bounds, clickable, viewId, editable)
+    }
+
+    /** Compose / OEM overlays often lie with isVisibleToUser — Voice Access uses on-screen bounds too. */
+    private fun shown(node: AccessibilityNodeInfo): Boolean {
+        if (node.isVisibleToUser) return true
+        node.getBoundsInScreen(rect)
+        return rect.width() >= 8 && rect.height() >= 8 &&
+            rect.left < screenW && rect.top < screenH && rect.right > 0 && rect.bottom > 0
     }
 
     private fun labelOf(node: AccessibilityNodeInfo, viewId: String?): String? {
@@ -69,11 +82,21 @@ class ScreenTreeWalker(
         return "${base}_$n"
     }
 
-    private fun isChrome(bounds: ScreenBounds): Boolean {
+    private fun isBlankChrome(bounds: ScreenBounds, clickable: Boolean, editable: Boolean): Boolean {
+        if (clickable || editable) return false
         if (screenW <= 0 || screenH <= 0) return false
-        val coversWidth = bounds.width > screenW * 0.92f
-        val coversHeight = bounds.height > screenH * 0.55f
-        return coversWidth && coversHeight
+        return bounds.width > screenW * 0.92f && bounds.height > screenH * 0.55f
+    }
+
+    private fun roleLabel(node: AccessibilityNodeInfo): String {
+        val simple = node.className?.toString()?.substringAfterLast('.') ?: return "control"
+        val spaced = buildString(simple.length + 4) {
+            simple.forEachIndexed { i, ch ->
+                if (i > 0 && ch.isUpperCase()) append(' ')
+                append(ch.lowercaseChar())
+            }
+        }
+        return spaced.ifBlank { "control" }
     }
 
     private fun collapse(nodes: List<ScreenNode>): List<ScreenNode> = nodes.filter { node ->
@@ -81,11 +104,6 @@ class ScreenTreeWalker(
         nodes.none { other ->
             other.id != node.id && other.label == node.label && other.clickable && !node.clickable && other.bounds.contains(node.bounds)
         }
-    }
-
-    private fun recycle(node: AccessibilityNodeInfo) {
-        @Suppress("DEPRECATION")
-        node.recycle()
     }
 
     companion object {

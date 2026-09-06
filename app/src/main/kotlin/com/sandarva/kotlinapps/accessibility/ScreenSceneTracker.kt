@@ -20,12 +20,14 @@ class ScreenSceneTracker(
     val scenes: SharedFlow<ScreenSnapshot> = _scenes.asSharedFlow()
     @Volatile private var watching = false
     @Volatile private var lastKey = ""
+    private var emptyTries = 0
 
     fun setWatching(on: Boolean) {
         watching = on
         if (on) schedule(0) else {
             main.removeCallbacksAndMessages(null)
             lastKey = ""
+            emptyTries = 0
         }
     }
 
@@ -38,6 +40,7 @@ class ScreenSceneTracker(
         watching = false
         main.removeCallbacksAndMessages(null)
         lastKey = ""
+        emptyTries = 0
     }
 
     private fun schedule(delayMs: Long) {
@@ -48,6 +51,13 @@ class ScreenSceneTracker(
     private val flush = Runnable {
         if (!watching) return@Runnable
         val snap = snapshot()
+        if (snap.nodes.isEmpty() && emptyTries < EMPTY_RETRY_MAX) {
+            emptyTries += 1
+            BuddyLog.d("Eyes.scene", "empty retry=$emptyTries pkg=${snap.packageName}")
+            schedule(EMPTY_RETRY_MS)
+            return@Runnable
+        }
+        emptyTries = 0
         val key = snap.sceneKey()
         if (key == lastKey) return@Runnable
         lastKey = key
@@ -58,7 +68,9 @@ class ScreenSceneTracker(
     companion object {
         /** Wait for a swipe/page animation to finish before reading the new icons. */
         private const val PAGE_SETTLE_MS = 380L
-        private const val WINDOW_SETTLE_MS = 220L
+        private const val WINDOW_SETTLE_MS = 560L
+        private const val EMPTY_RETRY_MS = 320L
+        private const val EMPTY_RETRY_MAX = 4
 
         private fun isSceneEvent(event: AccessibilityEvent): Boolean {
             val t = event.eventType
