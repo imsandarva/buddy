@@ -10,19 +10,21 @@ The model does not move the cursor and does not walk the tree. It returns tools.
 | `tap(element_id?)` | Fly to that control (or the tip), then a real tap |
 | `hold(element_id?)` | Fly, then long-press |
 | `swipe` / `drag` | Quick slide, or hold-then-slide |
+| `type(text, element_id?, submit?)` | Fill a text field, optionally press Search / Send |
 
 `place` is a named spot (`top_left`, `center`, …), not pixels. Not Computer Use. **Live** is a second brain adapter on these same tools (except `say` — Live speaks with native audio). See `docs/live.md`.
 
-Sliding the buddy around is on-device (`BuddyMoveIntent`) — “move up”, “go to the top left”. Tap / hold / swipe / drag at the current tip is also on-device (`BuddyHandIntent`) — “tap”, “hold this”, “swipe left”. Gemini is for named controls (“tap Wi‑Fi”). A DNS miss cannot block a nudge or a tap-here.
+Sliding the buddy around is on-device (`BuddyMoveIntent`) — “move up”, “go to the top left”. Tap / hold / swipe / drag at the current tip is also on-device (`BuddyHandIntent`) — “tap”, “hold this”, “swipe left”. “Type hello” / “search for pizza” / “press enter” is on-device (`BuddyTypeIntent`). Gemini is for named controls (“tap Wi‑Fi”, “type pizza in the search box”). A DNS miss cannot block a nudge, a tap-here, or a type-here.
 
 ## Flow
 
 1. If they asked the buddy itself to move, fly or nudge locally and speak. No network.
-2. If they asked to tap / hold / swipe / drag *here*, do that locally. No network.
-3. Spoken or typed: close the ask panel first and wait a beat. A voice tap used to land on the still-open sheet (scrim dismiss → job cancel). The sheet must be gone before eyes or hands run.
-4. Snapshot the screen they are looking at (`GuidanceCatalog` — ids and labels, no pixels), including the launcher under the overlay. Strip a node whose label is the question itself.
-5. If the radio is down, say so — do not wait on DNS. Otherwise send the user’s words + that list to Gemini Flash.
-6. Speak `say`. Then fly, point, or perform the hand stroke on **that** snapshot.
+2. If they asked to type, search, or press enter *here*, do that locally. No network.
+3. If they asked to tap / hold / swipe / drag *here*, do that locally. No network.
+4. Spoken or typed: close the ask panel first and wait a beat. A voice tap used to land on the still-open sheet (scrim dismiss → job cancel). The sheet must be gone before eyes, hands, or type run.
+5. Snapshot the screen they are looking at (`GuidanceCatalog` — ids and labels, no pixels), including the launcher under the overlay. Strip a node whose label is the question itself. Text fields are marked `type`.
+6. If the radio is down, say so — do not wait on DNS. Otherwise send the user’s words + that list to Gemini Flash.
+7. Speak `say`. Then fly, point, type, or perform the hand stroke on **that** snapshot.
 
 Typed send cancels leftover listening so a later STT miss cannot overwrite a real error.
 
@@ -44,14 +46,16 @@ Typed Ask snapshotted **while the panel was open**. The text field’s accessibi
 |------|------|
 | `brain/BuddyBrain.kt` | Orchestrator |
 | `brain/GeminiClient.kt` | Gemini Developer API (REST) |
-| `brain/GeminiTools.kt` | `say` / `point_to` / `fly_to` / `tap` / `hold` / `swipe` / `drag` |
+| `brain/GeminiTools.kt` | `say` / `point_to` / `fly_to` / `tap` / `hold` / `swipe` / `drag` / `type` |
 | `brain/GuidancePrompt.kt` | System + user prompt |
 | `brain/GuidanceCatalog.kt` | Snapshot → compact list |
-| `brain/GuidancePlan.kt` | `say` + `element_id` + `place` + `hand` |
+| `brain/GuidancePlan.kt` | `say` + `element_id` + `place` + `hand` + `type` |
 | `brain/HandPlan.kt` | Tap / hold / stroke from the model |
-| `brain/GuidanceActor.kt` | Shared tap / fly / point executor |
+| `brain/TypePlan.kt` | Text + field id + submit from the model |
+| `brain/GuidanceActor.kt` | Shared tap / fly / point / type executor |
 | `brain/live/` | Gemini Live WebSocket + jitter-buffered speaker + AEC mic + screen follow |
 | `brain/BuddyHandIntent.kt` | On-device “tap / hold / swipe left” |
+| `brain/BuddyTypeIntent.kt` | On-device “type hello” / “search for pizza” |
 | `brain/Reachability.kt` | Online check + network-error detect |
 | `brain/BuddyVoice.kt` | STT + TTS |
 | `brain/BrainSession.kt` | Listening / thinking / ask sheet |
@@ -69,9 +73,10 @@ Model (REST): `gemini-3.5-flash-lite` only. Model (Live): `gemini-3.1-flash-live
 1. Start the buddy, turn on **Buddy Assistant**, allow the microphone once via **Ask buddy**.
 2. Leave the app. Double-tap the cursor — a live talk starts (or the type sheet if the mic is off).
 3. Speak naturally. Ask “open Calculator” — Gemini should talk, then tap. Type still uses the old one-shot ask.
-3. Ask “move up” or “move to the top-left” — the cursor should fly even with no internet.
-4. Ask “tap” or “hold this” — it should press where it is. Ask “tap Wi‑Fi” on a list — it should fly there and tap.
-5. Ask something on this screen (or type it) — Buddy should speak and point or tap a real control, not the ask field.
-6. Open Settings, pull the notification, tap **Ask buddy**. After the shade closes it asks what you need, then points, taps, or speaks.
+4. Ask “move up” or “move to the top-left” — the cursor should fly even with no internet.
+5. Ask “tap” or “hold this” — it should press where it is. Ask “tap Wi‑Fi” on a list — it should fly there and tap.
+6. Open a search box and ask “type hello” — it should fill the field. Ask “search for pizza” — it should type and press search.
+7. Ask something on this screen (or type it) — Buddy should speak and point or tap a real control, not the ask field.
+8. Open Settings, pull the notification, tap **Ask buddy**. After the shade closes it asks what you need, then points, taps, types, or speaks.
 
-See `docs/eyes.md`, `docs/cursor-hands.md`, and `docs/hands.md`.
+See `docs/eyes.md`, `docs/cursor-hands.md`, `docs/hands.md`, and `docs/type.md`.

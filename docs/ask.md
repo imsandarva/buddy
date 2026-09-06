@@ -7,7 +7,7 @@ The ask panel lives in the overlay service, not in the Buddy activity. That is t
 1. Double-tap the buddy cursor — on the home screen, in Settings, in another app.
 2. With the microphone on, that starts a **live talk** — audio in and audio out, no captions. A small bar stays at the bottom so the screen is still tappable; that bar is not the type sheet and is hidden from eyes. If live cannot start, the type sheet opens instead — see `docs/live.md`.
 3. Or choose **Type instead** / type in the sheet — that still uses the one-shot chat API.
-4. Buddy flies, points, speaks, or taps / holds / drags.
+4. Buddy flies, points, speaks, taps / holds / drags, or types.
 
 **Ask buddy** in the app and **Ask buddy** on the notification use this same panel.
 

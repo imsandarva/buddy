@@ -8,6 +8,7 @@ import com.sandarva.kotlinapps.BuildConfig
 import com.sandarva.kotlinapps.R
 import com.sandarva.kotlinapps.accessibility.BuddyHands
 import com.sandarva.kotlinapps.accessibility.BuddyScreenEyes
+import com.sandarva.kotlinapps.accessibility.BuddyType
 import com.sandarva.kotlinapps.accessibility.ScreenSnapshot
 import com.sandarva.kotlinapps.brain.live.BuddyLive
 import com.sandarva.kotlinapps.debug.BuddyLog
@@ -129,6 +130,7 @@ object BuddyBrain {
                 delay(TREE_SETTLE_MS)
                 if (!sessionActive) return@launch
                 if (tryLocalMove(question)) return@launch
+                if (tryLocalType(question)) return@launch
                 if (tryLocalHand(question)) return@launch
                 if (BuildConfig.GEMINI_API_KEY.isBlank()) {
                     failQuiet("I don’t have a way to think yet.")
@@ -142,7 +144,7 @@ object BuddyBrain {
                 BuddyLog.d("Brain.runGuide", "q=\"${question.take(80)}\" nodes=${snap.nodes.size} pkg=${snap.packageName} ids=${snap.nodes.take(12).joinToString { it.id }} hands=${BuddyCursorController.isAttached()}")
                 try {
                     val plan = gemini.guide(question, GuidanceCatalog.format(snap))
-                    BuddyLog.d("Brain.plan", "say=\"${plan.say?.take(80)}\" place=${plan.place} elementId=${plan.elementId} hand=${plan.hand}")
+                    BuddyLog.d("Brain.plan", "say=\"${plan.say?.take(80)}\" place=${plan.place} elementId=${plan.elementId} hand=${plan.hand} type=${plan.type}")
                     apply(plan, snap)
                 } catch (error: CancellationException) {
                     BuddyLog.d("Brain.guideCancel", "job cancelled — not a think failure")
@@ -152,6 +154,24 @@ object BuddyBrain {
                     failQuiet(if (Reachability.isNetworkFailure(error)) OFFLINE_NOTE else THINK_FAIL_NOTE)
                 }
             }
+        }
+
+        private suspend fun tryLocalType(question: String): Boolean {
+            val action = BuddyTypeIntent.parse(question) ?: return false
+            BuddyLog.d("Brain.localType", "q=\"${question.take(80)}\" type=$action ready=${BuddyType.isReady()}")
+            if (!sessionActive) return true
+            if (!BuddyType.isReady()) {
+                failQuiet(HANDS_OFF_NOTE)
+                return true
+            }
+            voice.speak(action.say)
+            val ok = when (action) {
+                is BuddyTypeIntent.Action.Type -> BuddyType.typeHere(action.text, action.submit)
+                is BuddyTypeIntent.Action.Submit -> BuddyType.submitHere()
+            }
+            BuddyLog.d("Brain.localType", "ok=$ok")
+            finishTurn()
+            return true
         }
 
         private suspend fun tryLocalHand(question: String): Boolean {
@@ -195,7 +215,7 @@ object BuddyBrain {
                 BuddyLog.d("Brain.apply", "ignored — session already closed")
                 return
             }
-            if (plan.hand != null && !BuddyHands.isReady()) {
+            if ((plan.hand != null && !BuddyHands.isReady()) || (plan.type != null && !BuddyType.isReady())) {
                 failQuiet(HANDS_OFF_NOTE)
                 return
             }
@@ -240,7 +260,7 @@ object BuddyBrain {
             private const val TREE_SETTLE_MS = 320L
             private const val OFFLINE_NOTE = "I can’t reach the internet just now. Check the connection and try again."
             private const val THINK_FAIL_NOTE = "I couldn’t think that through just now. Try once more in a moment."
-            private const val HANDS_OFF_NOTE = "Turn on Buddy Assistant so I can tap for you."
+            private const val HANDS_OFF_NOTE = "Turn on Buddy Assistant so I can tap and type for you."
         }
     }
 }

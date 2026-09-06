@@ -24,7 +24,7 @@ Buddy opens on a single home surface. `MainActivity` only enables edge-to-edge d
 - **Ask buddy** — starts a live talk when the microphone is allowed. See `docs/live.md`.
 - **Point at something** — snapshots the active screen and flies to one real control.
 
-See `docs/overlay.md`, `docs/cursor.md`, `docs/eyes.md`, `docs/hands.md`, and `docs/brain.md`.
+See `docs/overlay.md`, `docs/cursor.md`, `docs/eyes.md`, `docs/hands.md`, `docs/type.md`, and `docs/brain.md`.
 
 ## Design tokens
 

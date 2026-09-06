@@ -8,7 +8,7 @@ Live is a **brain adapter**. Eyes and hands do not change.
 
 ## What Live is
 
-A stateful WebSocket (`BidiGenerateContent`) to the Gemini Developer API. **Mic PCM goes straight to Gemini; Gemini PCM comes straight back.** There is no Android speech-to-text step, no chat REST hop, and no captions. When it wants the buddy to move or tap, it calls the same functions: `point_to`, `fly_to`, `tap`, `hold`, `swipe`, `drag`. There is no `say` tool — the model’s own voice is the speech.
+A stateful WebSocket (`BidiGenerateContent`) to the Gemini Developer API. **Mic PCM goes straight to Gemini; Gemini PCM comes straight back.** There is no Android speech-to-text step, no chat REST hop, and no captions. When it wants the buddy to move, tap, or type, it calls the same functions: `point_to`, `fly_to`, `tap`, `hold`, `swipe`, `drag`, `type`. There is no `say` tool — the model’s own voice is the speech.
 
 | | Chat REST | Live |
 |--|-----------|------|
@@ -17,7 +17,7 @@ A stateful WebSocket (`BidiGenerateContent`) to the Gemini Developer API. **Mic 
 | Voice in | Android `SpeechRecognizer` | 16 kHz PCM mic stream (no STT) |
 | Voice out | Android TTS | 24 kHz PCM from Gemini (no captions) |
 | Screen | Accessibility catalog in the prompt | Catalog as `realtimeInput` text after mic is open |
-| Tools | `say` + cursor tools | Cursor tools only |
+| Tools | `say` + cursor tools + `type` | Cursor tools + `type` |
 
 Not Computer Use. Not video Live. Not ElevenLabs. Not ChatGPT.
 
@@ -57,7 +57,7 @@ Long pauses after “tap Wi‑Fi” can still be a tree walk or a tool, not the 
 
 1. Start the buddy, turn on **Buddy Assistant**, allow the microphone once.
 2. Double-tap the cursor (or **Ask buddy**). A small bar appears at the bottom — the rest of the screen stays open so a tap can reach an app.
-3. Talk right away. You will not see your words or Buddy’s words as text — you only hear each other. Ask it to open Calculator, move, tap, hold, or drag.
+3. Talk right away. You will not see your words or Buddy’s words as text — you only hear each other. Ask it to open Calculator, move, tap, hold, drag, or type.
 
 ## Not speech-to-text, then chat
 
@@ -110,4 +110,4 @@ A spoken tap that then sits still is usually the tree or the tool, not VAD. Voic
 
 API key is still `gemini.api.key` in `local.properties`. The socket uses `?key=` on the Gemini Live URL.
 
-See `docs/brain.md` and `docs/hands.md`.
+See `docs/brain.md`, `docs/hands.md`, and `docs/type.md`.

@@ -9,15 +9,18 @@ Buddy appears in **Settings → Accessibility → Installed apps** as **Buddy As
 - Prompt to open the Buddy Assistant page (details screen on Android 11+, list otherwise)
 - On-demand snapshot of visible controls
 - **Point at something** (home or notification) flies the overlay to a real node’s center
-- **Ask buddy** sends that snapshot to Gemini, then speaks, points, flies, or taps / holds / drags (see `docs/brain.md`)
+- **Ask buddy** sends that snapshot to Gemini, then speaks, points, flies, taps / holds / drags, or types (see `docs/brain.md`)
 - Real finger strokes via `dispatchGesture` (`canPerformGestures`) — see `docs/hands.md`
+- Real typing via `ACTION_SET_TEXT` (accessibility IME on Android 13+) — see `docs/type.md`
 
 ## Composition
 
 | File | Role |
 |------|------|
-| `accessibility/BuddyAccessibilityService.kt` | System service; attaches eyes + hands when enabled |
+| `accessibility/BuddyAccessibilityService.kt` | System service; attaches eyes + hands + type when enabled |
 | `accessibility/BuddyHands.kt` | Tap / hold / swipe / drag API |
+| `accessibility/BuddyType.kt` | Type / submit API |
+| `accessibility/FieldWriter.kt` | Live field find + set-text / IME / paste |
 | `accessibility/GesturePlayer.kt` | `dispatchGesture` + result callback |
 | `accessibility/GestureStrokes.kt` | Finger-like `GestureDescription`s |
 | `accessibility/WindowRootPicker.kt` | Foreign app windows only (never our package) |
@@ -34,7 +37,7 @@ See `docs/eyes.md` for the snapshot API.
 1. Overlay cursor is already on screen.
 2. Tap **Let me see your screen**, turn on **Buddy Assistant**, return.
 3. **Point at something** — in the app, or from the notification while another app is open.
-4. Ask “tap” or “tap Wi‑Fi” — the buddy presses like a finger. Hold and drag work the same way.
+4. Ask “tap” or “tap Wi‑Fi” — the buddy presses like a finger. Hold, drag, and type work the same way.
 
 ## Capabilities enabled
 
@@ -42,6 +45,7 @@ See `docs/eyes.md` for the snapshot API.
 - `flagRetrieveInteractiveWindows` — read every interactive window, including the launcher under the overlay.
 - `flagReportViewIds` — stable ids when the app provides them.
 - `canPerformGestures` — tap, hold, swipe, drag (`BuddyHands`).
+- `flagInputMethodEditor` — Android 13+ parallel IME so type can `commitText` without replacing Gboard.
 
 ## Notes
 

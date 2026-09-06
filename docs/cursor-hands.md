@@ -27,5 +27,6 @@ Flight is a quadratic arc (`cursor/CursorArc.kt`) driven by `ValueAnimator`. Gra
 - `fly_to(place)` maps a name through `CursorLanding` to `animateToNormalized`.
 - “Move up / down / left / right” is `BuddyMoveIntent` → `nudgeNormalized`. Do not parse `moveBuddyCursor(x,y)` out of spoken text.
 - `BuddyHands` flies, then taps, holds, or drags. See `docs/hands.md`.
+- `BuddyType` flies to a field, then fills it. See `docs/type.md`.
 
 See `docs/eyes.md`.

@@ -26,6 +26,7 @@ object GeminiTools {
         list.put(fn("hold", "Press and hold a listed control. Omit element_id to hold where the buddy is now.", listOf(Arg("element_id", "Exact element_id from the on-screen list."))))
         list.put(fn("swipe", "A quick finger swipe across the screen.", listOf(Arg("direction", "Swipe direction.", DIRS), Arg("from_element_id", "Optional start control."), Arg("to_element_id", "Optional end control."), Arg("to_place", "Optional named end place.", CursorLanding.PLACES))))
         list.put(fn("drag", "Press, hold, and slide — to move an icon or a slider.", listOf(Arg("direction", "Drag direction.", DIRS), Arg("from_element_id", "Optional start control."), Arg("to_element_id", "Optional end control."), Arg("to_place", "Optional named end place.", CursorLanding.PLACES))))
+        list.put(fn("type", "Type into a text field — search, a message, a name, anything they asked you to write.", listOf(Arg("text", "Exact words to put in the field."), Arg("element_id", "Exact element_id of a type field from the on-screen list."), Arg("submit", "true to press Search, Send, or Enter after typing.", listOf("true", "false"))), listOf("text")))
         return list
     }
 
@@ -37,6 +38,7 @@ object GeminiTools {
         "hold" -> GuidancePlan(null, null, null, HandPlan.Hold(args.optString("element_id").ifBlank { null }))
         "swipe" -> GuidancePlan(null, null, null, stroke(args, holdFirst = false))
         "drag" -> GuidancePlan(null, null, null, stroke(args, holdFirst = true))
+        "type" -> GuidancePlan(null, null, null, type = typePlan(args))
         else -> GuidancePlan(null, null, null)
     }
 
@@ -47,6 +49,7 @@ object GeminiTools {
         var elementId: String? = null
         var place: String? = null
         var hand: HandPlan? = null
+        var type: TypePlan? = null
         val names = ArrayList<String>(6)
         for (i in 0 until parts.length()) {
             val part = parts.optJSONObject(i) ?: continue
@@ -63,15 +66,22 @@ object GeminiTools {
                     "hold" -> hand = HandPlan.Hold(args.optString("element_id").ifBlank { null })
                     "swipe" -> hand = stroke(args, holdFirst = false)
                     "drag" -> hand = stroke(args, holdFirst = true)
+                    "type" -> type = typePlan(args)
                 }
             } else {
                 val text = part.optString("text").trim()
                 if (text.isNotBlank() && say == null) say = text
             }
         }
-        BuddyLog.d("Gemini.parse", "calls=$names say=${say != null} place=$place elementId=$elementId hand=$hand")
-        return GuidancePlan(say, elementId, place, hand)
+        BuddyLog.d("Gemini.parse", "calls=$names say=${say != null} place=$place elementId=$elementId hand=$hand type=$type")
+        return GuidancePlan(say, elementId, place, hand, type)
     }
+
+    private fun typePlan(args: JSONObject) = TypePlan(
+        text = args.optString("text"),
+        elementId = args.optString("element_id").ifBlank { null },
+        submit = args.optBoolean("submit") || args.optString("submit").equals("true", ignoreCase = true)
+    )
 
     private fun stroke(args: JSONObject, holdFirst: Boolean) = HandPlan.Stroke(
         fromId = args.optString("from_element_id").ifBlank { null },

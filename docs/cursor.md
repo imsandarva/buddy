@@ -25,4 +25,4 @@ BuddyCursor is the on-screen pointer. After Start, it lives in a system overlay 
 7. Tap **Ask buddy** → same panel as the double-tap.
 8. Tap **Stop buddy** (or the notification action) → the overlay is removed.
 
-See `docs/cursor-hands.md` and `docs/hands.md`.
+See `docs/cursor-hands.md`, `docs/hands.md`, and `docs/type.md`.

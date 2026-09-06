@@ -9,7 +9,11 @@ object GuidanceCatalog {
         if (snapshot.nodes.isEmpty()) return "App: ${appLabel(snapshot.packageName)}\nOn screen: (nothing readable)"
         val nodes = snapshot.nodes.take(limit)
         val lines = nodes.joinToString("\n") { node ->
-            val kind = if (node.clickable) "tap" else "label"
+            val kind = when {
+                node.editable -> "type"
+                node.clickable -> "tap"
+                else -> "label"
+            }
             "- ${node.id} | \"${node.label}\" | $kind"
         }
         return "App: ${appLabel(snapshot.packageName)}\nOn screen:\n$lines"

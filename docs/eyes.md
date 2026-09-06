@@ -8,7 +8,7 @@ The AI does not walk the accessibility tree. It calls this API. The overlay curs
 
 | Call | Use |
 |------|-----|
-| `snapshot()` | Visible nodes on **the user’s** screen: `{ id, label, bounds, clickable }` |
+| `snapshot()` | Visible nodes on **the user’s** screen: `{ id, label, bounds, clickable, editable }` |
 | `scenes` | While Live is on, a fresh snapshot when they change apps, windows, or pages (drawer swipe) |
 | `pointTo(id)` | Fresh snapshot, then fly the tip to that node’s center |
 | `pointTo(node)` | Fly to a node we already hold |
@@ -31,7 +31,7 @@ Pixels stay in the app. Gemini’s `point_to(element_id)` resolves through this 
 | `accessibility/GuidePicker.kt` | Chooses one control for the debug tap |
 | `accessibility/AccessibilitySession.kt` | Bound / granted / awaiting |
 | `accessibility/AccessibilityController.kt` | Reads Settings, opens Buddy Assistant |
-| `accessibility/BuddyAccessibilityService.kt` | Composition — attach / detach eyes + hands |
+| `accessibility/BuddyAccessibilityService.kt` | Composition — attach / detach eyes + hands + type |
 
 ## What is snapshotted
 
@@ -41,6 +41,7 @@ Pixels stay in the app. Gemini’s `point_to(element_id)` resolves through this 
 - Overlay views also set `IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS` so we do not announce ourselves
 - System UI is skipped
 - Visible nodes with a label (text, description, hint, or a clickable view id)
+- Editable fields even when empty (listed as `type` so the model can fill them)
 - Full-screen chrome is skipped
 - Same-label children inside a clickable parent are collapsed to the parent
 - Typed ask: the panel is closed first so the catalog is not the ask field

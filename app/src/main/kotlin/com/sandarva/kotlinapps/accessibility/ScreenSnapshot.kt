@@ -16,7 +16,8 @@ data class ScreenNode(
     val label: String,
     val bounds: ScreenBounds,
     val clickable: Boolean,
-    val viewId: String? = null
+    val viewId: String? = null,
+    val editable: Boolean = false
 )
 
 /** Immutable copy of what is on screen. Never holds live `AccessibilityNodeInfo`. */

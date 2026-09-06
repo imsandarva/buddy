@@ -45,4 +45,4 @@ Touches outside the cursor pass through (`FLAG_NOT_FOCUSABLE` + `FLAG_NOT_TOUCH_
 5. Tap **Let me see your screen**, then **Ask buddy** — or double-tap the cursor from any app.
 6. Tap **Stop buddy** in the app or in the notification to remove it.
 
-Taps, holds, and drags go through `BuddyHands` — see `docs/hands.md`.
+Taps, holds, and drags go through `BuddyHands` — see `docs/hands.md`. Typing goes through `BuddyType` — see `docs/type.md`.

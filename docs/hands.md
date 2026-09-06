@@ -34,4 +34,6 @@ The ask panel is a full-screen overlay. A stroke while it is still up hits the s
 
 Needs **Let me see your screen** (Buddy Assistant). `canPerformGestures` is on.
 
+Typing is a separate API — see `docs/type.md`.
+
 See `docs/brain.md` and `docs/accessibility.md`.

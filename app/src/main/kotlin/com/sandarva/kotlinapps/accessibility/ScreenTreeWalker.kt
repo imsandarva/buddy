@@ -37,9 +37,10 @@ class ScreenTreeWalker(
         if (bounds.width < 8 || bounds.height < 8) return
         if (isChrome(bounds)) return
         val viewId = shortViewId(node.viewIdResourceName)
-        val label = labelOf(node, viewId) ?: return
+        val editable = node.isEditable || node.actionList.any { it.id == AccessibilityNodeInfo.ACTION_SET_TEXT }
+        val label = labelOf(node, viewId) ?: if (editable) "text field" else return
         if (label.equals(skipLabel, ignoreCase = true)) return
-        into += ScreenNode(uniqueId(viewId, label), label, bounds, node.isClickable, viewId)
+        into += ScreenNode(uniqueId(viewId, label), label, bounds, node.isClickable, viewId, editable)
     }
 
     private fun labelOf(node: AccessibilityNodeInfo, viewId: String?): String? {
@@ -76,6 +77,7 @@ class ScreenTreeWalker(
     }
 
     private fun collapse(nodes: List<ScreenNode>): List<ScreenNode> = nodes.filter { node ->
+        if (node.editable) return@filter true
         nodes.none { other ->
             other.id != node.id && other.label == node.label && other.clickable && !node.clickable && other.bounds.contains(node.bounds)
         }

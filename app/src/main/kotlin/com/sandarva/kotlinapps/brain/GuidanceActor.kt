@@ -2,30 +2,47 @@ package com.sandarva.kotlinapps.brain
 
 import com.sandarva.kotlinapps.accessibility.BuddyHands
 import com.sandarva.kotlinapps.accessibility.BuddyScreenEyes
+import com.sandarva.kotlinapps.accessibility.BuddyType
+import com.sandarva.kotlinapps.accessibility.FieldTarget
 import com.sandarva.kotlinapps.accessibility.ScreenSnapshot
 import com.sandarva.kotlinapps.debug.BuddyLog
 import com.sandarva.kotlinapps.overlay.BuddyCursorController
 import com.sandarva.kotlinapps.overlay.CursorLanding
 
 /**
- * Executes a [GuidancePlan] on eyes + hands. Chat REST and Live both call this.
+ * Executes a [GuidancePlan] on eyes, hands, and type. Chat REST and Live both call this.
  * Does not speak — Live already has a voice; REST TTS stays in the brain.
  */
 object GuidanceActor {
     suspend fun run(plan: GuidancePlan, snapshot: ScreenSnapshot): String {
-        if (plan.hand != null && !BuddyHands.isReady()) return "Buddy Assistant is off — I cannot tap."
-        val result = when (val hand = plan.hand) {
-            is HandPlan.Tap -> tap(hand.elementId, snapshot)
-            is HandPlan.Hold -> hold(hand.elementId, snapshot)
-            is HandPlan.Stroke -> stroke(hand, snapshot)
-            null -> when {
-                !plan.place.isNullOrBlank() -> fly(plan.place)
-                !plan.elementId.isNullOrBlank() -> point(plan.elementId, snapshot)
-                else -> "ok"
+        if ((plan.hand != null || plan.type != null) && !BuddyHands.isReady() && !BuddyType.isReady()) {
+            return "Buddy Assistant is off — I cannot tap or type."
+        }
+        val result = when {
+            plan.type != null && !BuddyType.isReady() -> "Buddy Assistant is off — I cannot type."
+            plan.type != null -> type(plan.type, snapshot)
+            plan.hand != null && !BuddyHands.isReady() -> "Buddy Assistant is off — I cannot tap."
+            else -> when (val hand = plan.hand) {
+                is HandPlan.Tap -> tap(hand.elementId, snapshot)
+                is HandPlan.Hold -> hold(hand.elementId, snapshot)
+                is HandPlan.Stroke -> stroke(hand, snapshot)
+                null -> when {
+                    !plan.place.isNullOrBlank() -> fly(plan.place)
+                    !plan.elementId.isNullOrBlank() -> point(plan.elementId, snapshot)
+                    else -> "ok"
+                }
             }
         }
-        BuddyLog.d("Actor.run", "result=$result place=${plan.place} elementId=${plan.elementId} hand=${plan.hand}")
+        BuddyLog.d("Actor.run", "result=$result place=${plan.place} elementId=${plan.elementId} hand=${plan.hand} type=${plan.type}")
         return result
+    }
+
+    private suspend fun type(plan: TypePlan, snapshot: ScreenSnapshot): String {
+        if (plan.text.isBlank() && !plan.submit) return "type failed"
+        val node = plan.elementId?.let { snapshot.node(it) }
+        val target = FieldTarget(plan.elementId, node?.viewId, node?.bounds)
+        val ok = if (plan.text.isBlank()) BuddyType.submitHere() else BuddyType.typeAt(plan.text, target, plan.submit)
+        return if (ok) "typed ${plan.elementId ?: "here"}" else "type failed"
     }
 
     private suspend fun tap(id: String?, snapshot: ScreenSnapshot): String {
