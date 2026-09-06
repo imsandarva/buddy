@@ -70,7 +70,4 @@ class LiveAudio(context: Context) {
         effects.clear()
     }
 
-    companion object {
-        fun canBindRecordSession(): Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.P
-    }
 }

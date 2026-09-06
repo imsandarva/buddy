@@ -46,7 +46,9 @@ Gemini generates PCM **faster than realtime**. The official Gemini app buffers t
 
 Playback is now a jitter buffer: preroll ~120 ms, never drop, blocking `AudioTrack` writes, decode on a worker. Barge-in flush happens only on the speaker thread.
 
-Buddy’s own voice used to leak into the mic (USAGE_ASSISTANT vs VOICE_COMMUNICATION). The server then sent `interrupted` and we flushed mid-sentence. Mic and speaker now share one audio session with echo cancel, and VAD start-of-speech is less jumpy.
+Buddy’s own voice used to leak into the mic (USAGE_ASSISTANT vs VOICE_COMMUNICATION). The server then sent `interrupted` and we flushed mid-sentence. Mic and speaker now share one audio session with echo cancel.
+
+Setup JSON must stay on fields this `v1beta` socket actually knows. Extra keys such as `proactivity` get `1007 Invalid JSON payload` and the talk dies before you can speak.
 
 ## Why the cursor felt hung
 

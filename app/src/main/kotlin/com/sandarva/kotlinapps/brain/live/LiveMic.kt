@@ -4,7 +4,6 @@ import android.annotation.SuppressLint
 import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
-import android.os.Build
 import android.os.Process
 import com.sandarva.kotlinapps.debug.BuddyLog
 import java.util.concurrent.LinkedBlockingQueue
@@ -26,7 +25,7 @@ class LiveMic(private val onChunk: (ByteArray) -> Unit) {
         }
         val chunk = (LiveConfig.IN_HZ * LiveConfig.CHUNK_MS / 1000) * 2
         val buffer = maxOf(min, chunk * 4)
-        val next = buildRecord(buffer, audio?.sessionId ?: 0)
+        val next = AudioRecord(MediaRecorder.AudioSource.VOICE_COMMUNICATION, LiveConfig.IN_HZ, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, buffer)
         if (next.state != AudioRecord.STATE_INITIALIZED) {
             BuddyLog.e("Live.mic", "AudioRecord failed state=${next.state}")
             next.release()
@@ -51,19 +50,6 @@ class LiveMic(private val onChunk: (ByteArray) -> Unit) {
         try { current.stop() } catch (_: Exception) { }
         current.release()
         BuddyLog.d("Live.mic", "stop")
-    }
-
-    @SuppressLint("MissingPermission")
-    private fun buildRecord(buffer: Int, sessionId: Int): AudioRecord {
-        if (LiveAudio.canBindRecordSession() && sessionId > 0 && Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            return AudioRecord.Builder()
-                .setAudioSource(MediaRecorder.AudioSource.VOICE_COMMUNICATION)
-                .setAudioFormat(AudioFormat.Builder().setEncoding(AudioFormat.ENCODING_PCM_16BIT).setSampleRate(LiveConfig.IN_HZ).setChannelMask(AudioFormat.CHANNEL_IN_MONO).build())
-                .setBufferSizeInBytes(buffer)
-                .setSessionId(sessionId)
-                .build()
-        }
-        return AudioRecord(MediaRecorder.AudioSource.VOICE_COMMUNICATION, LiveConfig.IN_HZ, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, buffer)
     }
 
     private fun capture(chunk: Int) {
