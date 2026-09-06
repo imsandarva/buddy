@@ -11,6 +11,7 @@ BuddyCursor is the on-screen pointer. After Start, it lives in a system overlay 
 | `ui/cursor/BuddyDrag.kt` | Finger-down pickup |
 | `ui/cursor/GrabMotion.kt` | Hold bounce + short jiggle |
 | `overlay/BuddyCursorController.kt` | Hands API — programmatic move |
+| `overlay/CursorLanding.kt` | Named spots for `fly_to` |
 | `overlay/` | Window, service, permission, session |
 
 ## Current behavior
@@ -20,7 +21,7 @@ BuddyCursor is the on-screen pointer. After Start, it lives in a system overlay 
 3. Drag → the overlay window follows your finger.
 4. Lift → it stays there.
 5. Tap **Watch it move** → the cursor flies a short path (same API AI will call later).
-6. Tap **Ask buddy** → Gemini speaks and points at a real control (brain → eyes → hands).
+6. Tap **Ask buddy** → “move up” / “top left” fly on-device; other asks go to Gemini, which speaks and points.
 7. Tap **Stop buddy** (or the notification action) → the overlay is removed.
 
 See `docs/cursor-hands.md`.

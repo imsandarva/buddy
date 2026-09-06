@@ -20,7 +20,7 @@ Buddy opens on a single home surface. `MainActivity` only enables edge-to-edge d
 - **Stop buddy** — shown while the overlay is running; removes the cursor.
 - **Watch it move** — flies the overlay along a short demo path (`BuddyCursorController.playDemo()`).
 - **Let me see your screen** — opens Buddy Assistant while the overlay is running.
-- **Ask buddy** — listens (or accepts typed words), then Gemini speaks and points.
+- **Ask buddy** — listens (or accepts typed words). Cursor moves (“move up”) run on the phone; other asks close the panel, snapshot the real screen, then Gemini speaks and points.
 - **Point at something** — snapshots the active screen and flies to one real control.
 
 See `docs/overlay.md`, `docs/cursor.md`, `docs/eyes.md`, and `docs/brain.md`.

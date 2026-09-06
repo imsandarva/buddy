@@ -5,6 +5,7 @@ interface BuddyCursorMover {
     fun animateToPixels(xPx: Float, yPx: Float)
     fun animateToNormalized(x: Float, y: Float)
     fun animateToGrid999(x: Int, y: Int)
+    fun nudgeNormalized(dx: Float, dy: Float)
     fun playPath(normalized: List<Pair<Float, Float>>)
     fun cancelFlight()
 }
@@ -15,10 +16,36 @@ object BuddyCursorController {
 
     fun attach(next: BuddyCursorMover) { mover = next }
     fun detach(current: BuddyCursorMover) { if (mover === current) mover = null }
+    fun isAttached(): Boolean = mover != null
 
-    fun animateToPixels(xPx: Float, yPx: Float) { mover?.animateToPixels(xPx, yPx) }
-    fun animateToNormalized(x: Float, y: Float) { mover?.animateToNormalized(x, y) }
-    fun animateToGrid999(x: Int, y: Int) { mover?.animateToGrid999(x, y) }
+    fun animateToPixels(xPx: Float, yPx: Float): Boolean {
+        val next = mover
+        if (next == null) return false
+        next.animateToPixels(xPx, yPx)
+        return true
+    }
+
+    fun animateToNormalized(x: Float, y: Float): Boolean {
+        val next = mover
+        if (next == null) return false
+        next.animateToNormalized(x, y)
+        return true
+    }
+
+    fun animateToGrid999(x: Int, y: Int): Boolean {
+        val next = mover
+        if (next == null) return false
+        next.animateToGrid999(x, y)
+        return true
+    }
+
+    fun nudgeNormalized(dx: Float, dy: Float): Boolean {
+        val next = mover
+        if (next == null) return false
+        next.nudgeNormalized(dx, dy)
+        return true
+    }
+
     fun playDemo() { mover?.playPath(DEMO_PATH) }
     fun cancelFlight() { mover?.cancelFlight() }
 

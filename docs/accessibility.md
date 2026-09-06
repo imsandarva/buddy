@@ -9,7 +9,7 @@ Buddy appears in **Settings → Accessibility → Installed apps** as **Buddy As
 - Prompt to open the Buddy Assistant page (details screen on Android 11+, list otherwise)
 - On-demand snapshot of visible controls
 - **Point at something** (home or notification) flies the overlay to a real node’s center
-- **Ask buddy** sends that snapshot to Gemini, then speaks and points (see `docs/brain.md`)
+- **Ask buddy** sends that snapshot to Gemini, then speaks and points or flies (see `docs/brain.md`)
 
 Performing taps is still later (`canPerformGestures` is declared, unused).
 
@@ -42,3 +42,4 @@ See `docs/eyes.md` for the snapshot API.
 
 - Rebuild and reinstall after manifest or service changes for the entry to appear in Settings.
 - Snapshots run only when asked. Window events are ignored so the service stays cheap.
+- Do not snapshot while the ask panel is covering the screen — the catalog becomes the panel (and the typed question).

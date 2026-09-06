@@ -13,7 +13,9 @@ The AI does not walk the accessibility tree. It calls this API. The overlay curs
 | `pointTo(node)` | Fly to a node we already hold |
 | `pointToGuide()` | Debug pick — one teachable control, then `pointTo` |
 
-Pixels stay in the app. Gemini’s `point_to(element_id)` resolves through this API. See `docs/brain.md`.
+Pixels stay in the app. Gemini’s `point_to(element_id)` resolves through this API. `fly_to` does not use eyes. See `docs/brain.md`.
+
+`pointTo` returns false if the overlay hands are not attached.
 
 ## Composition
 
@@ -35,6 +37,7 @@ Pixels stay in the app. Gemini’s `point_to(element_id)` resolves through this 
 - The Buddy cursor label is skipped
 - Full-screen chrome is skipped
 - Same-label children inside a clickable parent are collapsed to the parent
+- Typed ask: the panel is closed first so the catalog is not the ask field
 
 Ids prefer the short view id (`date_time_settings`), then a slug of the label. Duplicates get `_2`.
 

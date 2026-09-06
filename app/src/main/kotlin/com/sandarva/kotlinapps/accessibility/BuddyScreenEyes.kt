@@ -1,5 +1,6 @@
 package com.sandarva.kotlinapps.accessibility
 
+import com.sandarva.kotlinapps.debug.BuddyLog
 import com.sandarva.kotlinapps.overlay.BuddyCursorController
 
 /** Eyes API. The brain (AI later) asks for a snapshot or `pointTo`; it never walks the tree. */
@@ -15,8 +16,8 @@ object BuddyScreenEyes {
     fun pointTo(id: String): Boolean = snapshot().node(id)?.let { pointTo(it) } ?: false
 
     fun pointTo(node: ScreenNode): Boolean {
-        BuddyCursorController.animateToPixels(node.bounds.centerX, node.bounds.centerY)
-        return true
+        BuddyLog.d("Eyes.pointTo", "id=${node.id} x=${node.bounds.centerX} y=${node.bounds.centerY} hands=${BuddyCursorController.isAttached()}")
+        return BuddyCursorController.animateToPixels(node.bounds.centerX, node.bounds.centerY)
     }
 
     /** Debug path: pick one visible control and fly there. */

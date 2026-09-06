@@ -8,14 +8,17 @@ import com.sandarva.kotlinapps.BuildConfig
 import com.sandarva.kotlinapps.accessibility.BuddyScreenEyes
 import com.sandarva.kotlinapps.accessibility.ScreenSnapshot
 import com.sandarva.kotlinapps.debug.BuddyLog
+import com.sandarva.kotlinapps.overlay.BuddyCursorController
+import com.sandarva.kotlinapps.overlay.CursorLanding
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
- * Brain facade. Snapshot → Gemini tools → speak + point.
+ * Brain facade. Snapshot → Gemini tools → speak + fly or point.
  * Live Mode is a later adapter on this same string.
  */
 object BuddyBrain {
@@ -37,24 +40,31 @@ object BuddyBrain {
         private val gemini = GeminiClient(BuildConfig.GEMINI_API_KEY)
         private var job: Job? = null
         @Volatile private var sessionActive = false
+        @Volatile private var reopenAskOnFail = false
 
         fun ask(text: String) {
             val trimmed = text.trim()
             BuddyLog.d("Brain.ask", "len=${trimmed.length} sessionActive=$sessionActive")
             if (trimmed.isBlank()) return
             sessionActive = true
-            runGuide(trimmed, BuddyScreenEyes.snapshot())
+            reopenAskOnFail = true
+            voice.cancelListen()
+            // The ask panel covers the screen; eyes must see the real controls, not the typed field.
+            BrainSession.setAskOpen(false)
+            BrainSession.setNote(null)
+            think(trimmed, settleMs = TREE_SETTLE_MS) { BuddyScreenEyes.snapshot() }
         }
 
         fun listen() {
             BuddyLog.d("Brain.listen", "open ask panel")
             cancelJob()
             sessionActive = true
+            reopenAskOnFail = true
             val snap = BuddyScreenEyes.snapshot()
             BrainSession.setAskOpen(true)
             BrainSession.setNote(null)
             BrainSession.setPhase(BrainPhase.Listening)
-            voice.listen(onText = { runGuide(it, snap) }, onFailed = ::failQuiet)
+            voice.listen(onText = { think(it) { snap } }, onFailed = ::failListen)
         }
 
         fun listenAfterPrompt() {
@@ -66,43 +76,76 @@ object BuddyBrain {
             }
             cancelJob()
             sessionActive = true
+            reopenAskOnFail = false
             val snap = BuddyScreenEyes.snapshot()
             BrainSession.setNote(null)
             BrainSession.setPhase(BrainPhase.Listening)
             voice.speak("What do you need?") {
                 if (!sessionActive) return@speak
-                voice.listen(onText = { runGuide(it, snap) }, onFailed = { voice.speak(it); if (sessionActive) BrainSession.setPhase(BrainPhase.Idle) })
+                voice.listen(onText = { think(it) { snap } }, onFailed = { msg ->
+                    if (job?.isActive == true) return@listen
+                    voice.speak(msg)
+                    if (sessionActive) BrainSession.setPhase(BrainPhase.Idle)
+                })
             }
         }
 
         fun cancel() {
             BuddyLog.d("Brain.cancel", "close ask panel sessionActive=$sessionActive")
             sessionActive = false
+            reopenAskOnFail = false
             cancelJob()
             voice.cancelAll()
             BrainSession.reset()
         }
 
-        private fun runGuide(question: String, snapshot: ScreenSnapshot) {
-            BuddyLog.d("Brain.runGuide", "q=\"${question.take(80)}\" nodes=${snapshot.nodes.size} pkg=${snapshot.packageName} keyBlank=${BuildConfig.GEMINI_API_KEY.isBlank()}")
+        private fun think(question: String, settleMs: Long = 0, snapshot: () -> ScreenSnapshot) {
             if (!sessionActive) return
-            if (BuildConfig.GEMINI_API_KEY.isBlank()) {
-                failQuiet("I don’t have a way to think yet.")
-                return
-            }
+            voice.cancelListen()
             cancelJob()
             BrainSession.setPhase(BrainPhase.Thinking)
             BrainSession.setNote(null)
             job = scope.launch {
+                if (tryLocalMove(question)) return@launch
+                if (BuildConfig.GEMINI_API_KEY.isBlank()) {
+                    failQuiet("I don’t have a way to think yet.")
+                    return@launch
+                }
+                if (!Reachability.online(app)) {
+                    failQuiet(OFFLINE_NOTE)
+                    return@launch
+                }
+                if (settleMs > 0) delay(settleMs)
+                if (!sessionActive) return@launch
+                val snap = GuidanceCatalog.forModel(snapshot(), question)
+                BuddyLog.d("Brain.runGuide", "q=\"${question.take(80)}\" nodes=${snap.nodes.size} pkg=${snap.packageName} ids=${snap.nodes.take(12).joinToString { it.id }} hands=${BuddyCursorController.isAttached()}")
                 try {
-                    val plan = gemini.guide(question, GuidanceCatalog.format(snapshot))
-                    BuddyLog.d("Brain.plan", "say=\"${plan.say?.take(80)}\" elementId=${plan.elementId}")
-                    apply(plan, snapshot)
+                    val plan = gemini.guide(question, GuidanceCatalog.format(snap))
+                    BuddyLog.d("Brain.plan", "say=\"${plan.say?.take(80)}\" place=${plan.place} elementId=${plan.elementId}")
+                    apply(plan, snap)
                 } catch (error: Exception) {
                     BuddyLog.e("Brain.guideFail", error.message ?: "unknown", error)
-                    failQuiet("I couldn’t think that through just now. Try once more in a moment.")
+                    failQuiet(if (Reachability.isNetworkFailure(error)) OFFLINE_NOTE else THINK_FAIL_NOTE)
                 }
             }
+        }
+
+        private fun tryLocalMove(question: String): Boolean {
+            val move = BuddyMoveIntent.parse(question) ?: return false
+            BuddyLog.d("Brain.localMove", "q=\"${question.take(80)}\" move=$move hands=${BuddyCursorController.isAttached()}")
+            if (!sessionActive) return true
+            when (move) {
+                is BuddyMoveIntent.Move.ToPlace -> fly(move.place)
+                is BuddyMoveIntent.Move.Nudge -> {
+                    val ok = BuddyCursorController.nudgeNormalized(move.dx, move.dy)
+                    BuddyLog.d("Brain.nudge", "dx=${move.dx} dy=${move.dy} ok=$ok")
+                }
+            }
+            voice.speak(move.say)
+            sessionActive = false
+            reopenAskOnFail = false
+            BrainSession.reset()
+            return true
         }
 
         private fun apply(plan: GuidancePlan, snapshot: ScreenSnapshot) {
@@ -110,24 +153,52 @@ object BuddyBrain {
                 BuddyLog.d("Brain.apply", "ignored — session already closed")
                 return
             }
-            plan.elementId?.let { id ->
-                val node = snapshot.node(id)
-                val ok = if (node != null) BuddyScreenEyes.pointTo(node) else BuddyScreenEyes.pointTo(id)
-                BuddyLog.d("Brain.point", "id=$id found=${node != null} ok=$ok")
+            when {
+                !plan.place.isNullOrBlank() -> fly(plan.place)
+                !plan.elementId.isNullOrBlank() -> point(plan.elementId, snapshot)
             }
             plan.say?.takeIf { it.isNotBlank() }?.let { voice.speak(it) }
             sessionActive = false
+            reopenAskOnFail = false
             BrainSession.reset()
         }
 
-        /** Keep the panel as-is if it is open; never reopen it after the user closed it. */
+        private fun fly(place: String) {
+            val xy = CursorLanding.normalized(place)
+            val ok = xy != null && BuddyCursorController.animateToNormalized(xy.first, xy.second)
+            BuddyLog.d("Brain.fly", "place=$place xy=$xy ok=$ok")
+        }
+
+        private fun point(id: String, snapshot: ScreenSnapshot) {
+            val node = snapshot.node(id)
+            val ok = node != null && BuddyScreenEyes.pointTo(node)
+            BuddyLog.d("Brain.point", "id=$id found=${node != null} ok=$ok")
+        }
+
+        /** Keep the panel as-is if it is open; reopen it after a typed ask so they can see the note. */
         private fun failQuiet(message: String) {
-            BuddyLog.d("Brain.failQuiet", "sessionActive=$sessionActive askOpen=${BrainSession.askOpen.value} msg=$message")
+            BuddyLog.d("Brain.failQuiet", "sessionActive=$sessionActive askOpen=${BrainSession.askOpen.value} reopen=$reopenAskOnFail msg=$message")
             if (!sessionActive) return
             BrainSession.setPhase(BrainPhase.Idle)
             BrainSession.setNote(message)
+            if (reopenAskOnFail) BrainSession.setAskOpen(true)
+        }
+
+        private fun failListen(message: String) {
+            if (job?.isActive == true) {
+                BuddyLog.d("Brain.failListen", "ignored — think already running")
+                return
+            }
+            failQuiet(message)
         }
 
         private fun cancelJob() { job?.cancel(); job = null }
+
+        companion object {
+            /** Let the ask panel leave the accessibility tree before we snapshot. */
+            private const val TREE_SETTLE_MS = 320L
+            private const val OFFLINE_NOTE = "I can’t reach the internet just now. Check the connection and try again."
+            private const val THINK_FAIL_NOTE = "I couldn’t think that through just now. Try once more in a moment."
+        }
     }
 }

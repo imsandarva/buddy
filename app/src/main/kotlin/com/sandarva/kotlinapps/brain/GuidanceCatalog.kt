@@ -1,6 +1,7 @@
 package com.sandarva.kotlinapps.brain
 
 import com.sandarva.kotlinapps.accessibility.ScreenSnapshot
+import com.sandarva.kotlinapps.accessibility.ScreenTreeWalker
 
 /** Compact on-screen list for the model. Bounds stay in the app. */
 object GuidanceCatalog {
@@ -11,5 +12,14 @@ object GuidanceCatalog {
             "- ${node.id} | \"${node.label}\" | $kind"
         }
         return "App: ${snapshot.packageName ?: "unknown"}\nOn screen:\n$lines"
+    }
+
+    /** Drop the typed/spoken question if it leaked in as a text-field node. */
+    fun forModel(snapshot: ScreenSnapshot, question: String): ScreenSnapshot {
+        val echo = question.trim()
+        if (echo.length < 12) return snapshot
+        val slug = ScreenTreeWalker.slug(echo)
+        val nodes = snapshot.nodes.filterNot { it.label.equals(echo, ignoreCase = true) || it.id == slug }
+        return snapshot.copy(nodes = nodes)
     }
 }

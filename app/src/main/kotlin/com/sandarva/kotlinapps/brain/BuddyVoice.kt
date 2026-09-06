@@ -74,16 +74,19 @@ class BuddyVoice(private val context: Context) {
         }
     }
 
-    fun cancelAll() {
-        BuddyLog.d("Voice.cancelAll", "acceptingWas=$accepting")
+    fun cancelListen() {
+        BuddyLog.d("Voice.cancelListen", "acceptingWas=$accepting")
         accepting = false
         onHeard = null
         onListenFailed = null
+        main.post { recognizer?.cancel() }
+    }
+
+    fun cancelAll() {
+        BuddyLog.d("Voice.cancelAll", "acceptingWas=$accepting")
+        cancelListen()
         speakGen += 1
-        main.post {
-            recognizer?.cancel()
-            tts?.stop()
-        }
+        main.post { tts?.stop() }
     }
 
     fun release() {

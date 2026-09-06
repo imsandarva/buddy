@@ -10,6 +10,7 @@ import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.lifecycle.setViewTreeViewModelStoreOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.sandarva.kotlinapps.R
+import com.sandarva.kotlinapps.debug.BuddyLog
 import com.sandarva.kotlinapps.ui.cursor.BuddyCursorHandle
 import com.sandarva.kotlinapps.ui.theme.BuddyTheme
 
@@ -72,6 +73,7 @@ class BuddyOverlayWindow(private val context: Context) : BuddyCursorMover {
     }
 
     override fun animateToPixels(xPx: Float, yPx: Float) {
+        BuddyLog.d("Overlay.flyTo", "x=$xPx y=$yPx")
         pathGen += 1
         val gen = pathGen
         flight?.flyTo(xPx, yPx) { if (gen == pathGen) persist() }
@@ -83,6 +85,16 @@ class BuddyOverlayWindow(private val context: Context) : BuddyCursorMover {
     }
 
     override fun animateToGrid999(x: Int, y: Int) = animateToNormalized(x / 999f, y / 999f)
+
+    override fun nudgeNormalized(dx: Float, dy: Float) {
+        val screen = screenSize()
+        if (screen.first <= 0 || screen.second <= 0) return
+        val now = currentXY()
+        val nx = (now.first / screen.first + dx).coerceIn(0.04f, 0.96f)
+        val ny = (now.second / screen.second + dy).coerceIn(0.04f, 0.92f)
+        BuddyLog.d("Overlay.nudge", "dx=$dx dy=$dy to=$nx,$ny")
+        animateToNormalized(nx, ny)
+    }
 
     override fun playPath(normalized: List<Pair<Float, Float>>) {
         val gen = ++pathGen
