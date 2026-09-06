@@ -7,18 +7,22 @@ The model does not move the cursor and does not walk the tree. It returns tools.
 | `say` | Android TTS — warm words only |
 | `point_to(element_id)` | `BuddyScreenEyes.pointTo` on the snapshot used for that turn |
 | `fly_to(place)` | `CursorLanding` → `BuddyCursorController.animateToNormalized` |
+| `tap(element_id?)` | Fly to that control (or the tip), then a real tap |
+| `hold(element_id?)` | Fly, then long-press |
+| `swipe` / `drag` | Quick slide, or hold-then-slide |
 
 `place` is a named spot (`top_left`, `center`, …), not pixels. Not Live Mode. Not Computer Use. A later Live adapter should call these same tools.
 
-Sliding the buddy around is on-device (`BuddyMoveIntent`) — “move up”, “go to the top left”. Gemini is only for “how do I tap this?”. That way a DNS miss (`Unable to resolve host generativelanguage.googleapis.com`) cannot block a cursor nudge.
+Sliding the buddy around is on-device (`BuddyMoveIntent`) — “move up”, “go to the top left”. Tap / hold / swipe / drag at the current tip is also on-device (`BuddyHandIntent`) — “tap”, “hold this”, “swipe left”. Gemini is for named controls (“tap Wi‑Fi”). A DNS miss cannot block a nudge or a tap-here.
 
 ## Flow
 
 1. If they asked the buddy itself to move, fly or nudge locally and speak. No network.
-2. If the ask panel is covering the screen (typed ask), close it and wait a beat so the accessibility tree is the real screen — not the typed field.
-3. Snapshot the screen they are looking at (`GuidanceCatalog` — ids and labels, no pixels), including the launcher under the overlay. Strip a node whose label is the question itself.
-4. If the radio is down, say so — do not wait on DNS. Otherwise send the user’s words + that list to Gemini Flash.
-5. Speak `say`. If they asked the buddy to move, fly to `place`. Otherwise fly to `element_id` from **that** snapshot.
+2. If they asked to tap / hold / swipe / drag *here*, do that locally. No network.
+3. If the ask panel is covering the screen (typed ask), close it and wait a beat so the accessibility tree is the real screen — not the typed field.
+4. Snapshot the screen they are looking at (`GuidanceCatalog` — ids and labels, no pixels), including the launcher under the overlay. Strip a node whose label is the question itself.
+5. If the radio is down, say so — do not wait on DNS. Otherwise send the user’s words + that list to Gemini Flash.
+6. Speak `say`. Then fly, point, or perform the hand stroke on **that** snapshot.
 
 Typed send cancels leftover listening so a later STT miss cannot overwrite a real error.
 
@@ -34,11 +38,13 @@ Typed Ask snapshotted **while the panel was open**. The text field’s accessibi
 |------|------|
 | `brain/BuddyBrain.kt` | Orchestrator |
 | `brain/GeminiClient.kt` | Gemini Developer API (REST) |
-| `brain/GeminiTools.kt` | `say` / `point_to` / `fly_to` declarations + parse |
+| `brain/GeminiTools.kt` | `say` / `point_to` / `fly_to` / `tap` / `hold` / `swipe` / `drag` |
 | `brain/GuidancePrompt.kt` | System + user prompt |
 | `brain/GuidanceCatalog.kt` | Snapshot → compact list |
-| `brain/GuidancePlan.kt` | `say` + `element_id` + `place` |
+| `brain/GuidancePlan.kt` | `say` + `element_id` + `place` + `hand` |
+| `brain/HandPlan.kt` | Tap / hold / stroke from the model |
 | `brain/BuddyMoveIntent.kt` | On-device “move up / top left” |
+| `brain/BuddyHandIntent.kt` | On-device “tap / hold / swipe left” |
 | `brain/Reachability.kt` | Online check + network-error detect |
 | `brain/BuddyVoice.kt` | STT + TTS |
 | `brain/BrainSession.kt` | Listening / thinking / ask sheet |
@@ -56,7 +62,8 @@ Model: `gemini-3.5-flash-lite` only.
 1. Start the buddy, turn on **Buddy Assistant**, allow the microphone once via **Ask buddy**.
 2. Leave the app. Double-tap the cursor — the panel should open on the launcher or whatever you opened.
 3. Ask “move up” or “move to the top-left” — the cursor should fly even with no internet.
-3. Ask something on this screen (or type it) — Buddy should speak and point at a real control, not at the ask field.
-4. Open Settings, pull the notification, tap **Ask buddy**. After the shade closes it asks what you need, then points and speaks.
+4. Ask “tap” or “hold this” — it should press where it is. Ask “tap Wi‑Fi” on a list — it should fly there and tap.
+5. Ask something on this screen (or type it) — Buddy should speak and point or tap a real control, not the ask field.
+6. Open Settings, pull the notification, tap **Ask buddy**. After the shade closes it asks what you need, then points, taps, or speaks.
 
-See `docs/eyes.md` and `docs/cursor-hands.md`.
+See `docs/eyes.md`, `docs/cursor-hands.md`, and `docs/hands.md`.

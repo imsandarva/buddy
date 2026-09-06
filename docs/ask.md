@@ -6,7 +6,7 @@ The ask panel lives in the overlay service, not in the Buddy activity. That is t
 
 1. Double-tap the buddy cursor — on the home screen, in Settings, in another app.
 2. Speak, or type and send.
-3. Buddy flies, points, or speaks. Local moves (“move up”) do not need the internet.
+3. Buddy flies, points, speaks, or taps / holds / drags. Local moves (“move up”) and local hands (“tap”, “swipe left”) do not need the internet.
 
 **Ask buddy** in the app and **Ask buddy** on the notification use this same panel.
 

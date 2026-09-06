@@ -22,7 +22,7 @@ Android will not let a normal app keep a window after a force-stop. Minimize / l
 | `overlay/OverlayPermission.kt` | Checks and opens “appear on top” |
 | `overlay/BuddyOverlayController.kt` | Start/stop + resume after Settings |
 | `overlay/BuddyOverlayService.kt` | Foreground service; owns the window lifetime |
-| `overlay/BuddyOverlayWindow.kt` | Small WindowManager view; drag, double-tap, or `animateTo` |
+| `overlay/BuddyOverlayWindow.kt` | Small WindowManager view; drag, double-tap, `animateTo`, or pass-through for a stroke |
 | `overlay/AskOverlayWindow.kt` | Full-screen ask panel over any app |
 | `overlay/BuddyCursorController.kt` | Hands API attached while the service runs |
 | `overlay/CursorLanding.kt` | Named spots for `fly_to` |
@@ -43,4 +43,4 @@ Touches outside the cursor pass through (`FLAG_NOT_FOCUSABLE` + `FLAG_NOT_TOUCH_
 5. Tap **Let me see your screen**, then **Ask buddy** — or double-tap the cursor from any app.
 6. Tap **Stop buddy** in the app or in the notification to remove it.
 
-Taps-for-you are later.
+Taps, holds, and drags go through `BuddyHands` — see `docs/hands.md`.

@@ -6,9 +6,10 @@ import android.content.Intent
 import android.view.accessibility.AccessibilityEvent
 import com.sandarva.kotlinapps.debug.BuddyLog
 
-/** System service — composition only. Walking lives in the reader; pointing lives in the eyes API. */
+/** System service — composition only. Walking lives in the reader; strokes live in the hands API. */
 class BuddyAccessibilityService : AccessibilityService() {
     private val reader by lazy { AccessibilityTreeReader(this) }
+    private val player by lazy { GesturePlayer(this) }
 
     override fun onServiceConnected() {
         super.onServiceConnected()
@@ -19,6 +20,7 @@ class BuddyAccessibilityService : AccessibilityService() {
             AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS
         serviceInfo = info
         BuddyScreenEyes.attach(reader)
+        BuddyHands.attach(player)
         AccessibilitySession.setBound(true)
         AccessibilitySession.setEnabled(true)
         AccessibilitySession.setAwaitingGrant(false)
@@ -42,6 +44,7 @@ class BuddyAccessibilityService : AccessibilityService() {
     override fun onInterrupt() = Unit
 
     private fun releaseEyes() {
+        BuddyHands.detach(player)
         BuddyScreenEyes.detach(reader)
         AccessibilitySession.setBound(false)
     }

@@ -18,6 +18,7 @@ object BuddyMoveIntent {
     }
 
     private fun looksLikeMove(q: String): Boolean {
+        if (HAND.containsMatchIn(q)) return false
         if (TASK.containsMatchIn(q) && !CURSOR.containsMatchIn(q)) return false
         return CURSOR.containsMatchIn(q) || (MOVE.containsMatchIn(q) && (PLACE.containsMatchIn(q) || DIR.containsMatchIn(q)))
     }
@@ -37,6 +38,7 @@ object BuddyMoveIntent {
 
     private val CURSOR = Regex("""\b(cursor|buddy|pointer)\b""")
     private val MOVE = Regex("""\b(move|fly|nudge|slide|put|place|go)\b""")
+    private val HAND = Regex("""\b(tap|click|press|hold|drag|swipe|flick|pull|slide)\b""")
     private val TASK = Regex("""\b(settings|wifi|date|time|tap|click|open|press|type|search|bluetooth)\b""")
     private val PLACE = Regex("""\b(top|bottom|center|middle|corner|left|right)\b""")
     private val DIR = Regex("""\b(up|down|left|right|upward|downward|upwards|downwards|higher|lower)\b""")

@@ -23,7 +23,7 @@ Buddy opens on a single home surface. `MainActivity` only enables edge-to-edge d
 - **Ask buddy** — same overlay panel as a double-tap on the cursor. Works from the home screen and other apps. See `docs/ask.md`.
 - **Point at something** — snapshots the active screen and flies to one real control.
 
-See `docs/overlay.md`, `docs/cursor.md`, `docs/eyes.md`, and `docs/brain.md`.
+See `docs/overlay.md`, `docs/cursor.md`, `docs/eyes.md`, `docs/hands.md`, and `docs/brain.md`.
 
 ## Design tokens
 

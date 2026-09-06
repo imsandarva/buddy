@@ -9,15 +9,17 @@ Buddy appears in **Settings → Accessibility → Installed apps** as **Buddy As
 - Prompt to open the Buddy Assistant page (details screen on Android 11+, list otherwise)
 - On-demand snapshot of visible controls
 - **Point at something** (home or notification) flies the overlay to a real node’s center
-- **Ask buddy** sends that snapshot to Gemini, then speaks and points or flies (see `docs/brain.md`)
-
-Performing taps is still later (`canPerformGestures` is declared, unused).
+- **Ask buddy** sends that snapshot to Gemini, then speaks, points, flies, or taps / holds / drags (see `docs/brain.md`)
+- Real finger strokes via `dispatchGesture` (`canPerformGestures`) — see `docs/hands.md`
 
 ## Composition
 
 | File | Role |
 |------|------|
-| `accessibility/BuddyAccessibilityService.kt` | System service; attaches eyes when enabled |
+| `accessibility/BuddyAccessibilityService.kt` | System service; attaches eyes + hands when enabled |
+| `accessibility/BuddyHands.kt` | Tap / hold / swipe / drag API |
+| `accessibility/GesturePlayer.kt` | `dispatchGesture` + result callback |
+| `accessibility/GestureStrokes.kt` | Finger-like `GestureDescription`s |
 | `accessibility/WindowRootPicker.kt` | Which windows to walk (skip our overlay) |
 | `accessibility/AccessibilityController.kt` | Grant check + settings |
 | `accessibility/AccessibilitySession.kt` | Bound / awaiting grant |
@@ -31,13 +33,14 @@ See `docs/eyes.md` for the snapshot API.
 1. Overlay cursor is already on screen.
 2. Tap **Let me see your screen**, turn on **Buddy Assistant**, return.
 3. **Point at something** — in the app, or from the notification while another app is open.
+4. Ask “tap” or “tap Wi‑Fi” — the buddy presses like a finger. Hold and drag work the same way.
 
 ## Capabilities enabled
 
 - `canRetrieveWindowContent` — read the on-screen UI tree.
 - `flagRetrieveInteractiveWindows` — read every interactive window, including the launcher under the overlay.
 - `flagReportViewIds` — stable ids when the app provides them.
-- `canPerformGestures` — tap/swipe later.
+- `canPerformGestures` — tap, hold, swipe, drag (`BuddyHands`).
 
 ## Notes
 

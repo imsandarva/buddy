@@ -1,13 +1,17 @@
 package com.sandarva.kotlinapps.overlay
 
-/** Hands API. The brain (AI later) only calls this; it never owns the window. */
+/** Window API. The brain flies or nudges through this; it never owns the overlay. */
 interface BuddyCursorMover {
-    fun animateToPixels(xPx: Float, yPx: Float)
+    fun animateToPixels(xPx: Float, yPx: Float, onLanded: (() -> Unit)? = null)
     fun animateToNormalized(x: Float, y: Float)
     fun animateToGrid999(x: Int, y: Int)
     fun nudgeNormalized(dx: Float, dy: Float)
+    fun slideToPixels(xPx: Float, yPx: Float, durationMs: Long, onLanded: (() -> Unit)? = null)
     fun playPath(normalized: List<Pair<Float, Float>>)
     fun cancelFlight()
+    fun tipPixels(): Pair<Float, Float>
+    fun screenPixels(): Pair<Int, Int>
+    fun setPassthrough(on: Boolean)
 }
 
 object BuddyCursorController {
@@ -18,12 +22,23 @@ object BuddyCursorController {
     fun detach(current: BuddyCursorMover) { if (mover === current) mover = null }
     fun isAttached(): Boolean = mover != null
 
-    fun animateToPixels(xPx: Float, yPx: Float): Boolean {
+    fun animateToPixels(xPx: Float, yPx: Float, onLanded: (() -> Unit)? = null): Boolean {
         val next = mover
         if (next == null) return false
-        next.animateToPixels(xPx, yPx)
+        next.animateToPixels(xPx, yPx, onLanded)
         return true
     }
+
+    fun slideToPixels(xPx: Float, yPx: Float, durationMs: Long, onLanded: (() -> Unit)? = null): Boolean {
+        val next = mover
+        if (next == null) return false
+        next.slideToPixels(xPx, yPx, durationMs, onLanded)
+        return true
+    }
+
+    fun tipPixels(): Pair<Float, Float>? = mover?.tipPixels()
+    fun screenPixels(): Pair<Int, Int>? = mover?.screenPixels()
+    fun setPassthrough(on: Boolean) { mover?.setPassthrough(on) }
 
     fun animateToNormalized(x: Float, y: Float): Boolean {
         val next = mover

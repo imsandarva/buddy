@@ -74,6 +74,7 @@ class BuddyOverlayWindow(
 
     fun dismiss() {
         cancelFlight()
+        OverlaySession.setPressing(false)
         flight = null
         val current = view ?: return
         current.disposeComposition()
@@ -83,11 +84,51 @@ class BuddyOverlayWindow(
         owner.dispose()
     }
 
-    override fun animateToPixels(xPx: Float, yPx: Float) {
+    override fun animateToPixels(xPx: Float, yPx: Float, onLanded: (() -> Unit)?) {
         BuddyLog.d("Overlay.flyTo", "x=$xPx y=$yPx")
         pathGen += 1
         val gen = pathGen
-        flight?.flyTo(xPx, yPx) { if (gen == pathGen) persist() }
+        val anim = flight
+        if (anim == null) {
+            applyPixels(xPx, yPx)
+            persist()
+            onLanded?.invoke()
+            return
+        }
+        anim.flyTo(xPx, yPx) {
+            if (gen != pathGen) return@flyTo
+            persist()
+            onLanded?.invoke()
+        }
+    }
+
+    override fun slideToPixels(xPx: Float, yPx: Float, durationMs: Long, onLanded: (() -> Unit)?) {
+        pathGen += 1
+        val gen = pathGen
+        val anim = flight
+        if (anim == null) {
+            applyPixels(xPx, yPx)
+            persist()
+            onLanded?.invoke()
+            return
+        }
+        anim.slideTo(xPx, yPx, durationMs) {
+            if (gen != pathGen) return@slideTo
+            persist()
+            onLanded?.invoke()
+        }
+    }
+
+    override fun tipPixels(): Pair<Float, Float> = currentXY()
+    override fun screenPixels(): Pair<Int, Int> = screenSize()
+
+    override fun setPassthrough(on: Boolean) {
+        val layout = params ?: return
+        val host = view ?: return
+        // Android 12+ drops touches through an opaque SAW; fade just enough to stay trusted.
+        layout.flags = if (on) overlayFlags() or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE else overlayFlags()
+        layout.alpha = if (on) PASS_ALPHA else 1f
+        host.post { if (params === layout && view === host) windowManager.updateViewLayout(host, layout) }
     }
 
     override fun animateToNormalized(x: Float, y: Float) {
@@ -172,5 +213,10 @@ class BuddyOverlayWindow(
             WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) flags = flags or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
         return flags
+    }
+
+    companion object {
+        /** At or below [WindowManager.LayoutParams] maximum obscuring opacity so pass-through taps reach the app. */
+        private const val PASS_ALPHA = 0.79f
     }
 }

@@ -10,7 +10,7 @@ BuddyCursor is the on-screen pointer. After Start, it lives in a system overlay 
 | `ui/cursor/BuddyCursorHandle.kt` | Hold, jiggle, live drag deltas |
 | `ui/cursor/BuddyDrag.kt` | Finger-down pickup, or a quick double-tap to ask |
 | `ui/cursor/GrabMotion.kt` | Hold bounce + short jiggle |
-| `overlay/BuddyCursorController.kt` | Hands API — programmatic move |
+| `overlay/BuddyCursorController.kt` | Flight API — programmatic move |
 | `overlay/CursorLanding.kt` | Named spots for `fly_to` |
 | `overlay/` | Window, service, permission, session |
 
@@ -25,4 +25,4 @@ BuddyCursor is the on-screen pointer. After Start, it lives in a system overlay 
 7. Tap **Ask buddy** → same panel as the double-tap.
 8. Tap **Stop buddy** (or the notification action) → the overlay is removed.
 
-See `docs/cursor-hands.md`.
+See `docs/cursor-hands.md` and `docs/hands.md`.

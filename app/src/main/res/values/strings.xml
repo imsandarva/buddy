@@ -2,12 +2,12 @@
 <resources>
     <string name="app_name">Buddy</string>
     <string name="accessibility_service_label">Buddy Assistant</string>
-    <string name="accessibility_service_description">Buddy helps you navigate your phone by seeing what is on screen and guiding you step by step. It can highlight where to tap and help with settings and everyday tasks.</string>
+    <string name="accessibility_service_description">Buddy helps you navigate your phone by seeing what is on screen. It can point to the next step, or tap, hold, and drag for you — like a finger — when you ask.</string>
     <string name="home_eyebrow">Buddy</string>
     <string name="home_headline">A friend on your screen.</string>
     <string name="home_headline_running">I’m with you now.</string>
-    <string name="home_body">It lives quietly with you and points to the next tap — so the confusing parts of your phone finally feel simple.</string>
-    <string name="home_body_running">Go ahead and leave this app. I’ll stay on your screen so you can follow along wherever you are.</string>
+    <string name="home_body">It lives quietly with you — pointing, tapping, holding, or dragging — so the confusing parts of your phone finally feel simple.</string>
+    <string name="home_body_running">Go ahead and leave this app. I’ll stay on your screen. Ask me to move, tap, hold, or drag — I’ll do it wherever you are.</string>
     <string name="start_your_buddy">Start your buddy</string>
     <string name="stop_buddy">Stop buddy</string>
     <string name="watch_buddy_move">Watch it move</string>
@@ -26,7 +26,7 @@
     <string name="home_footnote_listening">I’m listening.</string>
     <string name="home_footnote_thinking">Give me a moment…</string>
     <string name="home_footnote">Ready when you are.</string>
-    <string name="home_footnote_running">I’m on your screen. Double-tap me anywhere — I’ll listen.</string>
+    <string name="home_footnote_running">I’m on your screen. Double-tap me anywhere — then say move, tap, hold, or drag.</string>
     <string name="home_footnote_permission">On the next screen, allow Buddy to appear on top — then come back here.</string>
     <string name="home_footnote_access">On the next screen, turn on Buddy Assistant — then come back here.</string>
     <string name="buddy_cursor_label">Buddy cursor. Double-tap to ask.</string>

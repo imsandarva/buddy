@@ -29,7 +29,7 @@ Pixels stay in the app. Gemini’s `point_to(element_id)` resolves through this 
 | `accessibility/GuidePicker.kt` | Chooses one control for the debug tap |
 | `accessibility/AccessibilitySession.kt` | Bound / granted / awaiting |
 | `accessibility/AccessibilityController.kt` | Reads Settings, opens Buddy Assistant |
-| `accessibility/BuddyAccessibilityService.kt` | Composition — attach / detach only |
+| `accessibility/BuddyAccessibilityService.kt` | Composition — attach / detach eyes + hands |
 
 ## What is snapshotted
 

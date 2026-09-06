@@ -14,8 +14,12 @@ object OverlaySession {
     var placement: BuddyCursorState = BuddyCursorState(visible = true, xFraction = 0.5f, yFraction = 0.5f)
         private set
 
+    private val _pressing = MutableStateFlow(false)
+    val pressing: StateFlow<Boolean> = _pressing.asStateFlow()
+
     fun setActive(value: Boolean) { _active.value = value }
     fun setAwaitingPermission(value: Boolean) { _awaitingPermission.value = value }
+    fun setPressing(value: Boolean) { _pressing.value = value }
     fun savePlacement(xFraction: Float, yFraction: Float) {
         placement = BuddyCursorState(true, xFraction.coerceIn(0f, 1f), yFraction.coerceIn(0f, 1f))
     }
