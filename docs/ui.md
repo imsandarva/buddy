@@ -1,28 +1,30 @@
 # Home UI
 
-Buddy opens on a single home surface. `MainActivity` only enables edge-to-edge drawing and hosts `BuddyApp`. All visual and interaction work lives in focused Compose modules.
+Buddy opens on a single home surface. `MainActivity` only enables edge-to-edge drawing and hosts `BuddyApp`. The cursor is not part of this screen; it is a system overlay.
 
 ## Composition
 
 | File | Role |
 |------|------|
-| `MainActivity.kt` | Window chrome + `setContent { BuddyApp(...) }` |
-| `ui/BuddyApp.kt` | Theme, session, home, and BuddyCursor overlay |
-| `ui/home/HomeScreen.kt` | Assembles backdrop, hero, and CTA |
-| `ui/cursor/` | Pointer drawing and overlay placement |
-| `session/` | Buddy session state (cursor visibility and position) |
-| `ui/components/AmbientBackdrop.kt` | Slow-breathing light field |
-| `ui/components/BuddyMark.kt` | Cursor-like point of light |
-| `ui/components/StartBuddyButton.kt` | Primary action |
+| `MainActivity.kt` | Window chrome + `setContent { BuddyApp() }` |
+| `ui/BuddyApp.kt` | Theme, session, home, overlay + access resume hook |
+| `ui/home/HomeScreen.kt` | Assembles backdrop, hero, Start / Stop, and quiet eye actions |
+| `ui/components/BuddyActionButton.kt` | Honey Start and quiet Stop |
+| `session/BuddySessionViewModel.kt` | Facade over overlay hands and accessibility eyes |
 | `ui/theme/` | Color, type, motion, Material theme |
-| `ui/motion/FadeSlideIn.kt` | Staged entrance |
 
-## Start action
+## Actions
 
-Tap **Start your buddy** to show BuddyCursor at the center. Hold and drag it; it stays where you lift. See `docs/cursor.md`.
+- **Start your buddy** — requests appear-on-top if needed, then starts the overlay service.
+- **Stop buddy** — shown while the overlay is running; removes the cursor.
+- **Watch it move** — flies the overlay along a short demo path (`BuddyCursorController.playDemo()`).
+- **Let me see your screen** — opens Buddy Assistant while the overlay is running.
+- **Point at something** — snapshots the active screen and flies to one real control.
+
+See `docs/overlay.md`, `docs/cursor.md`, and `docs/eyes.md`.
 
 ## Design tokens
 
-- Dusk navy field (`#10141C`), honey light (`#E4B56A`), quiet sage (`#7A9E96`) for secondary type and atmospheric glow
+- Dusk navy field (`#10141C`), honey light (`#E4B56A`), quiet sage (`#7A9E96`)
 - Serif display + sans body, padding-trimmed type
-- Motion stays local: ambient pulse in the canvas, press state in the button, entrance in `FadeSlideIn`
+- Motion stays local: ambient pulse, press scale, entrance, grab jiggle

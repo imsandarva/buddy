@@ -1,26 +1,26 @@
 # BuddyCursor
 
-BuddyCursor is the on-screen pointer that will later guide taps. It is a session-owned overlay, not part of the home layout, so it can move independently and eventually live in a system overlay.
+BuddyCursor is the on-screen pointer. After Start, it lives in a system overlay so it remains visible on the home screen and in other apps. See `docs/overlay.md`.
 
 ## Composition
 
 | File | Role |
 |------|------|
-| `session/BuddyCursorState.kt` | Immutable placement: visibility + normalized x/y |
-| `session/BuddySessionViewModel.kt` | Start Buddy; persist rest position after a drag |
-| `ui/cursor/BuddyCursor.kt` | Arrow drawing; layout origin is the tip (hotspot) |
-| `ui/cursor/BuddyCursorOverlay.kt` | Layer, placement, grab handle |
-| `ui/cursor/BuddyDrag.kt` | Finger-down pickup and live drag |
+| `ui/cursor/BuddyCursor.kt` | Arrow drawing; layout origin is the tip |
+| `ui/cursor/BuddyCursorHandle.kt` | Hold, jiggle, live drag deltas |
+| `ui/cursor/BuddyDrag.kt` | Finger-down pickup |
 | `ui/cursor/GrabMotion.kt` | Hold bounce + short jiggle |
-| `ui/BuddyApp.kt` | Wires Start → session and hosts the cursor layer |
+| `overlay/BuddyCursorController.kt` | Hands API — programmatic move |
+| `overlay/` | Window, service, permission, session |
 
 ## Current behavior
 
-1. Tap **Start your buddy** → cursor appears at the center.
-2. Press the cursor → it bounces/jiggles to show it is held.
-3. Drag → the tip follows your finger in real time (local pixels, not ViewModel).
-4. Lift → it stays there; rest position is saved as fractions on the session.
+1. Tap **Start your buddy** → grant appear-on-top if asked → cursor shows at the last (or center) position.
+2. Press the cursor → it bounces to show it is held.
+3. Drag → the overlay window follows your finger.
+4. Lift → it stays there.
+5. Tap **Watch it move** → the cursor flies a short path (same API AI will call later).
+6. Tap **Point at something** → the cursor flies to a real on-screen control (eyes → hands).
+7. Tap **Stop buddy** (or the notification action) → the overlay is removed.
 
-Drag state is read only inside `BuddyCursorLayer`, so the home screen does not recompose while you move.
-
-Moving it onto other apps still comes later. Keep driving position from `BuddyCursorState`.
+See `docs/cursor-hands.md`.

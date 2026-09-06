@@ -3,6 +3,7 @@ package com.sandarva.kotlinapps.ui.components
 import android.view.HapticFeedbackConstants
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -21,20 +22,27 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.sandarva.kotlinapps.R
 import com.sandarva.kotlinapps.ui.theme.BuddyColors
 import com.sandarva.kotlinapps.ui.theme.BuddyMotion
 
+enum class BuddyActionStyle { Start, Stop }
+
 @Composable
-fun StartBuddyButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun BuddyActionButton(label: String, style: BuddyActionStyle, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val scale by animateFloatAsState(if (pressed) 0.985f else 1f, BuddyMotion.Press, label = "press")
     val view = LocalView.current
+    val shape = RoundedCornerShape(28.dp)
+    val fill = when (style) {
+        BuddyActionStyle.Start -> if (pressed) BuddyColors.HoneyDeep else BuddyColors.Honey
+        BuddyActionStyle.Stop -> BuddyColors.Bone.copy(alpha = if (pressed) 0.12f else 0.08f)
+    }
+    val text = if (style == BuddyActionStyle.Start) BuddyColors.OnHoney else BuddyColors.Bone
     Box(
         modifier = modifier
             .widthIn(max = 360.dp)
@@ -42,19 +50,20 @@ fun StartBuddyButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
             .height(56.dp)
             .graphicsLayer { scaleX = scale; scaleY = scale }
             .drawBehind {
-                drawCircle(
-                    brush = Brush.radialGradient(listOf(BuddyColors.Glow, BuddyColors.Ink.copy(alpha = 0f)), Offset(size.width / 2f, size.height / 2f), size.width * 0.58f),
-                    radius = size.width * 0.5f,
-                    center = Offset(size.width / 2f, size.height / 2f)
-                )
+                if (style == BuddyActionStyle.Start) {
+                    drawCircle(
+                        brush = Brush.radialGradient(listOf(BuddyColors.Glow, Color.Transparent), Offset(size.width / 2f, size.height / 2f), size.width * 0.58f),
+                        radius = size.width * 0.5f,
+                        center = Offset(size.width / 2f, size.height / 2f)
+                    )
+                }
             }
-            .background(if (pressed) BuddyColors.HoneyDeep else BuddyColors.Honey, RoundedCornerShape(28.dp))
+            .background(fill, shape)
+            .then(if (style == BuddyActionStyle.Stop) Modifier.border(1.dp, BuddyColors.Sage.copy(alpha = 0.45f), shape) else Modifier)
             .clickable(interactionSource = interaction, indication = null) {
                 view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                 onClick()
             },
         contentAlignment = Alignment.Center
-    ) {
-        Text(stringResource(R.string.start_your_buddy), style = MaterialTheme.typography.labelLarge, color = BuddyColors.OnHoney)
-    }
+    ) { Text(label, style = MaterialTheme.typography.labelLarge, color = text) }
 }

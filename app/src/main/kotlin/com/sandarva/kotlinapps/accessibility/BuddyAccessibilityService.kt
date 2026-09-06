@@ -1,21 +1,39 @@
 package com.sandarva.kotlinapps.accessibility
 
 import android.accessibilityservice.AccessibilityService
+import android.content.Intent
 import android.view.accessibility.AccessibilityEvent
 
-/** System accessibility service — entry point once the user enables Buddy in Settings. */
+/** System service — composition only. Walking lives in the reader; pointing lives in the eyes API. */
 class BuddyAccessibilityService : AccessibilityService() {
+    private val reader by lazy { AccessibilityTreeReader(this) }
 
     override fun onServiceConnected() {
         super.onServiceConnected()
-        // Future: wire screen-reading and gesture logic here.
+        BuddyScreenEyes.attach(reader)
+        AccessibilitySession.setBound(true)
+        AccessibilitySession.setEnabled(true)
+        AccessibilitySession.setAwaitingGrant(false)
+    }
+
+    override fun onUnbind(intent: Intent?): Boolean {
+        releaseEyes()
+        return super.onUnbind(intent)
+    }
+
+    override fun onDestroy() {
+        releaseEyes()
+        super.onDestroy()
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        // Future: react to UI changes for step-by-step guidance.
+        // Snapshot on demand. Do not walk the tree on every window event.
     }
 
-    override fun onInterrupt() {
-        // Future: pause guidance when the system interrupts the service.
+    override fun onInterrupt() = Unit
+
+    private fun releaseEyes() {
+        BuddyScreenEyes.detach(reader)
+        AccessibilitySession.setBound(false)
     }
 }
