@@ -7,13 +7,20 @@ BuddyCursor is the on-screen pointer that will later guide taps. It is a session
 | File | Role |
 |------|------|
 | `session/BuddyCursorState.kt` | Immutable placement: visibility + normalized x/y |
-| `session/BuddySessionViewModel.kt` | When Buddy starts; UI only observes |
+| `session/BuddySessionViewModel.kt` | Start Buddy; persist rest position after a drag |
 | `ui/cursor/BuddyCursor.kt` | Arrow drawing; layout origin is the tip (hotspot) |
-| `ui/cursor/BuddyCursorOverlay.kt` | Maps state to screen position and appear/disappear motion |
-| `ui/BuddyApp.kt` | Wires Start → `startBuddy()` and draws the overlay above home |
+| `ui/cursor/BuddyCursorOverlay.kt` | Layer, placement, grab handle |
+| `ui/cursor/BuddyDrag.kt` | Finger-down pickup and live drag |
+| `ui/cursor/GrabMotion.kt` | Hold bounce + short jiggle |
+| `ui/BuddyApp.kt` | Wires Start → session and hosts the cursor layer |
 
 ## Current behavior
 
-Tap **Start your buddy** → cursor appears at the center of the screen (`0.5, 0.5`) with a short scale-from-tip animation.
+1. Tap **Start your buddy** → cursor appears at the center.
+2. Press the cursor → it bounces/jiggles to show it is held.
+3. Drag → the tip follows your finger in real time (local pixels, not ViewModel).
+4. Lift → it stays there; rest position is saved as fractions on the session.
 
-Moving it, pointing at real UI, and drawing over other apps come next. Keep driving those from `BuddyCursorState` rather than from the home screen.
+Drag state is read only inside `BuddyCursorLayer`, so the home screen does not recompose while you move.
+
+Moving it onto other apps still comes later. Keep driving position from `BuddyCursorState`.

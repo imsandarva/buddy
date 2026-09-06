@@ -12,6 +12,10 @@ class BuddySessionViewModel : ViewModel() {
     val cursor: StateFlow<BuddyCursorState> = _cursor.asStateFlow()
 
     fun startBuddy() {
-        _cursor.update { it.copy(visible = true, xFraction = 0.5f, yFraction = 0.5f) }
+        _cursor.update { if (it.visible) it else it.copy(visible = true, xFraction = 0.5f, yFraction = 0.5f) }
+    }
+
+    fun moveCursor(xFraction: Float, yFraction: Float) {
+        _cursor.update { it.copy(xFraction = xFraction.coerceIn(0f, 1f), yFraction = yFraction.coerceIn(0f, 1f)) }
     }
 }

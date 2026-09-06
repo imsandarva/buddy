@@ -23,7 +23,7 @@ private val HotspotY = 11.dp
 
 /** Mouse-style pointer. Layout origin is the hotspot (the tip), so placement APIs aim at what it points to. */
 @Composable
-fun BuddyCursor(modifier: Modifier = Modifier, contentDescription: String) {
+fun BuddyCursor(modifier: Modifier = Modifier, held: Boolean = false, contentDescription: String) {
     Canvas(
         modifier
             .size(CursorWidth, CursorHeight)
@@ -32,9 +32,10 @@ fun BuddyCursor(modifier: Modifier = Modifier, contentDescription: String) {
     ) {
         val tip = Offset(HotspotX.toPx(), HotspotY.toPx())
         val path = arrowPath(tip, size.maxDimension)
+        val glowR = if (held) 26.dp.toPx() else 18.dp.toPx()
         drawCircle(
-            brush = Brush.radialGradient(listOf(BuddyColors.Glow, BuddyColors.Ink.copy(alpha = 0f)), tip, 18.dp.toPx()),
-            radius = 18.dp.toPx(),
+            brush = Brush.radialGradient(listOf(BuddyColors.Glow, BuddyColors.Ink.copy(alpha = 0f)), tip, glowR),
+            radius = glowR,
             center = tip
         )
         drawPath(path, BuddyColors.Honey)

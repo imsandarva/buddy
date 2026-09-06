@@ -19,7 +19,7 @@ Buddy opens on a single home surface. `MainActivity` only enables edge-to-edge d
 
 ## Start action
 
-Tap **Start your buddy** to show BuddyCursor at the center of the screen. Session logic lives in `BuddySessionViewModel`; see `docs/cursor.md`.
+Tap **Start your buddy** to show BuddyCursor at the center. Hold and drag it; it stays where you lift. See `docs/cursor.md`.
 
 ## Design tokens
 
