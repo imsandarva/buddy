@@ -3,4 +3,10 @@
     <string name="app_name">Buddy</string>
     <string name="accessibility_service_label">Buddy Assistant</string>
     <string name="accessibility_service_description">Buddy helps you navigate your phone by seeing what is on screen and guiding you step by step. It can highlight where to tap and help with settings and everyday tasks.</string>
+    <string name="home_eyebrow">Buddy</string>
+    <string name="home_headline">A friend on your screen.</string>
+    <string name="home_body">It lives quietly with you and points to the next tap — so the confusing parts of your phone finally feel simple.</string>
+    <string name="start_your_buddy">Start your buddy</string>
+    <string name="home_footnote">Ready when you are.</string>
+    <string name="buddy_cursor_label">Buddy cursor</string>
 </resources>

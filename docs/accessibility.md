@@ -2,6 +2,8 @@
 
 Buddy appears in **Settings → Accessibility → Installed apps** as **Buddy Assistant** once the service is declared in the manifest.
 
+The home screen is a brand welcome. Accessibility is not prompted there yet; `Start your buddy` is a reserved hook for that flow.
+
 ## Architecture
 
 | File | Role |
@@ -9,15 +11,13 @@ Buddy appears in **Settings → Accessibility → Installed apps** as **Buddy As
 | `accessibility/BuddyAccessibilityService.kt` | System service; runs when the user enables access |
 | `accessibility/AccessibilityController.kt` | Checks enabled state, opens system settings |
 | `res/xml/accessibility_service_config.xml` | Capabilities: read screen content, perform gestures |
-| `ui/HomeScreen.kt` | Onboarding UI to guide the user to Settings |
 | `MainActivity.kt` | Thin composition layer only |
 
-## User flow
+## User flow (next)
 
-1. Install and open Buddy.
-2. Tap **Open Accessibility Settings**.
-3. Select **Buddy Assistant** and turn it on.
-4. Return to the app — status updates on resume.
+1. Tap **Start your buddy**.
+2. If access is off, open Accessibility settings and turn on **Buddy Assistant**.
+3. Return to the app and begin on-screen guidance.
 
 ## Capabilities enabled
 
