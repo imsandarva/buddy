@@ -9,4 +9,10 @@ object LiveConfig {
     const val OUT_HZ = 24000
     const val PCM = "audio/pcm"
     const val CHUNK_MS = 40
+    /** Hold this much PCM before the first write so the track never starts empty. */
+    const val PREROLL_MS = 120
+    /** Hardware stream buffer — large enough to absorb jitter, not so large it feels late. */
+    const val TRACK_BUFFER_MS = 280
+    /** Mic send backlog. Drop oldest if the socket is busy so we do not send sped-up speech. */
+    const val MIC_QUEUE_CHUNKS = 6
 }

@@ -28,6 +28,8 @@ Typed send cancels leftover listening so a later STT miss cannot overwrite a rea
 
 Voice **talk** is Gemini Live (native audio). Voice **type** is still REST + Android TTS. Gemini only sees text on the REST path; Live hears PCM.
 
+Live replies arrive as binary JSON frames on the WebSocket. If those frames are ignored, `setupComplete` never lands and the session falls back to the type sheet. Speech is played through a jitter buffer (never drop, clocked at 24 kHz); cursor tools run off the main thread. See `docs/live.md`.
+
 ## Typed vs live
 
 Typed send still closes the sheet, snapshots, and calls `generateContent`. Double-tap with a microphone starts Live instead of STT.
@@ -48,7 +50,7 @@ Typed Ask snapshotted **while the panel was open**. The text field’s accessibi
 | `brain/GuidancePlan.kt` | `say` + `element_id` + `place` + `hand` |
 | `brain/HandPlan.kt` | Tap / hold / stroke from the model |
 | `brain/GuidanceActor.kt` | Shared tap / fly / point executor |
-| `brain/live/` | Gemini Live WebSocket + mic + speaker |
+| `brain/live/` | Gemini Live WebSocket + jitter-buffered speaker + AEC mic |
 | `brain/BuddyHandIntent.kt` | On-device “tap / hold / swipe left” |
 | `brain/Reachability.kt` | Online check + network-error detect |
 | `brain/BuddyVoice.kt` | STT + TTS |

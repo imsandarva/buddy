@@ -30,15 +30,40 @@ Not Computer Use. Not a screenshot stream yet. Not ElevenLabs. Not ChatGPT.
 
 The full ask sheet covers the screen, so Live never uses it. That was the bug when a spoken tap hit the sheet.
 
+## Why live used to die right after the socket opened
+
+Gemini Live answers on **binary WebSocket frames that still hold JSON** (`{"setupComplete":{}}`, audio, tool calls). OkHttp only delivers those to `onMessage(WebSocket, ByteString)`. A text-only listener never sees `setupComplete`, the 12s safety timer fires (`Live.stop user=false`), and the type sheet opens. Industry clients (Google’s JS GenAI SDK, Elixir `gemini_ex`) decode both text and binary as UTF-8 JSON. `LiveSocket` now does the same, and a server `error` object fails the session immediately instead of hanging.
+
+Look for `Live.socket setupComplete` then `Live.mic start` in logcat (`Buddy===TRACE`). If live cannot start, the type sheet still opens so they can ask another way.
+
+## Why speech scratched and sped up
+
+Gemini generates PCM **faster than realtime**. The official Gemini app buffers that stream and plays it at 24 kHz wall-clock speed. We used to do three things that the official player never does:
+
+1. **Drop audio** when a 32-chunk queue filled — later words vanished, so a sentence sounded rushed / “2×”.
+2. **Start the track empty** with a tiny hardware buffer — underruns sound like old-TV static.
+3. **Parse huge JSON on the WebSocket reader** — the next audio frame waited, then arrived in a burst.
+
+Playback is now a jitter buffer: preroll ~120 ms, never drop, blocking `AudioTrack` writes, decode on a worker. Barge-in flush happens only on the speaker thread.
+
+Buddy’s own voice used to leak into the mic (USAGE_ASSISTANT vs VOICE_COMMUNICATION). The server then sent `interrupted` and we flushed mid-sentence. Mic and speaker now share one audio session with echo cancel, and VAD start-of-speech is less jumpy.
+
+## Why the cursor felt hung
+
+Live tools ran on the main thread: a full accessibility walk, then fly + tap (up to ~2.4 s), then another walk. The overlay could not move or take taps. Tools now run on a background dispatcher; window moves stay on main. A live SCREEN list is capped so the model can call the next tool sooner.
+
+The API itself is live — long pauses after “tap Wi‑Fi” are usually us waiting on the tree or the player, not Gemini being “slow”.
+
 ## Composition
 
 | File | Role |
 |------|------|
 | `brain/live/BuddyLive.kt` | Session facade — start / stop / tools |
-| `brain/live/LiveSocket.kt` | OkHttp WebSocket |
+| `brain/live/LiveSocket.kt` | OkHttp WebSocket (text + binary JSON, decode off the reader) |
 | `brain/live/LiveMessages.kt` | Setup, audio, catalog, toolResponse JSON |
-| `brain/live/LiveMic.kt` | 16 kHz capture |
-| `brain/live/LiveSpeaker.kt` | 24 kHz playback + barge-in flush |
+| `brain/live/LiveAudio.kt` | Shared session + AEC / NS / AGC |
+| `brain/live/LiveMic.kt` | 16 kHz capture + send queue |
+| `brain/live/LiveSpeaker.kt` | 24 kHz jitter-buffered playback |
 | `brain/live/LiveConfig.kt` | Model, rates, voice (`Aoede`) |
 | `brain/GuidanceActor.kt` | Shared executor for REST and Live |
 | `overlay/LiveOverlayWindow.kt` | Compact bottom bar |

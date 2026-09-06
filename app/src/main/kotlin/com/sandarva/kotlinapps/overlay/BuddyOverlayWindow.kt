@@ -3,6 +3,7 @@ package com.sandarva.kotlinapps.overlay
 import android.content.Context
 import android.graphics.PixelFormat
 import android.os.Build
+import android.os.Looper
 import android.view.Gravity
 import android.view.WindowManager
 import androidx.compose.ui.platform.ComposeView
@@ -171,13 +172,18 @@ class BuddyOverlayWindow(
     }
 
     private fun applyPixels(x: Float, y: Float) {
+        val host = view
+        if (host != null && Looper.myLooper() != Looper.getMainLooper()) {
+            host.post { applyPixels(x, y) }
+            return
+        }
         val layout = params ?: return
         val screen = screenSize()
-        val w = view?.width?.takeIf { it > 0 } ?: 80
-        val h = view?.height?.takeIf { it > 0 } ?: 80
+        val w = host?.width?.takeIf { it > 0 } ?: 80
+        val h = host?.height?.takeIf { it > 0 } ?: 80
         layout.x = x.toInt().coerceIn(0, (screen.first - w).coerceAtLeast(0))
         layout.y = y.toInt().coerceIn(0, (screen.second - h).coerceAtLeast(0))
-        view?.let { windowManager.updateViewLayout(it, layout) }
+        host?.let { windowManager.updateViewLayout(it, layout) }
     }
 
     private fun currentXY(): Pair<Float, Float> {

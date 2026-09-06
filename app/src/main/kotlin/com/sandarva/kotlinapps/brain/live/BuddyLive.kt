@@ -34,9 +34,10 @@ object BuddyLive {
     fun stop() { session?.stop(user = true) }
 
     class Session(private val app: Application) {
-        private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+        private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
         private var socket: LiveSocket? = null
         private var mic: LiveMic? = null
+        private var audio: LiveAudio? = null
         private val speaker = LiveSpeaker()
         @Volatile var active = false
             private set
@@ -69,6 +70,7 @@ object BuddyLive {
                 }
                 override fun onAudio(pcm: ByteArray) { if (id == gen) speaker.play(pcm) }
                 override fun onInterrupted() { if (id == gen) speaker.interrupt() }
+                override fun onTurnComplete() { if (id == gen) speaker.endUtterance() }
                 override fun onToolCall(calls: List<LiveFunctionCall>) { if (id == gen) scope.launch { runTools(calls) } }
                 override fun onTranscript(text: String, fromUser: Boolean) {
                     if (id != gen) return
@@ -82,11 +84,17 @@ object BuddyLive {
                 }
             })
             socket = next
-            speaker.start()
+            val links = LiveAudio(app)
+            audio = links
+            links.enterVoiceRoute()
+            speaker.start(links.sessionId)
             next.connect()
             scope.launch {
-                delay(12_000L)
-                if (id == gen && active && socket?.isReady != true) fail("I couldn’t start a live talk. Try again in a moment.")
+                delay(SETUP_WAIT_MS)
+                if (id == gen && active && socket?.isReady != true) {
+                    BuddyLog.d("Live.setup", "timeout — no setupComplete")
+                    fail("I couldn’t start a live talk. Try again in a moment.")
+                }
             }
         }
 
@@ -97,6 +105,7 @@ object BuddyLive {
             active = false
             mic?.stop(); mic = null
             speaker.stop()
+            audio?.release(); audio = null
             socket?.close(); socket = null
             BrainSession.setLiveOpen(false)
             if (BrainSession.phase.value == BrainPhase.Live) BrainSession.setPhase(BrainPhase.Idle)
@@ -106,7 +115,7 @@ object BuddyLive {
             if (!active) return
             val next = LiveMic { pcm -> if (socket?.isReady == true) socket?.send(LiveMessages.audio(pcm)) }
             mic = next
-            if (!next.start()) fail("I couldn’t hear you on this phone. Type it instead.")
+            if (!next.start(audio)) fail("I couldn’t hear you on this phone. Type it instead.")
         }
 
         private suspend fun runTools(calls: List<LiveFunctionCall>) {
@@ -117,13 +126,13 @@ object BuddyLive {
                 BuddyLog.d("Live.tool", "name=${call.name} id=${call.id}")
                 val result = GuidanceActor.run(plan, snap)
                 delay(TREE_SETTLE_MS)
-                val screen = GuidanceCatalog.format(BuddyScreenEyes.snapshot())
+                val screen = GuidanceCatalog.format(BuddyScreenEyes.snapshot(), LIVE_CATALOG)
                 socket?.send(LiveMessages.toolResponse(call.id, call.name, result, screen))
             }
         }
 
         private fun pushCatalog() {
-            val catalog = GuidanceCatalog.format(BuddyScreenEyes.snapshot())
+            val catalog = GuidanceCatalog.format(BuddyScreenEyes.snapshot(), LIVE_CATALOG)
             BuddyLog.d("Live.catalog", "chars=${catalog.length}")
             socket?.send(LiveMessages.catalog(catalog))
         }
@@ -140,6 +149,10 @@ object BuddyLive {
             scope.cancel()
         }
 
-        companion object { private const val TREE_SETTLE_MS = 320L }
+        companion object {
+            private const val TREE_SETTLE_MS = 220L
+            private const val SETUP_WAIT_MS = 12_000L
+            private const val LIVE_CATALOG = 72
+        }
     }
 }
