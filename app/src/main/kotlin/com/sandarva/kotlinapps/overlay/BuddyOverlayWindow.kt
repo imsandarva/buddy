@@ -13,6 +13,7 @@ import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.sandarva.kotlinapps.R
 import com.sandarva.kotlinapps.debug.BuddyLog
 import com.sandarva.kotlinapps.ui.cursor.BuddyCursorHandle
+import com.sandarva.kotlinapps.ui.cursor.CursorGeometry
 import com.sandarva.kotlinapps.ui.theme.BuddyTheme
 
 /** Small WRAP_CONTENT window. Drag or animateTo moves the same LayoutParams. */
@@ -41,8 +42,9 @@ class BuddyOverlayWindow(
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.START
-            x = (screen.first * start.xFraction).toInt()
-            y = (screen.second * start.yFraction).toInt()
+            val (tipOx, tipOy) = tipOffsetPx()
+            x = ((screen.first * start.xFraction) - tipOx).toInt()
+            y = ((screen.second * start.yFraction) - tipOy).toInt()
         }
         val compose = ComposeView(context).apply {
             hideFromBuddyEyes()
@@ -65,7 +67,7 @@ class BuddyOverlayWindow(
         windowManager.addView(compose, layout)
         view = compose
         params = layout
-        flight = CursorFlightAnimator(compose, ::currentXY, ::applyPixels)
+        flight = CursorFlightAnimator(compose, ::currentTipXY, ::applyPixels)
         OverlayChrome.attach(this)
     }
 
@@ -124,7 +126,7 @@ class BuddyOverlayWindow(
         }
     }
 
-    override fun tipPixels(): Pair<Float, Float> = currentXY()
+    override fun tipPixels(): Pair<Float, Float> = currentTipXY()
     override fun screenPixels(): Pair<Int, Int> = screenSize()
 
     override fun setPassthrough(on: Boolean) {
@@ -143,7 +145,7 @@ class BuddyOverlayWindow(
     override fun nudgeNormalized(dx: Float, dy: Float) {
         val screen = screenSize()
         if (screen.first <= 0 || screen.second <= 0) return
-        val now = currentXY()
+        val now = currentTipXY()
         val nx = (now.first / screen.first + dx).coerceIn(0.04f, 0.96f)
         val ny = (now.second / screen.second + dy).coerceIn(0.04f, 0.92f)
         BuddyLog.d("Overlay.nudge", "dx=$dx dy=$dy to=$nx,$ny")
@@ -168,28 +170,39 @@ class BuddyOverlayWindow(
     }
 
     private fun moveBy(dx: Float, dy: Float) {
-        val now = currentXY()
+        val now = currentTipXY()
         applyPixels(now.first + dx, now.second + dy)
     }
 
-    private fun applyPixels(x: Float, y: Float) {
+    /** [x],[y] are tip pixels on screen; window origin is offset by [CursorGeometry]. */
+    private fun applyPixels(tipX: Float, tipY: Float) {
+        val (ox, oy) = tipOffsetPx()
+        applyWindowPixels(tipX - ox, tipY - oy)
+    }
+
+    private fun applyWindowPixels(x: Float, y: Float) {
         val host = view
         if (host != null && Looper.myLooper() != Looper.getMainLooper()) {
-            host.post { applyPixels(x, y) }
+            host.post { applyWindowPixels(x, y) }
             return
         }
         val layout = params ?: return
         val screen = screenSize()
-        val w = host?.width?.takeIf { it > 0 } ?: 80
-        val h = host?.height?.takeIf { it > 0 } ?: 80
+        val density = context.resources.displayMetrics.density
+        val w = host?.width?.takeIf { it > 0 } ?: (CursorGeometry.touchWidth.value * density).toInt()
+        val h = host?.height?.takeIf { it > 0 } ?: (CursorGeometry.touchHeight.value * density).toInt()
         layout.x = x.toInt().coerceIn(0, (screen.first - w).coerceAtLeast(0))
         layout.y = y.toInt().coerceIn(0, (screen.second - h).coerceAtLeast(0))
         host?.let { windowManager.updateViewLayout(it, layout) }
     }
 
-    private fun currentXY(): Pair<Float, Float> {
+    private fun tipOffsetPx(): Pair<Float, Float> =
+        CursorGeometry.tipOffsetPx(context.resources.displayMetrics.density)
+
+    private fun currentTipXY(): Pair<Float, Float> {
         val layout = params ?: return 0f to 0f
-        return layout.x.toFloat() to layout.y.toFloat()
+        val (ox, oy) = tipOffsetPx()
+        return layout.x + ox to layout.y + oy
     }
 
     private fun normalizedToPixels(nx: Float, ny: Float): Pair<Float, Float> {
@@ -198,9 +211,11 @@ class BuddyOverlayWindow(
     }
 
     private fun persist() {
-        val layout = params ?: return
+        val (tx, ty) = currentTipXY()
         val screen = screenSize()
-        if (screen.first > 0 && screen.second > 0) OverlaySession.savePlacement(layout.x / screen.first.toFloat(), layout.y / screen.second.toFloat())
+        if (screen.first > 0 && screen.second > 0) {
+            OverlaySession.savePlacement(tx / screen.first.toFloat(), ty / screen.second.toFloat())
+        }
     }
 
     private fun screenSize(): Pair<Int, Int> {

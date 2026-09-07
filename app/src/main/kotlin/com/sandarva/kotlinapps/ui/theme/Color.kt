@@ -18,6 +18,7 @@ object BuddyColors {
     val GlowSoft = Color(0x18635BFF)
     val GlowLilac = Color(0x248B83F4)
     val CursorBlue = Color(0xFF3B8CFF)
+    val CursorOutline = Color(0xFF111111)
     val CursorBlueDeep = Color(0xFF2563EB)
     val CursorBlueLight = Color(0xFF6BB0FF)
     val CursorGlow = Color(0x553B8CFF)

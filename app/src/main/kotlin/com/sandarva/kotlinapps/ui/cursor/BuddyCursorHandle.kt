@@ -8,6 +8,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -15,13 +16,11 @@ import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.unit.dp
 import com.sandarva.kotlinapps.overlay.OverlaySession
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import androidx.compose.runtime.rememberCoroutineScope
 
-/** Grab target for BuddyCursor — lift, drift, tap bloom, double-tap summon. */
+/** Touch target wraps the full cursor bounds; transforms pivot on the tip. */
 @Composable
 fun BuddyCursorHandle(
     onDrag: (Float, Float) -> Unit,
@@ -44,14 +43,15 @@ fun BuddyCursorHandle(
     val scope = rememberCoroutineScope()
     Box(
         modifier
+            .size(CursorGeometry.touchWidth, CursorGeometry.touchHeight)
             .graphicsLayer {
                 scaleX = motion.scale
                 scaleY = motion.scale
                 rotationZ = motion.rotation
                 translationY = motion.liftY
-                transformOrigin = TransformOrigin(0.08f, 0.1f)
+                transformOrigin = TransformOrigin(CursorGeometry.tipFractionX(), CursorGeometry.tipFractionY())
+                clip = false
             }
-            .size(60.dp, 72.dp)
             .pointerInput(Unit) {
                 cursorGestures(
                     onTap = {
