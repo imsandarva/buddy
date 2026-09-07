@@ -43,7 +43,7 @@ fun BuddyApp(session: BuddySessionViewModel = viewModel()) {
     }
     HostResumeHook()
     BuddyTheme {
-        Box(Modifier.fillMaxSize().background(BuddyColors.Ink)) {
+        Box(Modifier.fillMaxSize().background(BuddyColors.Paper)) {
             HomeScreen(
                 isRunning = isRunning,
                 awaitingPermission = awaitingPermission,

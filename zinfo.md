@@ -1,99 +1,124 @@
-You’re aiming at the right problem. The important split is this: **the AI should not move the cursor. The app should. The AI should only say where.**
 
-That’s how [Clicky](https://github.com/farzaa/clicky) works, how [Claude Computer Use](https://platform.claude.com/docs/en/agents-and-tools/tool-use/computer-use-tool.md) works, and how [Gemini Computer Use](https://ai.google.dev/gemini-api/docs/computer-use) works. Eyes, brain, and hands stay separate.
 
-## The forest
+def get_suggestion_prompt(user_context_str, places_context_str):
+    prompt = """
+###############################
+# ROLE: Place Recommendation Engine
+###############################
 
-Buddy already has a hand: the overlay window. What’s missing is a **single move command** anything can call:
+You are an intelligent recommendation system designed to suggest relevant places and activities based on user preferences.
 
-- `animateTo(xPx, yPx)` — screen pixels, tip lands there  
-- `animateToNormalized(x, y)` — `0…1` or Gemini’s `0…999` grid, then we convert  
+################################
+# OBJECTIVE
+################################
 
-Finger-drag already updates that window. AI later just becomes another caller of the same function. Don’t wait for Gemini Live to design this. If we can’t move it from a test button in code, the model won’t be able to either.
+Given a list of nearby places and a user's preferences, recommend the most relevant places and generate contextual suggestions describing what the user can do at each place.
 
-Three jobs, three modules:
+################################
+# INPUT
+################################
 
-| Layer | Job | Buddy today |
-|---|---|---|
-| Eyes | What’s on screen? | Not built (accessibility is stubbed) |
-| Brain | Where should we point, and what should we say? | Not built |
-| Hands | Fly the cursor there | Overlay exists; **no programmatic move API yet** |
+2. places_list:
+A list of places where each object may contain:
+- place_id (required)
+- name (required)
+- editorialSummary (optional)
+- types (optional)
 
-Live Mode, ChatGPT, MCP, `[POINT:…]` tags — those are only Brain adapters. The Hands stay the same.
+3. user_preferences:
+A description of the user’s interests, likes, and travel behavior.
 
-## How Clicky does it (Mac)
+################################
+# CORE TASK
+################################
 
-From [farzaa/clicky](https://github.com/farzaa/clicky): screenshot + voice go to Claude. The prompt tells Claude to append a tag in the **spoken text**:
+- Analyze user_preferences deeply.
+- Evaluate each place in places_list for relevance.
+- Select as many places as possible.
+- For each selected place, generate a short, natural suggestion describing what the user can do there.
 
-```text
-click that and you'll get the color wheels. [POINT:1100,42:color inspector]
-```
+################################
+# SUGGESTION GUIDELINES
+################################
 
-The app regex-parses `[POINT:x,y:label]`, strips it before TTS, maps screenshot pixels → screen pixels, then the overlay **flies** there on a curve.
+- Suggestions must be framed to feel personalized to the user's interests.
+- Describe concrete “things to do” (activities, experiences, vibes).
+- Use contextual cues from:
+  - place name
+  - editorialSummary
+  - types (if available)
+- If limited data is available, infer intelligently but stay realistic.
+- Suggestions must be in simple, natural, plain english—no special characters, no emojis.
+- Suggestions must be written from a first-person perspective (e.g., “Enjoy a sunset walk” or“Grab a coffee and relax”), not as instructions to someone else (avoid "You should…" or "I...").
+- Create a "main_suggestion" that is:
+  - Extremely concise (maximum 9 words)
+  - Combines activity + place name naturally (e.g., “Sunset walk at Lakeside”, “Street photography in Bhaktapur”)
+- Create a "concise_description" that is:
+  - Exactly 2 sentence
+  - Maximum 31 words
+  - Expands the main_suggestion with a clear, vivid, and relevant description
 
-That’s clever for a weekend demo. It is **not** the best protocol:
 
-- Models forget the format, put it mid-sentence, or invent coordinates  
-- Speech and control are jammed into one string  
-- You have to sanitize TTS so the user never hears “point one thousand one hundred”  
-- Clicky even needs `[POINT:none]` as a special case  
+################################
+# RULES
+################################
 
-They used tags because they wanted pointing mixed into one streaming paragraph. We don’t have that constraint.
+- Do NOT hallucinate non-existent facts about a place.
+- Do NOT repeat generic suggestions across all places.
+- Ensure each suggestion is specific to that place.
+- Prefer covering as many places as possible.
+- Avoid overly promotional or exaggerated language.
 
-## What the big APIs actually do
 
-Industry practice is **tool calls**, not “write `moveBuddyCursor(x,y)` in the reply.”
+################################
+# OUTPUT FORMAT (STRICT)
+################################
 
-- **Claude:** `mouse_move` / `left_click` as JSON `tool_use` blocks. Your app executes them.  
-- **Gemini:** `function_call` like `click` with **`x,y` on a 0–999 grid**, plus `ENVIRONMENT_MOBILE` for Android. You scale to the real screen. Google’s [Android computer-use quickstart](https://github.com/google-gemini/gemini-android-computer-use-quickstart) does exactly that.  
-- **MCP:** same idea, different socket. Useful if a desktop agent drives the phone. **Not needed** between Gemini’s API and this app.
+Return ONLY a JSON array.
 
-So: `movebuddycursor(x,y)` in the chat text is the workaround. Native function calling is the product version.
+Each object must follow exactly this structure:
 
-Also: **never let the model speak pixel numbers to the user.** Two outputs:
+[
+  {{
+    "place_id": "<place_id from input>",
+    "main_suggestion": "<main suggestion for the place that combines activity + place name naturally (max 9 words)>",
+    "concise_description": "<concise description of the main suggestion(max 31 words)>"
+  }},
+  ...
+]
 
-1. `say` — warm words: “Tap Date & time, right here.”  
-2. `point` — structured: where the cursor goes  
+################################
+# GOAL
+################################
 
-## Precision on Android (this is the real win)
+Frame and narrate the suggestions so the user feels each recommendation matches their interests and inspires them to visit.
 
-Raw “AI looks at a screenshot and guesses pixels” is okay. For **Settings → Date & time**, it’s the weaker path.
 
-Android already has a map of the screen: the **accessibility tree**. Each control has a label and `getBoundsInScreen()`. Operon-style Android agents send **screenshot + UI tree**, then act on a node, not a guess.
+USER CONTEXT:
+{user_context_str}
 
-For Buddy’s teaching use case, prefer this:
 
-1. Snapshot visible nodes: `{ id, text, bounds }`  
-2. Give the model that list (plus a screenshot if useful)  
-3. Tool: `point_to(element_id = "date_and_time")`  
-4. **We** move the cursor to the **center of that rect**
+PLACES CONTEXT:
+{places_context_str}
 
-That’s more precise than “look at the photo and pick x=812.” Pixels stay as a fallback when a screen has no useful tree (games, custom drawing).
 
-Normalized coordinates still matter as the wire format (Gemini’s 0–999, or 0–1). Screenshot pixels ≠ phone pixels (status bar, density, crop). One mapper. Clicky had to do this too.
 
-## Live Mode
 
-Gemini/ChatGPT Live is **eyes + voice**. It does not replace the Hands.
+################################
+# OUTPUT FORMAT (STRICT)
+################################
 
-When we add it: same `point_to` / `say` tools. If a live session can’t do tools well, *then* parse a tag as a fallback — don’t start there.
+Return ONLY a JSON array.
 
-Live also does not require the model to drive the system mouse. BuddyCursor is a **virtual** pointer. The real finger stays with the user. That’s the teacher product, not a full computer-use agent. Clicking *for* them is a later accessibility gesture.
+Each object must follow exactly this structure:
 
-## What I would do
-
-**Best path for this app**
-
-1. **Now (no AI):** `BuddyOverlayWindow.animateTo(x, y)` — spring/arc, same jiggle-on-arrive if we want. Prove it with a hidden debug target.  
-2. **Next:** accessibility snapshot → list of on-screen things.  
-3. **Then:** Gemini (or Claude) with tools `say` + `point_to(element_id)` and fallback `point_to_normalized(x, y)`.  
-4. **Later:** Live audio uses those same tools.  
-5. **Later still:** `tap` via accessibility on that same node.
-
-**Don’t** make the model write `moveBuddyCursor(120, 400)` in the sentence.  
-**Don’t** wait on MCP.  
-**Don’t** couple “which AI” to “how the window moves.”
-
-The forest sentence: **BuddyCursor is a puppet. Build a clean string. Then any brain — Gemini Live, ChatGPT, a test button — can pull it.**
-
-If you want a next step in code, the smallest one is that programmatic `animateTo` — still no API keys, but the AI will have somewhere to plug in.
+[
+  {{
+    "place_id": "<place_id from input>",
+    "main_suggestion": "<main suggestion for the place that combines activity + place name naturally (max 9 words)>",
+    "concise_description": "<concise description of the main suggestion(max 31 words)>"
+  }},
+  ...
+]
+""".format(user_context_str=user_context_str, places_context_str=places_context_str)
+    return prompt

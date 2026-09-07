@@ -6,6 +6,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -26,17 +27,18 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.sandarva.kotlinapps.R
 import com.sandarva.kotlinapps.ui.components.QuietTextAction
 import com.sandarva.kotlinapps.ui.theme.BuddyColors
 import com.sandarva.kotlinapps.ui.theme.BuddyMotion
 
+private val PillShape = RoundedCornerShape(28.dp)
+
 /** Floating live pill — small enough that bottom buttons stay reachable. */
 @Composable
 fun LiveBuddyBar(onStop: () -> Unit, onTypeInstead: () -> Unit, modifier: Modifier = Modifier) {
     val pulse by rememberInfiniteTransition(label = "liveListen").animateFloat(
-        initialValue = 0.42f,
+        initialValue = 0.45f,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(tween(1400, easing = BuddyMotion.EnterEasing), RepeatMode.Reverse),
         label = "livePulse"
@@ -44,20 +46,26 @@ fun LiveBuddyBar(onStop: () -> Unit, onTypeInstead: () -> Unit, modifier: Modifi
     Row(
         modifier
             .navigationBarsPadding()
-            .padding(start = 16.dp, end = 16.dp, bottom = 10.dp)
+            .padding(start = 16.dp, end = 16.dp, bottom = 12.dp)
             .wrapContentSize()
-            .shadow(12.dp, RoundedCornerShape(28.dp), ambientColor = BuddyColors.Ink.copy(alpha = 0.28f), spotColor = BuddyColors.Ink.copy(alpha = 0.22f))
-            .clip(RoundedCornerShape(28.dp))
-            .background(BuddyColors.Ink)
-            .padding(horizontal = 16.dp, vertical = 10.dp),
+            .shadow(18.dp, PillShape, ambientColor = BuddyColors.Ink.copy(alpha = 0.12f), spotColor = BuddyColors.Violet.copy(alpha = 0.16f))
+            .clip(PillShape)
+            .background(BuddyColors.Snow)
+            .border(1.dp, BuddyColors.Line, PillShape)
+            .padding(horizontal = 16.dp, vertical = 11.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Box(Modifier.size(8.dp).graphicsLayer { alpha = pulse; scaleX = 0.86f + 0.14f * pulse; scaleY = 0.86f + 0.14f * pulse }.background(BuddyColors.Honey, CircleShape))
+        Box(
+            Modifier
+                .size(8.dp)
+                .graphicsLayer { alpha = pulse; scaleX = 0.86f + 0.14f * pulse; scaleY = 0.86f + 0.14f * pulse }
+                .background(BuddyColors.Violet, CircleShape)
+        )
         Text(
             stringResource(R.string.live_title),
-            style = MaterialTheme.typography.titleLarge.copy(fontSize = 17.sp, lineHeight = 20.sp, letterSpacing = (-0.2).sp),
-            color = BuddyColors.Bone,
+            style = MaterialTheme.typography.titleMedium,
+            color = BuddyColors.Ink,
             maxLines = 1
         )
         QuietTextAction(stringResource(R.string.live_thats_all), onStop)

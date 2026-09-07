@@ -6,14 +6,15 @@ Buddy opens on a single home surface. `MainActivity` only enables edge-to-edge d
 
 | File | Role |
 |------|------|
-| `MainActivity.kt` | Window chrome + `setContent { BuddyApp() }` |
+| `MainActivity.kt` | Light system bars + `setContent { BuddyApp() }` |
 | `ui/BuddyApp.kt` | Theme, session, home, overlay + access resume hook |
-| `ui/home/HomeScreen.kt` | Assembles backdrop, hero, Start / Stop, and quiet actions |
+| `ui/home/HomeScreen.kt` | Assembles paper backdrop, hero, Start / Rest, and quiet actions |
 | `ui/home/AskBuddySheet.kt` | Type-to-ask panel (typed REST path) |
 | `ui/home/LiveBuddyBar.kt` | Compact live talk pill |
-| `ui/components/BuddyActionButton.kt` | Honey Start and quiet Stop |
+| `ui/components/BuddyActionButton.kt` | Violet Start and quiet Rest |
+| `ui/motion/PressScale.kt` | Shared press spring |
 | `session/BuddySessionViewModel.kt` | Facade over hands, eyes, and the Gemini brain |
-| `ui/theme/` | Color, type, motion, Material theme |
+| `ui/theme/` | Color, type, motion, Material theme — light only |
 
 ## Actions
 
@@ -28,6 +29,9 @@ See `docs/overlay.md`, `docs/cursor.md`, `docs/eyes.md`, `docs/hands.md`, `docs/
 
 ## Design tokens
 
-- Dusk navy field (`#10141C`), honey light (`#E4B56A`), quiet sage (`#7A9E96`)
-- Serif display + sans body, padding-trimmed type
-- Motion stays local: ambient pulse, press scale, entrance, grab jiggle
+Light only. Paper field (`#F7F6FB`), snow surfaces (`#FFFFFF`), ink (`#1C1730`), iris violet (`#635BFF`). No honey, no dusk, no dark theme.
+
+- Eyebrow: wide-tracked sans, violet
+- Display: light serif, stacked two-line headlines
+- Body: 17 / 27 sans, muted ink
+- Motion: local only — ambient bloom, press scale, entrance, grab jiggle, hero crossfade

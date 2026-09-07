@@ -1,5 +1,10 @@
 package com.sandarva.kotlinapps.ui.home
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,6 +32,7 @@ import com.sandarva.kotlinapps.ui.components.BuddyMark
 import com.sandarva.kotlinapps.ui.components.QuietTextAction
 import com.sandarva.kotlinapps.ui.motion.FadeSlideIn
 import com.sandarva.kotlinapps.ui.theme.BuddyColors
+import com.sandarva.kotlinapps.ui.theme.BuddyMotion
 
 @Composable
 fun HomeScreen(
@@ -46,7 +52,7 @@ fun HomeScreen(
     modifier: Modifier = Modifier
 ) {
     Box(modifier.fillMaxSize()) {
-        AmbientBackdrop(Modifier.fillMaxSize())
+        AmbientBackdrop(alive = isRunning, modifier = Modifier.fillMaxSize())
         HomeForeground(
             isRunning, awaitingPermission, canSeeScreen, awaitingAccess, listening, thinking, live,
             onStartBuddy, onStopBuddy, onWatchMove, onRequestAccess, onPointAtControl, onAskBuddy,
@@ -73,15 +79,15 @@ private fun HomeForeground(
     modifier: Modifier = Modifier
 ) {
     Column(
-        modifier = modifier.padding(horizontal = 28.dp),
+        modifier = modifier.padding(horizontal = 32.dp),
         verticalArrangement = Arrangement.SpaceBetween,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        HomeHero(isRunning, Modifier.fillMaxWidth().padding(top = 72.dp))
+        HomeHero(isRunning, Modifier.fillMaxWidth().padding(top = 80.dp))
         HomeCta(
             isRunning, awaitingPermission, canSeeScreen, awaitingAccess, listening, thinking, live,
             onStartBuddy, onStopBuddy, onWatchMove, onRequestAccess, onPointAtControl, onAskBuddy,
-            Modifier.fillMaxWidth().padding(bottom = 36.dp)
+            Modifier.fillMaxWidth().padding(bottom = 40.dp)
         )
     }
 }
@@ -89,29 +95,40 @@ private fun HomeForeground(
 @Composable
 private fun HomeHero(isRunning: Boolean, modifier: Modifier = Modifier) {
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        FadeSlideIn(0) { BuddyMark() }
-        Spacer(Modifier.height(36.dp))
-        FadeSlideIn(90) {
-            Text(stringResource(R.string.home_eyebrow), style = MaterialTheme.typography.labelSmall, color = BuddyColors.Sage, textAlign = TextAlign.Center)
-        }
-        Spacer(Modifier.height(16.dp))
-        FadeSlideIn(160) {
+        FadeSlideIn(0) { BuddyMark(alive = isRunning) }
+        Spacer(Modifier.height(40.dp))
+        FadeSlideIn(80) {
             Text(
-                stringResource(if (isRunning) R.string.home_headline_running else R.string.home_headline),
-                style = MaterialTheme.typography.displayLarge,
-                color = BuddyColors.Bone,
+                stringResource(R.string.home_eyebrow).uppercase(),
+                style = MaterialTheme.typography.labelSmall,
+                color = BuddyColors.Violet,
                 textAlign = TextAlign.Center
             )
         }
         Spacer(Modifier.height(18.dp))
-        FadeSlideIn(240) {
-            Text(
-                stringResource(if (isRunning) R.string.home_body_running else R.string.home_body),
-                style = MaterialTheme.typography.bodyLarge,
-                color = BuddyColors.BoneMuted,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(horizontal = 8.dp)
-            )
+        FadeSlideIn(150) {
+            AnimatedContent(
+                targetState = isRunning,
+                transitionSpec = { fadeIn(BuddyMotion.crossfade()) togetherWith fadeOut(BuddyMotion.crossfade()) },
+                label = "heroCopy"
+            ) { running ->
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        stringResource(if (running) R.string.home_headline_running else R.string.home_headline),
+                        style = MaterialTheme.typography.displayLarge,
+                        color = BuddyColors.Ink,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(Modifier.height(16.dp))
+                    Text(
+                        stringResource(if (running) R.string.home_body_running else R.string.home_body),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = BuddyColors.InkMuted,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 4.dp)
+                    )
+                }
+            }
         }
     }
 }
@@ -143,13 +160,15 @@ private fun HomeCta(
         else -> R.string.home_footnote
     }
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        FadeSlideIn(320) {
+        FadeSlideIn(280) {
             if (isRunning) BuddyActionButton(stringResource(R.string.stop_buddy), BuddyActionStyle.Stop, onStopBuddy)
             else BuddyActionButton(stringResource(R.string.start_your_buddy), BuddyActionStyle.Start, onStartBuddy)
         }
-        if (isRunning) HomeRunningActions(canSeeScreen, onWatchMove, onRequestAccess, onPointAtControl, onAskBuddy)
-        Spacer(Modifier.height(16.dp))
-        FadeSlideIn(400) {
+        AnimatedVisibility(visible = isRunning, enter = fadeIn(BuddyMotion.crossfade()), exit = fadeOut(BuddyMotion.crossfade())) {
+            HomeRunningActions(canSeeScreen, onWatchMove, onRequestAccess, onPointAtControl, onAskBuddy)
+        }
+        Spacer(Modifier.height(20.dp))
+        FadeSlideIn(360) {
             Text(stringResource(footnote), style = MaterialTheme.typography.bodySmall, color = BuddyColors.Mist, textAlign = TextAlign.Center)
         }
     }
@@ -163,15 +182,14 @@ private fun HomeRunningActions(
     onPointAtControl: () -> Unit,
     onAskBuddy: () -> Unit
 ) {
-    Spacer(Modifier.height(18.dp))
-    FadeSlideIn(350) {
+    Column(Modifier.fillMaxWidth().padding(top = 22.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         if (canSeeScreen) QuietTextAction(stringResource(R.string.ask_buddy), onAskBuddy)
         else QuietTextAction(stringResource(R.string.let_me_see_screen), onRequestAccess)
-    }
-    Spacer(Modifier.height(14.dp))
-    FadeSlideIn(370) { QuietTextAction(stringResource(R.string.watch_buddy_move), onWatchMove) }
-    if (canSeeScreen) {
-        Spacer(Modifier.height(14.dp))
-        FadeSlideIn(390) { QuietTextAction(stringResource(R.string.point_at_something), onPointAtControl) }
+        Spacer(Modifier.height(18.dp))
+        QuietTextAction(stringResource(R.string.watch_buddy_move), onWatchMove)
+        if (canSeeScreen) {
+            Spacer(Modifier.height(18.dp))
+            QuietTextAction(stringResource(R.string.point_at_something), onPointAtControl)
+        }
     }
 }

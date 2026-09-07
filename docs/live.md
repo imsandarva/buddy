@@ -29,7 +29,7 @@ We do **not** send those frames. Eyes stay the accessibility SCREEN list (labels
 
 ## It must see what the user sees
 
-The small pill at the bottom while you talk is **our** live chrome (“I’m with you”, **That’s all**, **Type instead**). It is WRAP_CONTENT — not a full-width sheet — so buttons beside and above it stay tappable. During a Buddy tap, the pill goes pass-through with the rest of `OverlayChrome`. It is not the type sheet, and it must not become the SCREEN list.
+The small pill at the bottom while you talk is **our** live chrome (“I’m with you”, **That’s all**, **Type instead**) — a white, hairlined bar with a violet listening pulse. It is WRAP_CONTENT — not a full-width sheet — so buttons beside and above it stay tappable. During a Buddy tap, the pill goes pass-through with the rest of `OverlayChrome`. It is not the type sheet, and it must not become the SCREEN list.
 
 Two things used to make the model describe the Buddy app while you were on the home screen:
 

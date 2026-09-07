@@ -32,15 +32,15 @@ fun BuddyCursor(modifier: Modifier = Modifier, held: Boolean = false, contentDes
     ) {
         val tip = Offset(HotspotX.toPx(), HotspotY.toPx())
         val path = arrowPath(tip, size.maxDimension)
-        val glowR = if (held) 26.dp.toPx() else 18.dp.toPx()
+        val glowR = if (held) 28.dp.toPx() else 20.dp.toPx()
         drawCircle(
-            brush = Brush.radialGradient(listOf(BuddyColors.Glow, BuddyColors.Ink.copy(alpha = 0f)), tip, glowR),
+            brush = Brush.radialGradient(listOf(BuddyColors.Glow, BuddyColors.Paper.copy(alpha = 0f)), tip, glowR),
             radius = glowR,
             center = tip
         )
-        drawPath(path, BuddyColors.Honey)
-        drawPath(path, BuddyColors.OnHoney, style = Stroke(width = 1.6.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
-        drawCircle(BuddyColors.Bone.copy(alpha = 0.55f), radius = 1.6.dp.toPx(), center = tip + Offset(3.2.dp.toPx(), 4.2.dp.toPx()))
+        drawPath(path, BuddyColors.Violet)
+        drawPath(path, BuddyColors.Snow, style = Stroke(width = 1.8.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
+        drawCircle(BuddyColors.Snow.copy(alpha = 0.7f), radius = 1.7.dp.toPx(), center = tip + Offset(3.2.dp.toPx(), 4.2.dp.toPx()))
     }
 }
 

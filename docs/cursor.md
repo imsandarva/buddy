@@ -14,6 +14,8 @@ BuddyCursor is the on-screen pointer. After Start, it lives in a system overlay 
 | `overlay/CursorLanding.kt` | Named spots for `fly_to` |
 | `overlay/` | Window, service, permission, session |
 
+The pointer is iris-violet with a white rim so it reads on light and dark screens. See `docs/ui.md`.
+
 ## Current behavior
 
 1. Tap **Start your buddy** → grant appear-on-top if asked → cursor shows at the last (or center) position.

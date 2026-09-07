@@ -31,6 +31,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
@@ -42,6 +43,8 @@ import com.sandarva.kotlinapps.debug.BuddyLog
 import com.sandarva.kotlinapps.ui.components.QuietTextAction
 import com.sandarva.kotlinapps.ui.theme.BuddyColors
 import com.sandarva.kotlinapps.ui.theme.BuddyMotion
+
+private val SheetShape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
 
 /** Owned panel — not ModalBottomSheet, so dismiss cannot leave a stuck scrim. */
 @Composable
@@ -55,11 +58,11 @@ fun AskBuddySheet(
     var shown by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { shown = true }
     val progress by animateFloatAsState(if (shown) 1f else 0f, tween(420, easing = BuddyMotion.EnterEasing), label = "askEnter")
-    Box(modifier.fillMaxSize().graphicsLayer { alpha = 0.4f + 0.6f * progress }) {
+    Box(modifier.fillMaxSize().graphicsLayer { alpha = 0.45f + 0.55f * progress }) {
         Box(
             Modifier
                 .fillMaxSize()
-                .background(BuddyColors.Ink.copy(alpha = 0.46f))
+                .background(BuddyColors.Scrim)
                 .clickable(
                     enabled = phase != BrainPhase.Thinking,
                     indication = null,
@@ -73,9 +76,10 @@ fun AskBuddySheet(
             Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
-                .graphicsLayer { translationY = (1f - progress) * 40f }
-                .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
-                .background(BuddyColors.Ink)
+                .graphicsLayer { translationY = (1f - progress) * 36f }
+                .shadow(24.dp, SheetShape, ambientColor = BuddyColors.Ink.copy(alpha = 0.12f), spotColor = BuddyColors.Violet.copy(alpha = 0.08f))
+                .clip(SheetShape)
+                .background(BuddyColors.Snow)
                 .imePadding()
                 .navigationBarsPadding()
                 .padding(horizontal = 28.dp)
@@ -83,10 +87,10 @@ fun AskBuddySheet(
                 .clickable(remember { MutableInteractionSource() }, null) { }
         ) {
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                Box(Modifier.padding(bottom = 16.dp).width(48.dp).height(4.dp).background(BuddyColors.Honey.copy(alpha = 0.55f), RoundedCornerShape(50)))
+                Box(Modifier.padding(bottom = 18.dp).width(36.dp).height(4.dp).background(BuddyColors.Lilac.copy(alpha = 0.45f), RoundedCornerShape(50)))
             }
             AskBuddyBody(phase, note, onAskText)
-            Spacer(Modifier.height(18.dp))
+            Spacer(Modifier.height(20.dp))
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                 QuietTextAction(stringResource(R.string.ask_not_now), onClick = {
                     BuddyLog.d("AskPanel", "not now → dismiss")
@@ -100,22 +104,22 @@ fun AskBuddySheet(
 @Composable
 private fun AskBuddyBody(phase: BrainPhase, note: String?, onAskText: (String) -> Unit) {
     var draft by remember { mutableStateOf("") }
-        val title = when (phase) {
-            BrainPhase.Listening, BrainPhase.Live -> R.string.ask_title_listening
-            BrainPhase.Thinking -> R.string.ask_title_thinking
-            BrainPhase.Idle -> R.string.ask_title_idle
+    val title = when (phase) {
+        BrainPhase.Listening, BrainPhase.Live -> R.string.ask_title_listening
+        BrainPhase.Thinking -> R.string.ask_title_thinking
+        BrainPhase.Idle -> R.string.ask_title_idle
+    }
+    val body = note ?: stringResource(
+        when (phase) {
+            BrainPhase.Listening, BrainPhase.Live -> R.string.ask_body_listening
+            BrainPhase.Thinking -> R.string.ask_body_thinking
+            BrainPhase.Idle -> R.string.ask_body_idle
         }
-        val body = note ?: stringResource(
-            when (phase) {
-                BrainPhase.Listening, BrainPhase.Live -> R.string.ask_body_listening
-                BrainPhase.Thinking -> R.string.ask_body_thinking
-                BrainPhase.Idle -> R.string.ask_body_idle
-            }
-        )
+    )
     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(stringResource(title), style = MaterialTheme.typography.titleLarge, color = BuddyColors.Bone, textAlign = TextAlign.Center)
+        Text(stringResource(title), style = MaterialTheme.typography.titleLarge, color = BuddyColors.Ink, textAlign = TextAlign.Center)
         Spacer(Modifier.height(12.dp))
-        Text(body, style = MaterialTheme.typography.bodyLarge, color = if (note != null) BuddyColors.Honey else BuddyColors.BoneMuted, textAlign = TextAlign.Center)
+        Text(body, style = MaterialTheme.typography.bodyLarge, color = if (note != null) BuddyColors.Violet else BuddyColors.InkMuted, textAlign = TextAlign.Center)
         Spacer(Modifier.height(28.dp))
         OutlinedTextField(
             value = draft,
@@ -132,11 +136,13 @@ private fun AskBuddyBody(phase: BrainPhase, note: String?, onAskText: (String) -
             }),
             shape = RoundedCornerShape(22.dp),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = BuddyColors.Honey,
-                unfocusedBorderColor = BuddyColors.Sage.copy(alpha = 0.45f),
-                focusedTextColor = BuddyColors.Bone,
-                unfocusedTextColor = BuddyColors.Bone,
-                cursorColor = BuddyColors.Honey
+                focusedBorderColor = BuddyColors.Violet,
+                unfocusedBorderColor = BuddyColors.Line,
+                focusedTextColor = BuddyColors.Ink,
+                unfocusedTextColor = BuddyColors.Ink,
+                focusedContainerColor = BuddyColors.Paper,
+                unfocusedContainerColor = BuddyColors.Paper,
+                cursorColor = BuddyColors.Violet
             )
         )
     }
