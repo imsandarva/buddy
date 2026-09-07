@@ -47,7 +47,7 @@ Typed Ask snapshotted **while the panel was open**. The text field’s accessibi
 | `brain/BuddyBrain.kt` | Orchestrator |
 | `brain/GeminiClient.kt` | Gemini Developer API (REST) |
 | `brain/GeminiTools.kt` | `say` / `point_to` / `fly_to` / `tap` / `hold` / `swipe` / `drag` / `type` |
-| `brain/GuidancePrompt.kt` | System + user prompt |
+| `brain/GuidancePrompt.kt` | System + user prompt — sectioned contract for the model |
 | `brain/GuidanceCatalog.kt` | Snapshot → compact list |
 | `brain/GuidancePlan.kt` | `say` + `element_id` + `place` + `hand` + `type` |
 | `brain/HandPlan.kt` | Tap / hold / stroke from the model |
@@ -63,6 +63,19 @@ Typed Ask snapshotted **while the panel was open**. The text field’s accessibi
 | `ui/home/AskBuddySheet.kt` | Ask panel UI |
 | `overlay/AskOverlayWindow.kt` | Hosts that panel over any app |
 | `debug/BuddyLog.kt` | `Buddy===TRACE` logcat lines |
+
+## How we instruct the model
+
+`GuidancePrompt` is the first message. It is written like a production system prompt, not a paragraph of vibes: **role, objective, input contract, tool policy, matching rule, speech, hard rules, goal** — then the same matching rule again on the user turn.
+
+The important contract, repeated on purpose:
+
+- Latest SCREEN is the only truth.
+- The name they say is the quoted **label**. The tool argument is that line’s **element_id**, copied exactly (`Pinterest` on screen may be `apps_icon_4`, never an invented `pinterest`).
+- One spoken sentence. One phone step. Point is not tap. Flying the buddy is not pointing at a control.
+- If SCREEN is empty, say so. Do not guess.
+
+REST (`SYSTEM`) must call `say`. Live (`LIVE`) speaks with native audio and has no `say` tool. Tool declarations in `GeminiTools` repeat the same id rule so the schema and the prompt agree.
 
 The API key is `gemini.api.key` in `local.properties` (gitignored) → `BuildConfig.GEMINI_API_KEY`. Never commit it.
 

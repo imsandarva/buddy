@@ -19,14 +19,14 @@ object GeminiTools {
 
     fun functionDeclarations(includeSay: Boolean): JSONArray {
         val list = JSONArray()
-        if (includeSay) list.put(fn("say", "Speak a short warm instruction. Never include coordinates or ids.", listOf(Arg("text", "Words to say out loud.")), listOf("text")))
-        list.put(fn("point_to", "Only point at a visible control. Use when they asked where, not when they asked you to tap.", listOf(Arg("element_id", "Exact element_id from the on-screen list.")), listOf("element_id")))
-        list.put(fn("fly_to", "Fly the buddy cursor to a place on the screen. Use when they ask the buddy itself to move.", listOf(Arg("place", "Where the buddy should go.", CursorLanding.PLACES)), listOf("place")))
-        list.put(fn("tap", "Tap a listed control like a finger. Omit element_id to tap where the buddy is now.", listOf(Arg("element_id", "Exact element_id from the on-screen list."))))
-        list.put(fn("hold", "Press and hold a listed control. Omit element_id to hold where the buddy is now.", listOf(Arg("element_id", "Exact element_id from the on-screen list."))))
-        list.put(fn("swipe", "A quick finger swipe across the screen.", listOf(Arg("direction", "Swipe direction.", DIRS), Arg("from_element_id", "Optional start control."), Arg("to_element_id", "Optional end control."), Arg("to_place", "Optional named end place.", CursorLanding.PLACES))))
-        list.put(fn("drag", "Press, hold, and slide — to move an icon or a slider.", listOf(Arg("direction", "Drag direction.", DIRS), Arg("from_element_id", "Optional start control."), Arg("to_element_id", "Optional end control."), Arg("to_place", "Optional named end place.", CursorLanding.PLACES))))
-        list.put(fn("type", "Type into a text field — search, a message, a name, anything they asked you to write.", listOf(Arg("text", "Exact words to put in the field."), Arg("element_id", "Exact element_id of a type field from the on-screen list."), Arg("submit", "true to press Search, Send, or Enter after typing.", listOf("true", "false"))), listOf("text")))
+        if (includeSay) list.put(fn("say", "One short warm sentence. Never include coordinates, ids, tool names, or lists.", listOf(Arg("text", "Words to say out loud.")), listOf("text")))
+        list.put(fn("point_to", "Point at a listed control. Use when they asked where or show me — not when they asked you to tap. Copy element_id exactly from SCREEN.", listOf(Arg("element_id", "Exact element_id from the SCREEN line whose label they meant.")), listOf("element_id")))
+        list.put(fn("fly_to", "Fly the buddy cursor to a named place. Use only when they asked the buddy itself to move.", listOf(Arg("place", "Where the buddy should go.", CursorLanding.PLACES)), listOf("place")))
+        list.put(fn("tap", "Tap a listed control like a finger. Copy element_id exactly from SCREEN. Omit to tap where the buddy is now. Never invent an id.", listOf(Arg("element_id", "Exact element_id from the SCREEN line whose label they meant."))))
+        list.put(fn("hold", "Press and hold a listed control. Copy element_id exactly from SCREEN. Omit to hold where the buddy is now.", listOf(Arg("element_id", "Exact element_id from the SCREEN line whose label they meant."))))
+        list.put(fn("swipe", "A quick finger swipe across the screen.", listOf(Arg("direction", "Swipe direction.", DIRS), Arg("from_element_id", "Optional start control, copied from SCREEN."), Arg("to_element_id", "Optional end control, copied from SCREEN."), Arg("to_place", "Optional named end place.", CursorLanding.PLACES))))
+        list.put(fn("drag", "Press, hold, and slide — to move an icon or a slider.", listOf(Arg("direction", "Drag direction.", DIRS), Arg("from_element_id", "Optional start control, copied from SCREEN."), Arg("to_element_id", "Optional end control, copied from SCREEN."), Arg("to_place", "Optional named end place.", CursorLanding.PLACES))))
+        list.put(fn("type", "Type into a listed type field. Use that line’s element_id. Set submit true for search or send. Never invent an id.", listOf(Arg("text", "Exact words to put in the field."), Arg("element_id", "Exact element_id of a type field from SCREEN."), Arg("submit", "true to press Search, Send, or Enter after typing.", listOf("true", "false"))), listOf("text")))
         return list
     }
 
