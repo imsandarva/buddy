@@ -9,7 +9,7 @@ import com.sandarva.kotlinapps.debug.BuddyLog
 
 /**
  * TalkBack-style: the one screen the person is looking at.
- * Skip Buddy chrome (overlays, the live pill). Keep the Buddy activity when it is in front.
+ * Skip Buddy chrome (overlays, ask sheet). Keep the Buddy activity when it is in front.
  * Pick by z-order, not focused/active — the overlay used to leave Buddy “active” and hide other apps.
  */
 class WindowRootPicker(private val service: AccessibilityService) {

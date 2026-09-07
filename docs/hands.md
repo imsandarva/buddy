@@ -20,7 +20,7 @@ A tap is a short dwell. A hold uses `ViewConfiguration.getLongPressTimeout()` pl
 
 ## Overlay pass-through
 
-Every Buddy overlay sits above the app, so a raw gesture would hit us. Before each stroke `OverlayChrome` sets `FLAG_NOT_TOUCHABLE` on the cursor, the live pill, and the ask sheet (Voice Access does the same). A tap that used to land on “I’m with you” now reaches the button underneath. Flags restore in `finally`.
+Every Buddy overlay sits above the app, so a raw gesture would hit us. Before each stroke `OverlayChrome` sets `FLAG_NOT_TOUCHABLE` on the cursor and the ask sheet (Voice Access does the same). Flags restore in `finally`.
 
 A directional swipe is a **page pull** — about 76% of the screen, ~460 ms — so an app-drawer page actually turns. A short flick from the tip cannot do that.
 

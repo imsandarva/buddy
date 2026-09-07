@@ -6,25 +6,27 @@ BuddyCursor is the on-screen pointer. After Start, it lives in a system overlay 
 
 | File | Role |
 |------|------|
-| `ui/cursor/BuddyCursor.kt` | Arrow drawing; layout origin is the tip |
-| `ui/cursor/BuddyCursorHandle.kt` | Hold, jiggle, live drag deltas |
-| `ui/cursor/BuddyDrag.kt` | Finger-down pickup, or a quick double-tap to ask |
-| `ui/cursor/GrabMotion.kt` | Hold bounce + short jiggle |
+| `ui/cursor/BuddyCursor.kt` | Soft rounded pointer; blue gradient + glow; layout origin is the tip |
+| `ui/cursor/BuddyCursorHandle.kt` | Lift, drift, tap bloom, double-tap summon |
+| `ui/cursor/CursorGestures.kt` | Tap, summon, hold-lift, drag |
+| `ui/cursor/CursorMotion.kt` | Breathing idle, levitation, velocity tilt, summon ripples, landings |
 | `overlay/BuddyCursorController.kt` | Flight API — programmatic move |
 | `overlay/CursorLanding.kt` | Named spots for `fly_to` |
 | `overlay/` | Window, service, permission, session |
 
-The pointer is iris-violet with a white rim so it reads on light and dark screens. See `docs/ui.md`.
+The pointer is sky-blue with a soft glow and white rim so it reads on light and dark screens. See `docs/ui.md`.
 
-## Current behavior
+## Interaction
 
-1. Tap **Start your buddy** → grant appear-on-top if asked → cursor shows at the last (or center) position.
-2. Press the cursor → it bounces to show it is held.
-3. Drag → the overlay window follows your finger.
-4. Lift → it stays there.
-5. Double-tap the cursor → the ask panel opens on top of whatever you are looking at.
+1. Tap **Start your buddy** → grant appear-on-top if asked → cursor eases in with a gentle entrance.
+2. **Single tap** — a soft bloom pulse; the cursor acknowledges without starting talk.
+3. **Double-tap** — summon ripples outward, then live talk starts (or the type sheet if the mic is off). See `docs/live.md`.
+4. **Press and hold** (~110 ms) — the cursor lifts with a brighter glow, then follows your finger.
+5. **Drag** — the pointer drifts with a slight velocity tilt; release lands with a soft spring.
 6. Tap **Watch it move** → the cursor flies a short path (same API AI will call later).
-7. Tap **Ask buddy** → same panel as the double-tap.
+7. Tap **Ask buddy** → same as double-tap.
 8. Tap **Stop buddy** (or the notification action) → the overlay is removed.
+
+During a live talk, pull notifications to see **I'm with you** with **End** and **Type instead** — no bottom bar on screen.
 
 See `docs/cursor-hands.md`, `docs/hands.md`, and `docs/type.md`.

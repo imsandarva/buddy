@@ -4,7 +4,7 @@ import android.view.View
 import android.view.WindowManager
 
 /**
- * Every Buddy overlay (cursor, live pill, ask sheet) is chrome — not the user’s screen.
+ * Every Buddy overlay (cursor, ask sheet) is chrome — not the user’s screen.
  * Hands make all of them pass through so a stroke hits the app, not us.
  */
 object OverlayChrome {

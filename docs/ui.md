@@ -10,7 +10,6 @@ Buddy opens on a single home surface. `MainActivity` only enables edge-to-edge d
 | `ui/BuddyApp.kt` | Theme, session, home, overlay + access resume hook |
 | `ui/home/HomeScreen.kt` | Assembles paper backdrop, hero, Start / Rest, and quiet actions |
 | `ui/home/AskBuddySheet.kt` | Type-to-ask panel (typed REST path) |
-| `ui/home/LiveBuddyBar.kt` | Compact live talk pill |
 | `ui/components/BuddyActionButton.kt` | Violet Start and quiet Rest |
 | `ui/motion/PressScale.kt` | Shared press spring |
 | `session/BuddySessionViewModel.kt` | Facade over hands, eyes, and the Gemini brain |
@@ -29,7 +28,7 @@ See `docs/overlay.md`, `docs/cursor.md`, `docs/eyes.md`, `docs/hands.md`, `docs/
 
 ## Design tokens
 
-Light only. Paper field (`#F7F6FB`), snow surfaces (`#FFFFFF`), ink (`#1C1730`), iris violet (`#635BFF`). No honey, no dusk, no dark theme.
+Light only. Paper field (`#F7F6FB`), snow surfaces (`#FFFFFF`), ink (`#1C1730`), iris violet (`#635BFF`) for UI accents, sky-blue (`#3B8CFF`) for the cursor with a soft glow. No honey, no dusk, no dark theme.
 
 - Eyebrow: wide-tracked sans, violet
 - Display: light serif, stacked two-line headlines

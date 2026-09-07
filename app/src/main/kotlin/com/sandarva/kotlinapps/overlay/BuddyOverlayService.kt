@@ -28,7 +28,6 @@ import kotlinx.coroutines.launch
 class BuddyOverlayService : Service() {
     private var cursor: BuddyOverlayWindow? = null
     private var ask: AskOverlayWindow? = null
-    private var live: LiveOverlayWindow? = null
     private val mainHandler = Handler(Looper.getMainLooper())
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
@@ -54,6 +53,18 @@ class BuddyOverlayService : Service() {
             mainHandler.postDelayed({ BuddyBrain.openAsk() }, SHADE_SETTLE_MS)
             return START_STICKY
         }
+        if (intent?.action == ACTION_END_LIVE) {
+            mainHandler.post { BuddyBrain.cancel() }
+            return START_STICKY
+        }
+        if (intent?.action == ACTION_TYPE_INSTEAD) {
+            mainHandler.post { BuddyBrain.openTypeAsk() }
+            return START_STICKY
+        }
+        if (intent?.action == ACTION_SYNC) {
+            syncNotification()
+            return START_STICKY
+        }
         return START_STICKY
     }
 
@@ -63,7 +74,6 @@ class BuddyOverlayService : Service() {
         scope.cancel()
         BuddyLive.stop()
         hideAsk()
-        hideLive()
         CursorSurface.release()
         cursor = null
         OverlaySession.setActive(false)
@@ -71,9 +81,9 @@ class BuddyOverlayService : Service() {
     }
 
     private fun presentCursor() {
-        applyFgs(mic = false)
         cursor = CursorSurface.ensure(this)
         OverlaySession.setActive(true)
+        syncNotification()
     }
 
     private fun watchAsk() {
@@ -83,10 +93,9 @@ class BuddyOverlayService : Service() {
             AccessibilitySession.bound.collect { if (OverlaySession.active.value || cursor != null) presentCursor() }
         }
         scope.launch {
-            combine(BrainSession.askOpen, BrainSession.liveOpen) { askOpen, liveOpen -> askOpen to liveOpen }.collect { (askOpen, liveOpen) ->
-                applyFgs(mic = askOpen || liveOpen)
+            combine(BrainSession.askOpen, BrainSession.liveOpen) { askOpen, liveOpen -> askOpen to liveOpen }.collect { (askOpen, _) ->
+                syncNotification()
                 if (askOpen) showAsk() else hideAsk()
-                if (liveOpen) showLive() else hideLive()
             }
         }
     }
@@ -102,20 +111,15 @@ class BuddyOverlayService : Service() {
         ask = null
     }
 
-    private fun showLive() {
-        val bar = live ?: LiveOverlayWindow(this).also { live = it }
-        if (!bar.isShowing) bar.show()
-        CursorSurface.current()?.raise()
+    private fun syncNotification() {
+        val askOpen = BrainSession.askOpen.value
+        val liveOpen = BrainSession.liveOpen.value
+        applyFgs(mic = askOpen || liveOpen, live = liveOpen)
     }
 
-    private fun hideLive() {
-        live?.dismiss()
-        live = null
-    }
-
-    private fun applyFgs(mic: Boolean) {
+    private fun applyFgs(mic: Boolean, live: Boolean = false) {
         val wantMic = mic && ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
-        ServiceCompat.startForeground(this, OverlayNotification.ID, OverlayNotification.build(this), fgsType(wantMic))
+        ServiceCompat.startForeground(this, OverlayNotification.ID, OverlayNotification.build(this, live), fgsType(wantMic))
     }
 
     private fun fgsType(mic: Boolean): Int {
@@ -135,6 +139,9 @@ class BuddyOverlayService : Service() {
         const val ACTION_STOP = "com.sandarva.kotlinapps.overlay.STOP"
         const val ACTION_POINT = "com.sandarva.kotlinapps.overlay.POINT"
         const val ACTION_ASK = "com.sandarva.kotlinapps.overlay.ASK"
+        const val ACTION_END_LIVE = "com.sandarva.kotlinapps.overlay.END_LIVE"
+        const val ACTION_TYPE_INSTEAD = "com.sandarva.kotlinapps.overlay.TYPE_INSTEAD"
+        const val ACTION_SYNC = "com.sandarva.kotlinapps.overlay.SYNC"
         private const val SHADE_SETTLE_MS = 320L
     }
 }

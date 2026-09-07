@@ -39,7 +39,7 @@ Pixels stay in the app. Gemini’s `point_to(element_id)` resolves through this 
 
 - The **topmost covering** app window (`getWindows` is z-order, top first). Focused/active lies while our overlay is up and used to hide other apps
 - After a tap into another app the first tree is often hollow (`nodes=0` with the right package). TalkBack / Voice Access / UI Automator wait and prefetch: we take an **uninterruptible** descendant snapshot, `refresh()` an empty root, and **retry** until controls appear before sending SCREEN
-- **Buddy chrome** is skipped (cursor, live pill, ask sheet). The **Buddy activity** is kept when it is the covering window on top — leftover launcher under Buddy is ignored, and leftover Buddy under Chrome is ignored too
+- **Buddy chrome** is skipped (cursor, ask sheet). The **Buddy activity** is kept when it is the covering window on top — leftover launcher under Buddy is ignored, and leftover Buddy under Chrome is ignored too
 - Live used to ignore window events from our package, so opening Buddy left the last app-drawer SCREEN frozen. Scene follow now watches those events too
 - A **pulled-down notification / quick-settings shade** is what they see — we read that System UI window and skip the thin status/nav strips so the model is not blind there
 - Overlay views also set `IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS` so we do not announce ourselves

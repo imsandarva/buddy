@@ -14,28 +14,35 @@ import com.sandarva.kotlinapps.R
 object OverlayNotification {
     const val ID = 1001
     private const val CHANNEL_ID = "buddy_overlay"
+    private const val CHANNEL_LIVE_ID = "buddy_live"
 
-    fun build(context: Context): Notification {
-        ensureChannel(context)
+    fun build(context: Context, live: Boolean = false): Notification {
+        ensureChannels(context)
         val openApp = PendingIntent.getActivity(
             context, 0, Intent(context, MainActivity::class.java),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-        val stop = PendingIntent.getService(
-            context, 1,
-            Intent(context, BuddyOverlayService::class.java).setAction(BuddyOverlayService.ACTION_STOP),
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-        val point = PendingIntent.getService(
-            context, 2,
-            Intent(context, BuddyOverlayService::class.java).setAction(BuddyOverlayService.ACTION_POINT),
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-        val ask = PendingIntent.getService(
-            context, 3,
-            Intent(context, BuddyOverlayService::class.java).setAction(BuddyOverlayService.ACTION_ASK),
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
+        val stop = serviceIntent(context, 1, BuddyOverlayService.ACTION_STOP)
+        if (live) {
+            val end = serviceIntent(context, 4, BuddyOverlayService.ACTION_END_LIVE)
+            val typeInstead = serviceIntent(context, 5, BuddyOverlayService.ACTION_TYPE_INSTEAD)
+            return NotificationCompat.Builder(context, CHANNEL_LIVE_ID)
+                .setSmallIcon(R.drawable.ic_buddy_status)
+                .setContentTitle(context.getString(R.string.live_title))
+                .setContentText(context.getString(R.string.live_body))
+                .setStyle(NotificationCompat.BigTextStyle().bigText(context.getString(R.string.live_body)))
+                .setContentIntent(openApp)
+                .setOngoing(true)
+                .setCategory(Notification.CATEGORY_CALL)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
+                .addAction(0, context.getString(R.string.live_end), end)
+                .addAction(0, context.getString(R.string.live_type_instead), typeInstead)
+                .addAction(0, context.getString(R.string.stop_buddy), stop)
+                .build()
+        }
+        val point = serviceIntent(context, 2, BuddyOverlayService.ACTION_POINT)
+        val ask = serviceIntent(context, 3, BuddyOverlayService.ACTION_ASK)
         return NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_buddy_status)
             .setContentTitle(context.getString(R.string.overlay_notification_title))
@@ -43,17 +50,28 @@ object OverlayNotification {
             .setContentIntent(openApp)
             .setOngoing(true)
             .setSilent(true)
+            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
             .addAction(0, context.getString(R.string.ask_buddy), ask)
             .addAction(0, context.getString(R.string.point_at_something), point)
             .addAction(0, context.getString(R.string.stop_buddy), stop)
             .build()
     }
 
-    private fun ensureChannel(context: Context) {
+    private fun serviceIntent(context: Context, requestCode: Int, action: String): PendingIntent =
+        PendingIntent.getService(
+            context, requestCode,
+            Intent(context, BuddyOverlayService::class.java).setAction(action),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+    private fun ensureChannels(context: Context) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val manager = context.getSystemService(NotificationManager::class.java)
         manager.createNotificationChannel(
             NotificationChannel(CHANNEL_ID, context.getString(R.string.overlay_channel_name), NotificationManager.IMPORTANCE_LOW)
+        )
+        manager.createNotificationChannel(
+            NotificationChannel(CHANNEL_LIVE_ID, context.getString(R.string.overlay_live_channel_name), NotificationManager.IMPORTANCE_DEFAULT)
         )
     }
 }

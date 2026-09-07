@@ -8,12 +8,14 @@ import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.positionChange
 import android.view.ViewConfiguration as AndroidViewConfiguration
 
-/** Instant pickup after slop; a quick second tap asks Buddy. */
-internal suspend fun PointerInputScope.dragBuddyCursor(
-    onGrab: () -> Unit,
+/** Tap blooms, double-tap summons, hold lifts, drag drifts. */
+internal suspend fun PointerInputScope.cursorGestures(
+    onTap: () -> Unit,
+    onSummon: () -> Unit,
+    onLift: () -> Unit,
+    onDragStart: () -> Unit,
     onDrag: (Float, Float) -> Unit,
-    onRelease: () -> Unit,
-    onDoubleTap: () -> Unit
+    onRelease: () -> Unit
 ) {
     var lastTapAt = 0L
     var lastTap = Offset.Unspecified
@@ -22,15 +24,22 @@ internal suspend fun PointerInputScope.dragBuddyCursor(
     awaitEachGesture {
         val down = awaitFirstDown()
         var dragged = false
+        var lifted = false
         var travel = 0f
+        val liftAt = down.uptimeMillis + 110L
         try {
             drag(down.id) { change ->
                 val delta = change.positionChange()
                 change.consume()
                 travel += delta.getDistance()
+                if (!lifted && change.uptimeMillis >= liftAt && travel < slop) {
+                    lifted = true
+                    onLift()
+                }
                 if (!dragged && travel >= slop) {
                     dragged = true
-                    onGrab()
+                    if (!lifted) { lifted = true; onLift() }
+                    onDragStart()
                 }
                 if (dragged && delta != Offset.Zero) onDrag(delta.x, delta.y)
             }
@@ -40,13 +49,14 @@ internal suspend fun PointerInputScope.dragBuddyCursor(
                 lastTapAt = 0L
             } else {
                 val now = down.uptimeMillis
-                val near = lastTap != Offset.Unspecified && (down.position - lastTap).getDistance() <= slop * 2f
+                val near = lastTap != Offset.Unspecified && (down.position - lastTap).getDistance() <= slop * 2.5f
                 if (now - lastTapAt <= tapWindow && near) {
                     lastTapAt = 0L
-                    onDoubleTap()
+                    onSummon()
                 } else {
                     lastTapAt = now
                     lastTap = down.position
+                    onTap()
                 }
             }
         }

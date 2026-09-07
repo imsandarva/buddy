@@ -13,6 +13,7 @@ import com.sandarva.kotlinapps.brain.GuidanceActor
 import com.sandarva.kotlinapps.brain.GuidanceCatalog
 import com.sandarva.kotlinapps.brain.Reachability
 import com.sandarva.kotlinapps.debug.BuddyLog
+import com.sandarva.kotlinapps.overlay.OverlayNotifier
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -65,6 +66,7 @@ object BuddyLive {
             BrainSession.setLiveOpen(true)
             BrainSession.setPhase(BrainPhase.Live)
             BrainSession.setNote(null)
+            OverlayNotifier.sync(app)
             lastScene = ""
             BuddyScreenEyes.setWatching(true)
             BuddyLog.d("Live.start", "model=${LiveConfig.MODEL}")
@@ -115,6 +117,7 @@ object BuddyLive {
             socket?.close(); socket = null
             BrainSession.setLiveOpen(false)
             if (BrainSession.phase.value == BrainPhase.Live) BrainSession.setPhase(BrainPhase.Idle)
+            OverlayNotifier.sync(app)
         }
 
         private fun startMic() {

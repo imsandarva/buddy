@@ -29,16 +29,16 @@ We do **not** send those frames. Eyes stay the accessibility SCREEN list (labels
 
 ## It must see what the user sees
 
-The small pill at the bottom while you talk is **our** live chrome (“I’m with you”, **That’s all**, **Type instead**) — a white, hairlined bar with a violet listening pulse. It is WRAP_CONTENT — not a full-width sheet — so buttons beside and above it stay tappable. During a Buddy tap, the pill goes pass-through with the rest of `OverlayChrome`. It is not the type sheet, and it must not become the SCREEN list.
+Live status lives in the **ongoing notification** on a dedicated `buddy_live` channel (“I’m with you”, **End**, **Type instead**) — the screen stays fully tappable with no bottom chrome. `OverlayNotifier.sync()` pushes the live notification whenever talk starts or stops, and `presentCursor()` no longer clobbers it. During a Buddy tap, only the cursor and ask sheet go pass-through via `OverlayChrome`.
 
 Two things used to make the model describe the Buddy app while you were on the home screen:
 
 1. **A frozen first look.** SCREEN was sent once at `setupComplete`. If talk started in Buddy, then you pressed Home, the model still had the Buddy buttons. Industry voice agents (TalkBack-style window follow, Gemini Live `realtimeInput` text) push a new scene when the foreground app changes.
-2. **Our chrome in the tree.** Eyes skip overlay chrome (cursor, live pill, ask sheet) and still read the **Buddy activity** when it is in front. Skipping the whole package made opening Buddy look like the previous app drawer. Scene follow also listens to our package’s window events, so the SCREEN list updates when they come home to Buddy.
+2. **Our chrome in the tree.** Eyes skip overlay chrome (cursor, ask sheet) and still read the **Buddy activity** when it is in front. Skipping the whole package made opening Buddy look like the previous app drawer. Scene follow also listens to our package’s window events, so the SCREEN list updates when they come home to Buddy.
 
 After you install this, toggle **Buddy Assistant** off and on once so the new window events are registered.
 
-The live bar is our chrome. The notification shade is theirs. Eyes read the shade when it covers the screen, and the cursor stays above it (accessibility overlay) so it does not slip behind the panel.
+The live bar is gone — live talk shows in the notification shade. Eyes read the shade when it covers the screen, and the cursor stays above it (accessibility overlay) so it does not slip behind the panel.
 
 ## Why “I talked, then waited forever”
 
@@ -56,13 +56,13 @@ Long pauses after “tap Wi‑Fi” can still be a tree walk or a tool, not the 
 ## How to talk
 
 1. Start the buddy, turn on **Buddy Assistant**, allow the microphone once.
-2. Double-tap the cursor (or **Ask buddy**). A small bar appears at the bottom — the rest of the screen stays open so a tap can reach an app.
+2. Double-tap the cursor (or **Ask buddy**). The screen stays open — pull notifications to see **I’m with you** with **End** and **Type instead**.
 3. Talk right away. You will not see your words or Buddy’s words as text — you only hear each other. Ask it to open Calculator, move, tap, hold, drag, or type.
 
 ## Not speech-to-text, then chat
 
 Live is **audio in, audio out** on one socket — the same shape as the official Gemini app. We used to also ask Gemini for transcripts and paint them on the bar. That extra job is billed and delivered late, so it *looked* like we waited for STT before thinking. We do not request `inputAudioTranscription` / `outputAudioTranscription`. The mic opens as soon as `setupComplete` arrives; the screen list is sent after, so talking is not blocked on a tree walk.
-4. **That’s all** or a second double-tap ends the talk. **Type instead** opens the old sheet (REST).
+4. **End** in the notification, or a second double-tap, ends the talk. **Type instead** opens the old sheet (REST).
 
 The full ask sheet covers the screen, so Live never uses it. That was the bug when a spoken tap hit the sheet.
 
@@ -108,9 +108,9 @@ After a tap that opens another app, the first accessibility tree is often empty 
 | `brain/live/LiveSpeaker.kt` | 24 kHz jitter-buffered playback |
 | `brain/live/LiveConfig.kt` | Model, rates, voice (`Aoede`) |
 | `brain/GuidanceActor.kt` | Shared executor for REST and Live |
-| `overlay/LiveOverlayWindow.kt` | WRAP_CONTENT live pill + chrome pass-through |
-| `ui/home/LiveBuddyBar.kt` | Compact live pill |
-| `overlay/OverlayChrome.kt` | All Buddy overlays pass through during a stroke |
+| `overlay/OverlayNotification.kt` | Live talk controls in the notification shade (`buddy_live` channel) |
+| `overlay/OverlayNotifier.kt` | Syncs notification when live starts or stops |
+| `overlay/OverlayChrome.kt` | Cursor + ask pass through during a stroke |
 
 API key is still `gemini.api.key` in `local.properties`. The socket uses `?key=` on the Gemini Live URL.
 
