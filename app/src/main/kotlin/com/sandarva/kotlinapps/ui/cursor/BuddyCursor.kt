@@ -1,20 +1,19 @@
 package com.sandarva.kotlinapps.ui.cursor
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.StrokeJoin
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.dp
 import com.sandarva.kotlinapps.ui.theme.BuddyColors
 
-/** Classic arrow — solid blue fill, thick dark outline, rounded stroke joins. */
+/** Asset-backed pointer — summon ripples at the tip; scale/tilt/lift live on the handle. */
 @Composable
 fun BuddyCursor(
     modifier: Modifier = Modifier,
@@ -22,21 +21,32 @@ fun BuddyCursor(
     contentDescription: String
 ) {
     val density = LocalDensity.current
+    val bitmap = rememberBuddyCursorBitmap()
     val tip = CursorGeometry.tipInView(density)
-    val outline = with(density) { CursorGeometry.outlineWidth.toPx() }
-    Canvas(
+    val iconPx = with(density) { CursorGeometry.iconSize.toPx() }
+    Box(
         modifier
             .size(CursorGeometry.touchWidth, CursorGeometry.touchHeight)
             .semantics { this.contentDescription = contentDescription }
     ) {
-        val path = CursorGeometry.pointerPath(tip, density)
-        val ringScale = 1f + motion.ring1 * 0.08f + motion.ring2 * 0.05f
         if (motion.ring1 > 0f || motion.ring2 > 0f) {
-            scale(ringScale, ringScale, tip) {
-                drawPath(path, BuddyColors.CursorBlue.copy(alpha = 0.12f), style = Stroke(outline * 2.4f, cap = StrokeCap.Round, join = StrokeJoin.Round))
+            Canvas(Modifier.fillMaxSize()) {
+                listOf(motion.ring1 to 0.14f, motion.ring2 to 0.1f).forEach { (ring, alphaScale) ->
+                    if (ring <= 0f) return@forEach
+                    drawCircle(
+                        color = BuddyColors.CursorBlue.copy(alpha = alphaScale * (1f - ring * 0.65f)),
+                        radius = iconPx * (0.42f + ring * 0.55f),
+                        center = tip
+                    )
+                }
             }
         }
-        drawPath(path, BuddyColors.CursorBlue)
-        drawPath(path, BuddyColors.CursorOutline, style = Stroke(outline, cap = StrokeCap.Round, join = StrokeJoin.Round))
+        Image(
+            bitmap = bitmap,
+            contentDescription = null,
+            modifier = Modifier
+                .offset(CursorGeometry.touchPad, CursorGeometry.touchPad)
+                .size(CursorGeometry.iconSize)
+        )
     }
 }

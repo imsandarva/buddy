@@ -6,8 +6,9 @@ BuddyCursor is the on-screen pointer. After Start, it lives in a system overlay 
 
 | File | Role |
 |------|------|
-| `ui/cursor/CursorGeometry.kt` | Silhouette bounds, tip anchor, path — single source of truth |
-| `ui/cursor/BuddyCursor.kt` | Renders the full shape inside the geometry box |
+| `ui/cursor/CursorGeometry.kt` | Asset bounds, tip anchor — single source of truth |
+| `ui/cursor/CursorAsset.kt` | Loads `assets/buddycursor_icon.png` once |
+| `ui/cursor/BuddyCursor.kt` | Renders the PNG + summon ripples |
 | `ui/cursor/BuddyCursorHandle.kt` | Touch target, transforms pivot on the tip |
 | `ui/cursor/CursorGestures.kt` | Tap, summon, hold-lift, drag |
 | `ui/cursor/CursorMotion.kt` | Breathing idle, levitation, velocity tilt, summon ripples, landings |
@@ -15,17 +16,9 @@ BuddyCursor is the on-screen pointer. After Start, it lives in a system overlay 
 | `overlay/BuddyCursorController.kt` | Flight API — programmatic move |
 | `overlay/CursorLanding.kt` | Named spots for `fly_to` |
 
-## Geometry (why the left side used to vanish)
+## Geometry
 
-The shape is symmetric around the tip and extends left *and* right. The old code put the tip 10 dp from the canvas edge and clipped the box — only the right flank survived.
-
-`CursorGeometry` fixes that properly:
-
-1. **Extents** — how far the silhouette reaches left, right, up, and down from the tip.
-2. **View size** — `extentLeft + extentRight` by `extentTop + extentBottom`, plus touch padding. Nothing is drawn outside the canvas.
-3. **Tip anchor** — the tip sits at `(extentLeft + pad, extentTop + pad)` inside the view. The overlay window is positioned so that point lands on screen coordinates; `tipPixels()` always returns the tip, not the window origin.
-
-The pointer matches the classic arrow: vertical left edge, diagonal right edge, chevron notch, solid blue fill, thick dark outline with rounded joins. See `docs/ui.md`.
+The pointer is `assets/buddycursor_icon.png` (500×500, tip at pixel 155,50). `CursorGeometry` maps that tip to overlay coordinates so window placement and transforms pivot stay exact. Touch target = 56 dp icon + 8 dp pad on each side.
 
 ## Interaction
 
