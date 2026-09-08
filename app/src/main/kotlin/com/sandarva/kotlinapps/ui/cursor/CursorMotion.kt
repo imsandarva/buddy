@@ -19,7 +19,7 @@ import com.sandarva.kotlinapps.ui.theme.BuddyMotion
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-enum class CursorPhase { Idle, Tap, Lifted, Drifting, Summon, Land }
+enum class CursorPhase { Idle, Tap, Lifted, Drifting, Summon, Land, Thinking }
 
 data class CursorMotionValues(
     val scale: Float,
@@ -95,6 +95,18 @@ fun rememberCursorMotion(phase: CursorPhase, dragVelocity: Offset): CursorMotion
                 launch { liftY.animateTo(0f, spring(dampingRatio = 0.65f, stiffness = 420f)) }
                 launch { rotation.animateTo(0f, spring(dampingRatio = 0.78f, stiffness = 320f)) }
                 launch { glowBoost.animateTo(0.35f, tween(100)); glowBoost.animateTo(0f, tween(380, easing = FastOutSlowInEasing)) }
+            }
+            // Deciding the next step: a slow halo breath says “still here, thinking” without any motion.
+            CursorPhase.Thinking -> {
+                launch { scale.animateTo(1f, spring(dampingRatio = 0.78f, stiffness = 280f)) }
+                launch { rotation.animateTo(0f, spring(dampingRatio = 0.8f, stiffness = 300f)) }
+                launch { liftY.animateTo(-1.5f, spring(dampingRatio = 0.72f, stiffness = 360f)) }
+                launch {
+                    while (true) {
+                        glowBoost.animateTo(0.62f, tween(760, easing = FastOutSlowInEasing))
+                        glowBoost.animateTo(0.22f, tween(760, easing = FastOutSlowInEasing))
+                    }
+                }
             }
         }
     }

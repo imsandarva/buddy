@@ -12,7 +12,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.coroutines.resume
 
 /**
- * Hands API. The brain asks for a tap, hold, swipe, or drag.
+ * Hands API. The brain asks for a tap, hold, swipe, scroll, or drag.
  * Every Buddy overlay must go pass-through so the stroke hits the app, not us.
  */
 object BuddyHands {
@@ -30,6 +30,9 @@ object BuddyHands {
     suspend fun swipeHere(dxNorm: Float, dyNorm: Float): Boolean = slideHere(dxNorm, dyNorm, Kind.Swipe)
     suspend fun dragHere(dxNorm: Float, dyNorm: Float): Boolean = slideHere(dxNorm, dyNorm, Kind.Drag)
 
+    /** Page pull in the direction the finger moves — launcher pages, carousels, dismiss. */
+    suspend fun swipePage(direction: Direction): Boolean = swipeHere(direction.dx * HandReach.DRAG, direction.dy * HandReach.DRAG)
+
     suspend fun swipeTo(x: Float, y: Float): Boolean = atTip { x0, y0 -> stroke(x0, y0, x, y, Kind.Swipe) }
     suspend fun dragTo(x: Float, y: Float): Boolean = atTip { x0, y0 -> stroke(x0, y0, x, y, Kind.Drag) }
 
@@ -41,6 +44,18 @@ object BuddyHands {
     suspend fun dragFromTo(x0: Float, y0: Float, x1: Float, y1: Float): Boolean {
         if (!land(x0, y0)) return false
         return stroke(x0, y0, x1, y1, Kind.Drag)
+    }
+
+    /**
+     * Reveal more content in [direction] inside [within] (a list) — or the middle of the screen when
+     * no list is named. The finger moves the opposite way, about 40% of the container, then rests.
+     */
+    suspend fun scrollWithin(within: ScreenBounds?, direction: Direction): Boolean {
+        val screen = BuddyCursorController.screenPixels() ?: return false
+        val box = within ?: ScreenBounds((screen.first * 0.08f).toInt(), (screen.second * 0.16f).toInt(), (screen.first * 0.92f).toInt(), (screen.second * 0.86f).toInt())
+        val span = HandReach.scrollPan(box, direction)
+        if (!land(span.x0, span.y0)) return false
+        return stroke(span.x0, span.y0, span.x1, span.y1, Kind.Scroll)
     }
 
     private suspend fun slideHere(dxNorm: Float, dyNorm: Float, kind: Kind): Boolean {
@@ -86,16 +101,17 @@ object BuddyHands {
         return try {
             delay(PASSTHROUGH_MS)
             val ok = supervisorScope {
-                if (kind == Kind.Swipe || kind == Kind.Drag) {
+                if (kind.moves) {
                     launch {
                         if (kind == Kind.Drag) delay(hands.holdMs())
-                        follow(x1, y1, if (kind == Kind.Drag) DRAG_FOLLOW_MS else SWIPE_FOLLOW_MS)
+                        follow(x1, y1, kind.followMs)
                     }
                 }
                 when (kind) {
                     Kind.Tap -> hands.tap(x0, y0)
                     Kind.Hold -> hands.hold(x0, y0)
                     Kind.Swipe -> hands.swipe(x0, y0, x1, y1)
+                    Kind.Scroll -> hands.pan(x0, y0, x1, y1)
                     Kind.Drag -> hands.drag(x0, y0, x1, y1)
                 }
             }
@@ -114,7 +130,10 @@ object BuddyHands {
         }
     }
 
-    private enum class Kind { Tap, Hold, Swipe, Drag }
+    /** How the cursor keeps up with the finger: swipes and drags are linear follows of the stroke. */
+    private enum class Kind(val moves: Boolean, val followMs: Long) {
+        Tap(false, 0L), Hold(false, 0L), Swipe(true, SWIPE_FOLLOW_MS), Scroll(true, GesturePlayer.PAN_MS), Drag(true, DRAG_FOLLOW_MS)
+    }
 
     private const val LAND_SETTLE_MS = 40L
     private const val FLIGHT_TIMEOUT_MS = 2400L

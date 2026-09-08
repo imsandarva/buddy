@@ -24,8 +24,9 @@ A named field gets a real tap first so the caret is in that box and the cursor i
 ## Wiring now
 
 - “Type hello” / “search for pizza” / “press enter” is on-device (`BuddyTypeIntent`). No network.
-- “Type pizza in the search box” goes to Gemini (`type`), then `BuddyType` on **that** snapshot.
-- Empty or unlabeled boxes still appear in the SCREEN list as `type` so the model can see them.
+- “Type pizza in the search box” goes to the model (`type` with the field's id), then `BuddyType` on **that** snapshot — from Live or from the agent runner.
+- Empty or unlabeled boxes still appear in SCREEN as `field` lines (with `focused` when the caret is there) so the model can see them. `KEYBOARD: open` tells it a field is ready.
+- Passwords and codes are never guessed: the runner asks the person to type them.
 
 Needs **Let me see your screen** (Buddy Assistant). After install, toggle Assistant off and on once so `flagInputMethodEditor` is live.
 

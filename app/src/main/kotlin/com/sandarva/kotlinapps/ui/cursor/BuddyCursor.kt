@@ -29,8 +29,16 @@ fun BuddyCursor(
             .size(CursorGeometry.touchWidth, CursorGeometry.touchHeight)
             .semantics { this.contentDescription = contentDescription }
     ) {
-        if (motion.ring1 > 0f || motion.ring2 > 0f) {
+        if (motion.ring1 > 0f || motion.ring2 > 0f || motion.glowBoost > 0.01f) {
             Canvas(Modifier.fillMaxSize()) {
+                // Soft halo behind the pointer — lifts while pressing, breathes while thinking.
+                if (motion.glowBoost > 0.01f) {
+                    drawCircle(
+                        color = BuddyColors.CursorGlow.copy(alpha = 0.34f * motion.glowBoost),
+                        radius = iconPx * (0.36f + 0.12f * motion.glowBoost),
+                        center = tip
+                    )
+                }
                 listOf(motion.ring1 to 0.14f, motion.ring2 to 0.1f).forEach { (ring, alphaScale) ->
                     if (ring <= 0f) return@forEach
                     drawCircle(

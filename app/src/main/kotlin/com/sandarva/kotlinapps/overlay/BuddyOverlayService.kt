@@ -15,7 +15,7 @@ import com.sandarva.kotlinapps.accessibility.AccessibilitySession
 import com.sandarva.kotlinapps.accessibility.BuddyScreenEyes
 import com.sandarva.kotlinapps.brain.BrainSession
 import com.sandarva.kotlinapps.brain.BuddyBrain
-import com.sandarva.kotlinapps.brain.goal.GoalRunner
+import com.sandarva.kotlinapps.brain.agent.AgentRunner
 import com.sandarva.kotlinapps.brain.live.BuddyLive
 import com.sandarva.kotlinapps.debug.BuddyLog
 import kotlinx.coroutines.CoroutineScope
@@ -73,7 +73,7 @@ class BuddyOverlayService : Service() {
         BuddyLog.d("OverlayService", "onDestroy")
         mainHandler.removeCallbacksAndMessages(null)
         scope.cancel()
-        GoalRunner.cancel()
+        AgentRunner.cancel()
         BuddyLive.stop()
         hideAsk()
         CursorSurface.release()
@@ -100,6 +100,11 @@ class BuddyOverlayService : Service() {
                 if (askOpen) showAsk() else hideAsk()
             }
         }
+        scope.launch {
+            BrainSession.progress.collect { progress ->
+                if (BrainSession.goalOpen.value) OverlayNotification.update(this@BuddyOverlayService, live = false, working = true, progress = progress)
+            }
+        }
     }
 
     private fun showAsk() {
@@ -122,7 +127,7 @@ class BuddyOverlayService : Service() {
 
     private fun applyFgs(mic: Boolean, live: Boolean = false, working: Boolean = false) {
         val wantMic = mic && ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
-        ServiceCompat.startForeground(this, OverlayNotification.ID, OverlayNotification.build(this, live, working), fgsType(wantMic))
+        ServiceCompat.startForeground(this, OverlayNotification.ID, OverlayNotification.build(this, live, working, BrainSession.progress.value), fgsType(wantMic))
     }
 
     private fun fgsType(mic: Boolean): Int {

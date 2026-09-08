@@ -7,42 +7,47 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 
-/** Thin Gemini Developer API client. Turn-based tools only — Live is a WebSocket adapter. */
+/** Thin Gemini Developer API client (`generateContent`). Knows HTTP and JSON, nothing about cursors. */
 class GeminiClient(
     private val apiKey: String,
     private val http: OkHttpClient = defaultHttp()
 ) {
-    suspend fun guide(question: String, catalog: String): GuidancePlan = withContext(Dispatchers.IO) {
-        BuddyLog.d("Gemini.post", "model=$MODEL catalogChars=${catalog.length}")
-        return@withContext GeminiTools.parse(post(GeminiTools.body(question, catalog)))
-    }
+    class ApiException(val code: Int, val body: String) : IllegalStateException("gemini $code ${body.take(180)}")
 
-    suspend fun goalStep(goal: String, catalog: String, trail: String, step: Int): GuidancePlan = withContext(Dispatchers.IO) {
-        BuddyLog.d("Gemini.goal", "step=$step catalogChars=${catalog.length} trailChars=${trail.length}")
-        return@withContext GeminiTools.parse(post(GeminiTools.goalBody(goal, catalog, trail, step)))
-    }
-
-    private fun post(bodyJson: String): String {
-        val body = bodyJson.toRequestBody(JSON)
+    suspend fun generate(model: String, body: JSONObject): JSONObject = withContext(Dispatchers.IO) {
+        val payload = body.toString()
+        BuddyLog.d("Gemini.post", "model=$model chars=${payload.length}")
         val request = Request.Builder()
-            .url("https://generativelanguage.googleapis.com/v1beta/models/$MODEL:generateContent")
+            .url("https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent")
             .addHeader("x-goog-api-key", apiKey)
             .addHeader("Content-Type", "application/json")
-            .post(body)
+            .post(payload.toRequestBody(JSON))
             .build()
         http.newCall(request).execute().use { response ->
             val text = response.body?.string().orEmpty()
-            BuddyLog.d("Gemini.response", "model=$MODEL code=${response.code} body=${text.take(800)}")
-            if (!response.isSuccessful) throw IllegalStateException("gemini ${response.code} ${text.take(180)}")
-            return text
+            BuddyLog.d("Gemini.response", "model=$model code=${response.code} body=${text.take(600)}")
+            if (!response.isSuccessful) throw ApiException(response.code, text)
+            JSONObject(text)
         }
     }
 
     companion object {
         private val JSON = "application/json; charset=utf-8".toMediaType()
-        private const val MODEL = "gemini-3.5-flash-lite"
+
+        /** The model's answer text — thought parts skipped, several text parts joined. */
+        fun firstText(response: JSONObject): String? {
+            val parts = response.optJSONArray("candidates")?.optJSONObject(0)?.optJSONObject("content")?.optJSONArray("parts") ?: return null
+            val out = StringBuilder()
+            for (i in 0 until parts.length()) {
+                val part = parts.optJSONObject(i) ?: continue
+                if (part.optBoolean("thought")) continue
+                out.append(part.optString("text"))
+            }
+            return out.toString().trim().ifBlank { null }
+        }
 
         fun defaultHttp(): OkHttpClient = OkHttpClient.Builder()
             .connectTimeout(20, TimeUnit.SECONDS)

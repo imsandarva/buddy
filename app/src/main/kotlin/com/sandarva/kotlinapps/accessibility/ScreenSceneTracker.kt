@@ -72,7 +72,7 @@ class ScreenSceneTracker(
         private const val EMPTY_RETRY_MS = 320L
         private const val EMPTY_RETRY_MAX = 4
 
-        private fun isSceneEvent(event: AccessibilityEvent): Boolean {
+        fun isSceneEvent(event: AccessibilityEvent): Boolean {
             val t = event.eventType
             return t == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED ||
                 t == AccessibilityEvent.TYPE_WINDOWS_CHANGED ||

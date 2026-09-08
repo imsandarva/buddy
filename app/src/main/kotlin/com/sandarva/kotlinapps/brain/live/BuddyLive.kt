@@ -4,15 +4,15 @@ import android.app.Application
 import com.sandarva.kotlinapps.BuildConfig
 import com.sandarva.kotlinapps.accessibility.BuddyScreenEyes
 import com.sandarva.kotlinapps.accessibility.ScreenSnapshot
-import com.sandarva.kotlinapps.accessibility.awaitReadableSnapshot
+import com.sandarva.kotlinapps.accessibility.awaitSettledSnapshot
 import com.sandarva.kotlinapps.accessibility.sceneKey
 import com.sandarva.kotlinapps.brain.BrainPhase
 import com.sandarva.kotlinapps.brain.BrainSession
-import com.sandarva.kotlinapps.brain.GeminiTools
-import com.sandarva.kotlinapps.brain.GuidanceActor
-import com.sandarva.kotlinapps.brain.GuidanceCatalog
 import com.sandarva.kotlinapps.brain.Reachability
-import com.sandarva.kotlinapps.brain.goal.GoalRunner
+import com.sandarva.kotlinapps.brain.agent.AgentExecutor
+import com.sandarva.kotlinapps.brain.agent.AgentRunner
+import com.sandarva.kotlinapps.brain.agent.AppLauncher
+import com.sandarva.kotlinapps.brain.agent.SceneDescriber
 import com.sandarva.kotlinapps.debug.BuddyLog
 import com.sandarva.kotlinapps.overlay.OverlayNotifier
 import kotlinx.coroutines.CoroutineScope
@@ -24,8 +24,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
- * Gemini Live adapter. Native audio in/out; cursor tools go through [GuidanceActor].
- * Chat REST stays in BuddyBrain for typed asks.
+ * Gemini Live adapter. Native audio in/out; one-shot cursor tools go through [AgentExecutor];
+ * anything longer is handed to [AgentRunner]. Typed asks go straight to the runner in BuddyBrain.
  */
 object BuddyLive {
     @Volatile private var session: Session? = null
@@ -45,15 +45,14 @@ object BuddyLive {
         private var mic: LiveMic? = null
         private var audio: LiveAudio? = null
         private val speaker = LiveSpeaker()
+        private val executor = AgentExecutor(AppLauncher(app))
         @Volatile var active = false
             private set
         private var gen = 0
         @Volatile private var lastScene = ""
         private var followJob: Job? = null
         @Volatile private var afterGoal = false
-        @Volatile private var theySpoke = false
-        @Volatile private var awaitingHello = false
-        private val speech = LiveSpeech()
+        private val listen = LiveListen()
 
         fun start(afterGoal: Boolean = false) {
             if (active) return
@@ -73,9 +72,7 @@ object BuddyLive {
             BrainSession.setNote(null)
             OverlayNotifier.sync(app)
             lastScene = ""
-            theySpoke = false
-            awaitingHello = false
-            speech.reset()
+            listen.reset()
             this.afterGoal = afterGoal
             BuddyScreenEyes.setWatching(true)
             BuddyLog.d("Live.start", "model=${LiveConfig.MODEL} afterGoal=$afterGoal")
@@ -85,12 +82,20 @@ object BuddyLive {
                     if (afterGoal) openEars(id)
                     else beginHello(id)
                 }
-                override fun onAudio(pcm: ByteArray) { if (id == gen) speaker.play(pcm) }
-                override fun onInterrupted() { if (id == gen) speaker.interrupt() }
+                override fun onAudio(pcm: ByteArray) {
+                    if (id != gen) return
+                    listen.onModelAudio()
+                    speaker.play(pcm)
+                }
+                override fun onInterrupted() {
+                    if (id != gen) return
+                    listen.onInterrupted()
+                    speaker.interrupt()
+                }
                 override fun onTurnComplete() {
                     if (id != gen) return
                     speaker.endUtterance()
-                    if (awaitingHello) openEars(id)
+                    if (listen.greeting) openEars(id)
                 }
                 override fun onToolCall(calls: List<LiveFunctionCall>) { if (id == gen) scope.launch { runTools(calls) } }
                 override fun onClosed(reason: String) {
@@ -132,18 +137,19 @@ object BuddyLive {
         }
 
         private fun beginHello(id: Int) {
-            awaitingHello = true
+            listen.startHello()
             socket?.send(LiveMessages.hello())
             scope.launch {
                 delay(HELLO_WAIT_MS)
-                if (id == gen && active && awaitingHello) openEars(id)
+                if (id == gen && active && listen.greeting) openEars(id)
             }
         }
 
         private fun openEars(id: Int) {
             if (!active || id != gen) return
-            awaitingHello = false
+            listen.startListening()
             startMic()
+            pushCatalog(BuddyScreenEyes.snapshot())
             followJob?.cancel()
             followJob = scope.launch { followScreen(id) }
         }
@@ -152,11 +158,7 @@ object BuddyLive {
             if (!active || mic != null) return
             val next = LiveMic { pcm ->
                 if (socket?.isReady != true) return@LiveMic
-                if (!theySpoke && speech.feed(pcm)) {
-                    theySpoke = true
-                    BuddyLog.d("Live.heard", "speech")
-                    pushCatalog(BuddyScreenEyes.snapshot())
-                }
+                listen.onMic(pcm)
                 socket?.send(LiveMessages.audio(pcm))
             }
             mic = next
@@ -166,36 +168,38 @@ object BuddyLive {
         private suspend fun runTools(calls: List<LiveFunctionCall>) {
             for (call in calls) {
                 if (!active) return
-                val plan = GeminiTools.planFromCall(call.name, call.args)
-                BuddyLog.d("Live.tool", "name=${call.name} id=${call.id}")
-                if (!theySpoke) {
-                    BuddyLog.d("Live.tool", "blocked name=${call.name} — they have not asked")
-                    val screen = GuidanceCatalog.format(BuddyScreenEyes.snapshot(), LIVE_CATALOG)
-                    socket?.send(LiveMessages.toolResponse(call.id, call.name, "ignored — wait until they ask", screen))
+                val intent = LiveTools.intent(call)
+                BuddyLog.d("Live.tool", "name=${call.name} id=${call.id} intent=$intent")
+                if (!listen.allow(intent)) {
+                    BuddyLog.d("Live.tool", "blocked name=${call.name} greeting=${listen.greeting} heard=${listen.theySpoke}")
+                    socket?.send(LiveMessages.toolResponse(call.id, call.name, "ignored — wait until they ask", describe(BuddyScreenEyes.snapshot())))
                     continue
                 }
-                if (!plan.runGoal.isNullOrBlank()) {
-                    handoffGoal(plan.runGoal)
-                    return
+                when (intent) {
+                    is LiveIntent.RunGoal -> { handoffGoal(intent.goal); return }
+                    is LiveIntent.Unknown -> socket?.send(LiveMessages.toolResponse(call.id, call.name, "not done — unknown tool or missing argument", describe(BuddyScreenEyes.snapshot())))
+                    is LiveIntent.Act -> {
+                        val outcome = executor.perform(intent.action, BuddyScreenEyes.snapshot())
+                        val after = awaitSettledSnapshot()
+                        lastScene = after.sceneKey()
+                        socket?.send(LiveMessages.toolResponse(call.id, call.name, if (outcome.ok) outcome.detail else "not done — ${outcome.detail}", describe(after)))
+                    }
                 }
-                val snap = BuddyScreenEyes.snapshot()
-                val result = GuidanceActor.run(plan, snap)
-                delay(TREE_SETTLE_MS)
-                val after = awaitReadableSnapshot()
-                lastScene = after.sceneKey()
-                socket?.send(LiveMessages.toolResponse(call.id, call.name, result, GuidanceCatalog.format(after, LIVE_CATALOG)))
             }
         }
 
+        private fun describe(snap: ScreenSnapshot): String = SceneDescriber.describe(snap, SceneDescriber.LIVE_LINES)
+
+        /** Live steps aside; the runner does the job on the screen, then talk comes back on its own. */
         private fun handoffGoal(goal: String) {
             BuddyLog.d("Live.handoff", "goal=\"${goal.take(80)}\"")
             stop(user = false, handoff = true)
-            GoalRunner.ensure(app).start(goal)
+            AgentRunner.ensure(app).start(goal, resumeLive = true)
         }
 
         private suspend fun followScreen(id: Int) {
             BuddyScreenEyes.scenes.collect { snap ->
-                if (id != gen || !active || socket?.isReady != true || !theySpoke) return@collect
+                if (id != gen || !active || socket?.isReady != true || listen.greeting) return@collect
                 pushCatalog(snap)
             }
         }
@@ -204,7 +208,7 @@ object BuddyLive {
             val key = snap.sceneKey()
             if (key == lastScene) return
             lastScene = key
-            val catalog = GuidanceCatalog.format(snap, LIVE_CATALOG)
+            val catalog = describe(snap)
             BuddyLog.d("Live.catalog", "pkg=${snap.packageName} nodes=${snap.nodes.size} chars=${catalog.length}")
             socket?.send(LiveMessages.catalog(catalog))
         }
@@ -222,10 +226,8 @@ object BuddyLive {
         }
 
         companion object {
-            private const val TREE_SETTLE_MS = 400L
             private const val SETUP_WAIT_MS = 12_000L
             private const val HELLO_WAIT_MS = 2_800L
-            private const val LIVE_CATALOG = 72
         }
     }
 }

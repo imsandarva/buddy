@@ -104,6 +104,7 @@ class LiveSocket(
             msg.has("serverContent") -> onServer(msg.optJSONObject("serverContent") ?: return)
             msg.has("server_content") -> onServer(msg.optJSONObject("server_content") ?: return)
             msg.has("goAway") || msg.has("go_away") -> fail("server asked to disconnect")
+            msg.has("sessionResumptionUpdate") || msg.has("session_resumption_update") -> Unit
             else -> BuddyLog.d("Live.socket", "keys=${msg.keys().asSequence().joinToString()}")
         }
     }

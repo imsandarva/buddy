@@ -7,16 +7,12 @@ import androidx.core.content.ContextCompat
 import com.sandarva.kotlinapps.BuildConfig
 import com.sandarva.kotlinapps.R
 import com.sandarva.kotlinapps.accessibility.BuddyHands
-import com.sandarva.kotlinapps.accessibility.BuddyScreenEyes
 import com.sandarva.kotlinapps.accessibility.BuddyType
-import com.sandarva.kotlinapps.accessibility.ScreenSnapshot
-import com.sandarva.kotlinapps.accessibility.awaitReadableSnapshot
-import com.sandarva.kotlinapps.brain.goal.GoalRunner
+import com.sandarva.kotlinapps.brain.agent.AgentRunner
 import com.sandarva.kotlinapps.brain.live.BuddyLive
 import com.sandarva.kotlinapps.debug.BuddyLog
 import com.sandarva.kotlinapps.overlay.BuddyCursorController
 import com.sandarva.kotlinapps.overlay.CursorLanding
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -25,7 +21,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
- * Brain facade. Typed asks use REST. Voice uses Gemini Live, same cursor tools.
+ * Brain facade — the doors. Voice is Gemini Live. Typed words are routed: a nudge, a tap-here, or a
+ * type-here runs on-device; everything else becomes a goal for the agent runner. While the runner
+ * is waiting on a question, the next words are its answer.
  */
 object BuddyBrain {
     @Volatile private var engine: Engine? = null
@@ -33,32 +31,31 @@ object BuddyBrain {
     fun ensure(app: Application): Engine {
         engine?.let { return it }
         BuddyLive.ensure(app)
-        GoalRunner.ensure(app)
-        return Engine(app).also { engine = it }
+        val next = Engine(app)
+        AgentRunner.ensure(app).door = AgentRunner.AnswerDoor { question -> next.openAnswer(question) }
+        return next.also { engine = it }
     }
 
     fun ask(text: String) { engine?.ask(text) }
     fun listen() { engine?.openAsk() }
     fun openAsk() { engine?.openAsk() }
     fun openTypeAsk() { engine?.openTypeAsk() }
-    fun listenAfterPrompt() { engine?.openAsk() }
     fun cancel() { engine?.cancel() }
 
     class Engine(private val app: Application) {
         private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
         private val voice = BuddyVoice(app)
-        private val gemini = GeminiClient(BuildConfig.GEMINI_API_KEY)
         private var job: Job? = null
         @Volatile private var sessionActive = false
-        @Volatile private var reopenAskOnFail = false
 
         fun ask(text: String) = heard(text)
 
         fun listen() = openAsk()
 
+        /** Double-tap / Ask buddy: start a live talk, or the type sheet — or end whatever is running. */
         fun openAsk() {
-            if (BuddyLive.isActive() || GoalRunner.isActive()) {
-                BuddyLog.d("Brain.openAsk", "toggle off live=${BuddyLive.isActive()} goal=${GoalRunner.isActive()}")
+            if (BuddyLive.isActive() || AgentRunner.isActive()) {
+                BuddyLog.d("Brain.openAsk", "toggle off live=${BuddyLive.isActive()} agent=${AgentRunner.isActive()}")
                 cancel()
                 return
             }
@@ -66,7 +63,7 @@ object BuddyBrain {
                 BuddyLog.d("Brain.openAsk", "ignored — already thinking")
                 return
             }
-            val mic = ContextCompat.checkSelfPermission(app, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+            val mic = hasMic()
             val live = mic && BuildConfig.GEMINI_API_KEY.isNotBlank()
             BuddyLog.d("Brain.openAsk", "mic=$mic live=$live askOpen=${BrainSession.askOpen.value}")
             cancelJob()
@@ -76,56 +73,67 @@ object BuddyBrain {
                 BuddyLive.ensure(app).start()
                 return
             }
+            openSheet(note = if (mic) null else app.getString(R.string.ask_type_only), listen = mic)
+        }
+
+        fun openTypeAsk() {
+            BuddyLog.d("Brain.openTypeAsk", "from live")
+            AgentRunner.cancel()
+            BuddyLive.stop()
+            cancelJob()
+            voice.cancelListen()
+            BrainSession.setLiveOpen(false)
+            openSheet(note = null, listen = false)
+        }
+
+        /** The runner asked something: show the question on the sheet and listen for the reply. */
+        fun openAnswer(question: String) {
+            BuddyLog.d("Brain.openAnswer", "q=\"${question.take(60)}\"")
+            cancelJob()
+            voice.cancelListen()
+            openSheet(note = question, listen = hasMic())
+        }
+
+        private fun openSheet(note: String?, listen: Boolean) {
             sessionActive = true
-            reopenAskOnFail = true
             BrainSession.setAskOpen(true)
-            BrainSession.setNote(if (mic) null else app.getString(R.string.ask_type_only))
+            BrainSession.setNote(note)
             BrainSession.setPhase(BrainPhase.Idle)
-            if (mic) {
+            if (listen) {
                 BrainSession.setPhase(BrainPhase.Listening)
                 voice.listen(onText = ::heard, onFailed = ::failListen)
             }
         }
 
-        fun openTypeAsk() {
-            BuddyLog.d("Brain.openTypeAsk", "from live")
-            GoalRunner.cancel()
-            BuddyLive.stop()
-            cancelJob()
-            voice.cancelListen()
-            sessionActive = true
-            reopenAskOnFail = true
-            BrainSession.setLiveOpen(false)
-            BrainSession.setAskOpen(true)
-            BrainSession.setPhase(BrainPhase.Idle)
-            BrainSession.setNote(null)
-        }
-
         /** Speak or type — same door. The sheet must be gone before eyes or hands run. */
         private fun heard(text: String) {
             val trimmed = text.trim()
-            BuddyLog.d("Brain.heard", "len=${trimmed.length} sessionActive=$sessionActive askOpen=${BrainSession.askOpen.value}")
+            BuddyLog.d("Brain.heard", "len=${trimmed.length} awaiting=${AgentRunner.isAwaitingAnswer()} askOpen=${BrainSession.askOpen.value}")
             if (trimmed.isBlank()) return
-            sessionActive = true
-            reopenAskOnFail = true
             voice.cancelListen()
             BrainSession.setAskOpen(false)
             BrainSession.setNote(null)
+            if (AgentRunner.isAwaitingAnswer()) {
+                sessionActive = false
+                AgentRunner.answer(trimmed)
+                return
+            }
+            sessionActive = true
             think(trimmed)
         }
 
         fun cancel() {
-            BuddyLog.d("Brain.cancel", "close ask panel sessionActive=$sessionActive live=${BuddyLive.isActive()}")
+            BuddyLog.d("Brain.cancel", "sessionActive=$sessionActive live=${BuddyLive.isActive()} agent=${AgentRunner.isActive()}")
             sessionActive = false
-            reopenAskOnFail = false
             cancelJob()
             voice.cancelAll()
-            GoalRunner.cancel()
+            AgentRunner.cancel()
             BuddyLive.stop()
             BrainSession.reset()
         }
 
-        private fun think(question: String) {
+        /** On-device verbs first (no network); everything else is a goal for the runner. */
+        private fun think(request: String) {
             if (!sessionActive) return
             voice.cancelListen()
             cancelJob()
@@ -134,47 +142,16 @@ object BuddyBrain {
             job = scope.launch {
                 delay(TREE_SETTLE_MS)
                 if (!sessionActive) return@launch
-                if (tryLocalMove(question)) return@launch
-                if (tryLocalType(question)) return@launch
-                if (tryLocalHand(question)) return@launch
-                if (BuildConfig.GEMINI_API_KEY.isBlank()) {
-                    failQuiet("I don’t have a way to think yet.")
-                    return@launch
-                }
-                if (!Reachability.online(app)) {
-                    failQuiet(OFFLINE_NOTE)
-                    return@launch
-                }
-                val snap = GuidanceCatalog.forModel(awaitReadableSnapshot(), question)
-                BuddyLog.d("Brain.runGuide", "q=\"${question.take(80)}\" nodes=${snap.nodes.size} pkg=${snap.packageName} ids=${snap.nodes.take(12).joinToString { it.id }} hands=${BuddyCursorController.isAttached()}")
-                try {
-                    val plan = gemini.guide(question, GuidanceCatalog.format(snap))
-                    BuddyLog.d("Brain.plan", "say=\"${plan.say?.take(80)}\" place=${plan.place} elementId=${plan.elementId} hand=${plan.hand} type=${plan.type} runGoal=${plan.runGoal != null}")
-                    if (!plan.runGoal.isNullOrBlank()) {
-                        sessionActive = false
-                        reopenAskOnFail = false
-                        GoalRunner.start(plan.runGoal)
-                        return@launch
-                    }
-                    apply(plan, snap)
-                } catch (error: CancellationException) {
-                    BuddyLog.d("Brain.guideCancel", "job cancelled — not a think failure")
-                    throw error
-                } catch (error: Exception) {
-                    BuddyLog.e("Brain.guideFail", error.message ?: "unknown", error)
-                    failQuiet(if (Reachability.isNetworkFailure(error)) OFFLINE_NOTE else THINK_FAIL_NOTE)
-                }
+                if (tryLocalMove(request) || tryLocalType(request) || tryLocalHand(request)) return@launch
+                sessionActive = false
+                AgentRunner.start(request, resumeLive = false)
             }
         }
 
-        private suspend fun tryLocalType(question: String): Boolean {
-            val action = BuddyTypeIntent.parse(question) ?: return false
-            BuddyLog.d("Brain.localType", "q=\"${question.take(80)}\" type=$action ready=${BuddyType.isReady()}")
-            if (!sessionActive) return true
-            if (!BuddyType.isReady()) {
-                failQuiet(HANDS_OFF_NOTE)
-                return true
-            }
+        private suspend fun tryLocalType(request: String): Boolean {
+            val action = BuddyTypeIntent.parse(request) ?: return false
+            BuddyLog.d("Brain.localType", "q=\"${request.take(80)}\" type=$action ready=${BuddyType.isReady()}")
+            if (!BuddyType.isReady()) { failQuiet(HANDS_OFF_NOTE); return true }
             voice.speak(action.say)
             val ok = when (action) {
                 is BuddyTypeIntent.Action.Type -> BuddyType.typeHere(action.text, action.submit)
@@ -185,14 +162,10 @@ object BuddyBrain {
             return true
         }
 
-        private suspend fun tryLocalHand(question: String): Boolean {
-            val hand = BuddyHandIntent.parse(question) ?: return false
-            BuddyLog.d("Brain.localHand", "q=\"${question.take(80)}\" hand=$hand ready=${BuddyHands.isReady()}")
-            if (!sessionActive) return true
-            if (!BuddyHands.isReady()) {
-                failQuiet(HANDS_OFF_NOTE)
-                return true
-            }
+        private suspend fun tryLocalHand(request: String): Boolean {
+            val hand = BuddyHandIntent.parse(request) ?: return false
+            BuddyLog.d("Brain.localHand", "q=\"${request.take(80)}\" hand=$hand ready=${BuddyHands.isReady()}")
+            if (!BuddyHands.isReady()) { failQuiet(HANDS_OFF_NOTE); return true }
             voice.speak(hand.say)
             val ok = when (hand) {
                 is BuddyHandIntent.Action.Tap -> BuddyHands.tapHere()
@@ -205,55 +178,30 @@ object BuddyBrain {
             return true
         }
 
-        private fun tryLocalMove(question: String): Boolean {
-            val move = BuddyMoveIntent.parse(question) ?: return false
-            BuddyLog.d("Brain.localMove", "q=\"${question.take(80)}\" move=$move hands=${BuddyCursorController.isAttached()}")
-            if (!sessionActive) return true
+        private fun tryLocalMove(request: String): Boolean {
+            val move = BuddyMoveIntent.parse(request) ?: return false
+            BuddyLog.d("Brain.localMove", "q=\"${request.take(80)}\" move=$move hands=${BuddyCursorController.isAttached()}")
             when (move) {
-                is BuddyMoveIntent.Move.ToPlace -> fly(move.place)
-                is BuddyMoveIntent.Move.Nudge -> {
-                    val ok = BuddyCursorController.nudgeNormalized(move.dx, move.dy)
-                    BuddyLog.d("Brain.nudge", "dx=${move.dx} dy=${move.dy} ok=$ok")
-                }
+                is BuddyMoveIntent.Move.ToPlace -> CursorLanding.normalized(move.place)?.let { BuddyCursorController.animateToNormalized(it.first, it.second) }
+                is BuddyMoveIntent.Move.Nudge -> BuddyCursorController.nudgeNormalized(move.dx, move.dy)
             }
             voice.speak(move.say)
             finishTurn()
             return true
         }
 
-        private suspend fun apply(plan: GuidancePlan, snapshot: ScreenSnapshot) {
-            if (!sessionActive) {
-                BuddyLog.d("Brain.apply", "ignored — session already closed")
-                return
-            }
-            if ((plan.hand != null && !BuddyHands.isReady()) || (plan.type != null && !BuddyType.isReady())) {
-                failQuiet(HANDS_OFF_NOTE)
-                return
-            }
-            plan.say?.takeIf { it.isNotBlank() }?.let { voice.speak(it) }
-            GuidanceActor.run(plan, snapshot)
-            finishTurn()
-        }
-
         private fun finishTurn() {
             sessionActive = false
-            reopenAskOnFail = false
             BrainSession.reset()
         }
 
-        private fun fly(place: String) {
-            val xy = CursorLanding.normalized(place)
-            val ok = xy != null && BuddyCursorController.animateToNormalized(xy.first, xy.second)
-            BuddyLog.d("Brain.fly", "place=$place xy=$xy ok=$ok")
-        }
-
-        /** Keep the panel as-is if it is open; reopen it after a typed ask so they can see the note. */
+        /** Keep the panel up with the note so they can see what went wrong and try again. */
         private fun failQuiet(message: String) {
-            BuddyLog.d("Brain.failQuiet", "sessionActive=$sessionActive askOpen=${BrainSession.askOpen.value} reopen=$reopenAskOnFail msg=$message")
+            BuddyLog.d("Brain.failQuiet", "sessionActive=$sessionActive msg=$message")
             if (!sessionActive) return
             BrainSession.setPhase(BrainPhase.Idle)
             BrainSession.setNote(message)
-            if (reopenAskOnFail) BrainSession.setAskOpen(true)
+            BrainSession.setAskOpen(true)
         }
 
         private fun failListen(message: String) {
@@ -264,13 +212,13 @@ object BuddyBrain {
             failQuiet(message)
         }
 
+        private fun hasMic(): Boolean = ContextCompat.checkSelfPermission(app, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+
         private fun cancelJob() { job?.cancel(); job = null }
 
         companion object {
             /** Let the ask panel leave the accessibility tree before we snapshot. */
             private const val TREE_SETTLE_MS = 320L
-            private const val OFFLINE_NOTE = "I can’t reach the internet just now. Check the connection and try again."
-            private const val THINK_FAIL_NOTE = "I couldn’t think that through just now. Try once more in a moment."
             private const val HANDS_OFF_NOTE = "Turn on Buddy Assistant so I can tap and type for you."
         }
     }

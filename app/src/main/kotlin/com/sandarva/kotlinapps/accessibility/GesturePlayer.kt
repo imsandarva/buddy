@@ -35,6 +35,13 @@ class GesturePlayer(private val service: AccessibilityService) {
         return play(GestureStrokes.drag(a.first, a.second, b.first, b.second, holdMs(), DRAG_MS))
     }
 
+    /** Controlled scroll: slower than a swipe and resting before lift, so nothing flies past. */
+    suspend fun pan(x0: Float, y0: Float, x1: Float, y1: Float): Boolean {
+        val a = clamp(x0, y0)
+        val b = clamp(x1, y1)
+        return play(GestureStrokes.pan(a.first, a.second, b.first, b.second, PAN_MS, PAN_REST_MS))
+    }
+
     fun holdMs(): Long = ViewConfiguration.getLongPressTimeout().toLong() + HOLD_PAD_MS
 
     private suspend fun play(gesture: GestureDescription): Boolean = suspendCancellableCoroutine { cont ->
@@ -69,6 +76,8 @@ class GesturePlayer(private val service: AccessibilityService) {
         private const val TAP_MS = 60L
         private const val SWIPE_MS = 460L
         private const val DRAG_MS = 520L
+        const val PAN_MS = 620L
+        private const val PAN_REST_MS = 110L
         private const val HOLD_PAD_MS = 140L
         private const val EDGE = 3f
     }

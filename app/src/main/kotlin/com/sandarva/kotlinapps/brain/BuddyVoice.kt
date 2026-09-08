@@ -32,6 +32,8 @@ class BuddyVoice(private val context: Context) {
         }
     }
 
+    fun isSpeaking(): Boolean = ready && tts?.isSpeaking == true
+
     fun speak(text: String, then: (() -> Unit)? = null) {
         val engine = tts
         BuddyLog.d("Voice.speak", "ready=$ready text=\"${text.take(80)}\" then=${then != null}")

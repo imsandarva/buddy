@@ -7,10 +7,10 @@ import android.os.Build
 import android.view.accessibility.AccessibilityEvent
 import com.sandarva.kotlinapps.debug.BuddyLog
 
-/** System service — composition only. Walking lives in the reader; strokes and typing attach here. */
+/** System service — composition only. Walking lives in the reader; strokes, typing, and global keys attach here. */
 class BuddyAccessibilityService : AccessibilityService() {
     private val reader by lazy { AccessibilityTreeReader(this) }
-        private val tracker by lazy { ScreenSceneTracker { reader.snapshot() } }
+    private val tracker by lazy { ScreenSceneTracker { reader.snapshot() } }
     private val player by lazy { GesturePlayer(this) }
     private val writer by lazy { FieldWriter(this) }
 
@@ -33,6 +33,7 @@ class BuddyAccessibilityService : AccessibilityService() {
         BuddyScreenEyes.attach(reader, tracker)
         BuddyHands.attach(player)
         BuddyType.attach(writer)
+        BuddyGlobal.attach(this)
         AccessibilitySession.bind(this)
         AccessibilitySession.setEnabled(true)
         AccessibilitySession.setAwaitingGrant(false)
@@ -56,6 +57,7 @@ class BuddyAccessibilityService : AccessibilityService() {
     override fun onInterrupt() = Unit
 
     private fun releaseEyes() {
+        BuddyGlobal.detach(this)
         BuddyType.detach(writer)
         BuddyHands.detach(player)
         BuddyScreenEyes.detach(reader)

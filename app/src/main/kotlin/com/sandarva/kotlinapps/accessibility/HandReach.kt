@@ -1,8 +1,11 @@
 package com.sandarva.kotlinapps.accessibility
 
+import kotlin.math.abs
+
 /**
  * Voice Access-style reach. A launcher page needs a long cross-screen pull,
- * not a short flick from wherever the cursor happens to sit.
+ * not a short flick from wherever the cursor happens to sit. A list scroll is a
+ * measured pan inside that list so nothing is skipped.
  */
 object HandReach {
     /** Drag distance as a fraction of the display. */
@@ -11,7 +14,7 @@ object HandReach {
     data class Span(val x0: Float, val y0: Float, val x1: Float, val y1: Float)
 
     fun pageSwipe(screenW: Int, screenH: Int, dx: Float, dy: Float, tip: Pair<Float, Float>?): Span {
-        val horizontal = kotlin.math.abs(dx) >= kotlin.math.abs(dy)
+        val horizontal = abs(dx) >= abs(dy)
         return if (horizontal) {
             val y = (tip?.second ?: screenH * 0.48f).coerceIn(screenH * 0.18f, screenH * 0.68f)
             val start = if (dx < 0) FAR else NEAR
@@ -25,6 +28,27 @@ object HandReach {
         }
     }
 
+    /**
+     * Reveal content in [content] direction inside [box]: the finger moves the other way across
+     * the middle 40% of the container, so each scroll shows the next “half page”.
+     */
+    fun scrollPan(box: ScreenBounds, content: Direction): Span {
+        val finger = content.opposite
+        return if (content.horizontal) {
+            val y = box.centerY
+            val x0 = box.left + box.width * (if (finger.dx < 0) PAN_FAR else PAN_NEAR)
+            val x1 = box.left + box.width * (if (finger.dx < 0) PAN_NEAR else PAN_FAR)
+            Span(x0, y, x1, y)
+        } else {
+            val x = box.centerX
+            val y0 = box.top + box.height * (if (finger.dy < 0) PAN_FAR else PAN_NEAR)
+            val y1 = box.top + box.height * (if (finger.dy < 0) PAN_NEAR else PAN_FAR)
+            Span(x, y0, x, y1)
+        }
+    }
+
     private const val NEAR = 0.12f
     private const val FAR = 0.88f
+    private const val PAN_NEAR = 0.30f
+    private const val PAN_FAR = 0.70f
 }

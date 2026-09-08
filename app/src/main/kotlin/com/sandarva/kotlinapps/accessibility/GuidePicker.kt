@@ -3,7 +3,7 @@ package com.sandarva.kotlinapps.accessibility
 /** Picks one teachable control so a debug tap can prove `point_to` without a model. */
 object GuidePicker {
     fun choose(snapshot: ScreenSnapshot): ScreenNode? {
-        val labeled = snapshot.nodes.filter { it.label.isNotBlank() && it.bounds.height >= 36 && it.bounds.width >= 48 }
+        val labeled = snapshot.nodes.filter { it.label.isNotBlank() && !it.scrollable && it.bounds.height >= 36 && it.bounds.width >= 48 }
         val pool = labeled.filter { it.clickable }.ifEmpty { labeled }
         return pool.maxByOrNull(::score)
     }

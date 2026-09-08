@@ -1,4 +1,4 @@
-package com.sandarva.kotlinapps.brain.goal
+package com.sandarva.kotlinapps.brain.agent
 
 import android.content.Context
 import android.content.Intent
@@ -6,17 +6,17 @@ import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
 import com.sandarva.kotlinapps.debug.BuddyLog
 
-/** Opens a launcher app by its visible name — no drawer hunt. */
+/** Opens a launcher app by its visible name — no drawer hunt. Exact, then prefix, then shortest contains. */
 class AppLauncher(private val context: Context) {
-    fun open(name: String): String {
+    fun open(name: String): Outcome {
         val query = name.trim()
-        if (query.isBlank()) return "open_app failed — empty name"
+        if (query.isBlank()) return Outcome.fail("no app name given")
         val pm = context.packageManager
         val apps = launcherApps(pm)
         val hit = pick(apps, pm, query)
         if (hit == null) {
-            BuddyLog.d("Goal.openApp", "miss name=\"$query\" n=${apps.size}")
-            return "app not found: $query"
+            BuddyLog.d("Agent.openApp", "miss name=\"$query\" n=${apps.size}")
+            return Outcome.fail("no app called \"$query\" is installed — try another name or open it from the home screen")
         }
         val pkg = hit.activityInfo.packageName
         val launch = pm.getLaunchIntentForPackage(pkg)
@@ -25,11 +25,11 @@ class AppLauncher(private val context: Context) {
         return try {
             context.startActivity(launch)
             val label = hit.loadLabel(pm).toString()
-            BuddyLog.d("Goal.openApp", "ok name=\"$query\" pkg=$pkg")
-            "opened $label"
+            BuddyLog.d("Agent.openApp", "ok name=\"$query\" pkg=$pkg")
+            Outcome.ok("opened $label")
         } catch (error: Exception) {
-            BuddyLog.e("Goal.openApp", error.message ?: "start failed", error)
-            "open_app failed: $query"
+            BuddyLog.e("Agent.openApp", error.message ?: "start failed", error)
+            Outcome.fail("could not open \"$query\"")
         }
     }
 

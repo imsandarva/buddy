@@ -21,7 +21,7 @@ Buddy opens on a single home surface. `MainActivity` only enables edge-to-edge d
 - **Stop buddy** — shown while the overlay is running; removes the cursor.
 - **Watch it move** — flies the overlay along a short demo path (`BuddyCursorController.playDemo()`).
 - **Let me see your screen** — opens Buddy Assistant while the overlay is running.
-- **Ask buddy** — starts a live talk when the microphone is allowed. A multi-step ask hands off to the goal runner on your screen. See `docs/live.md` and `docs/goal.md`.
+- **Ask buddy** — starts a live talk when the microphone is allowed. Anything longer than one step hands off to the agent runner on your screen. See `docs/live.md` and `docs/agent.md`.
 - **Point at something** — snapshots the active screen and flies to one real control.
 
 See `docs/overlay.md`, `docs/cursor.md`, `docs/eyes.md`, `docs/hands.md`, `docs/type.md`, and `docs/brain.md`.

@@ -1,8 +1,6 @@
 package com.sandarva.kotlinapps.brain.live
 
 import android.util.Base64
-import com.sandarva.kotlinapps.brain.GeminiTools
-import com.sandarva.kotlinapps.brain.GuidancePrompt
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -18,8 +16,8 @@ object LiveMessages {
                 .put("speechConfig", JSONObject().put("voiceConfig", JSONObject().put("prebuiltVoiceConfig", JSONObject().put("voiceName", LiveConfig.VOICE))))
                 .put("thinkingConfig", JSONObject().put("thinkingLevel", "minimal")))
             .put("realtimeInputConfig", JSONObject().put("automaticActivityDetection", vad()))
-            .put("systemInstruction", JSONObject().put("parts", JSONArray().put(JSONObject().put("text", GuidancePrompt.LIVE))))
-            .put("tools", JSONArray().put(JSONObject().put("functionDeclarations", GeminiTools.functionDeclarations(includeSay = false, includeRunGoal = true)))))
+            .put("systemInstruction", JSONObject().put("parts", JSONArray().put(JSONObject().put("text", LivePrompt.SYSTEM))))
+            .put("tools", JSONArray().put(JSONObject().put("functionDeclarations", LiveTools.declarations()))))
         .toString()
 
     /** One greeting turn. Tools are forbidden until they actually speak. */

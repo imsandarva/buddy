@@ -20,6 +20,9 @@ object BrainSession {
     val liveOpen: StateFlow<Boolean> = _liveOpen.asStateFlow()
     private val _goalOpen = MutableStateFlow(false)
     val goalOpen: StateFlow<Boolean> = _goalOpen.asStateFlow()
+    /** What the agent is doing right now, in its own words — shown in the notification while it works. */
+    private val _progress = MutableStateFlow<String?>(null)
+    val progress: StateFlow<String?> = _progress.asStateFlow()
 
     fun setPhase(value: BrainPhase) {
         if (_phase.value != value) BuddyLog.d("BrainSession.phase", "${_phase.value} -> $value")
@@ -38,6 +41,7 @@ object BrainSession {
         if (_goalOpen.value != value) BuddyLog.d("BrainSession.goalOpen", "${_goalOpen.value} -> $value")
         _goalOpen.value = value
     }
+    fun setProgress(value: String?) { _progress.value = value }
     fun reset() {
         BuddyLog.d("BrainSession.reset", "wasOpen=${_askOpen.value} live=${_liveOpen.value} goal=${_goalOpen.value} phase=${_phase.value}")
         _phase.value = BrainPhase.Idle
@@ -45,5 +49,6 @@ object BrainSession {
         _askOpen.value = false
         _liveOpen.value = false
         _goalOpen.value = false
+        _progress.value = null
     }
 }

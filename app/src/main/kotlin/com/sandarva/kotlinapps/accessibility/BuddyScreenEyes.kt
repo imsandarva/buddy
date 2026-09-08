@@ -2,6 +2,7 @@ package com.sandarva.kotlinapps.accessibility
 
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.view.accessibility.AccessibilityEvent
 import com.sandarva.kotlinapps.debug.BuddyLog
 import com.sandarva.kotlinapps.overlay.BuddyCursorController
@@ -17,6 +18,10 @@ object BuddyScreenEyes {
     @Volatile private var tracker: ScreenSceneTracker? = null
     private val idle = MutableSharedFlow<ScreenSnapshot>(replay = 0)
 
+    /** Last time the screen reported a change — lets a run wait for quiet instead of a fixed delay. */
+    @Volatile var lastEventAt: Long = 0L
+        private set
+
     fun attach(next: ScreenReader, watch: ScreenSceneTracker) {
         reader = next
         tracker = watch
@@ -31,9 +36,14 @@ object BuddyScreenEyes {
 
     val scenes: SharedFlow<ScreenSnapshot> get() = tracker?.scenes ?: idle
 
+    fun isReady(): Boolean = reader != null
+
     fun setWatching(on: Boolean) { tracker?.setWatching(on) }
 
-    fun onWindowEvent(event: AccessibilityEvent) { tracker?.onEvent(event) }
+    fun onWindowEvent(event: AccessibilityEvent) {
+        if (ScreenSceneTracker.isSceneEvent(event)) lastEventAt = SystemClock.elapsedRealtime()
+        tracker?.onEvent(event)
+    }
 
     fun snapshot(): ScreenSnapshot {
         val current = reader ?: return ScreenSnapshot.Empty

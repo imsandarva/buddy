@@ -16,7 +16,7 @@ object OverlayNotification {
     private const val CHANNEL_ID = "buddy_overlay"
     private const val CHANNEL_LIVE_ID = "buddy_live"
 
-    fun build(context: Context, live: Boolean = false, working: Boolean = false): Notification {
+    fun build(context: Context, live: Boolean = false, working: Boolean = false, progress: String? = null): Notification {
         ensureChannels(context)
         val openApp = PendingIntent.getActivity(
             context, 0, Intent(context, MainActivity::class.java),
@@ -25,11 +25,13 @@ object OverlayNotification {
         val stop = serviceIntent(context, 1, BuddyOverlayService.ACTION_STOP)
         if (working) {
             val end = serviceIntent(context, 4, BuddyOverlayService.ACTION_END_LIVE)
+            val body = progress?.takeIf { it.isNotBlank() } ?: context.getString(R.string.goal_body)
             return NotificationCompat.Builder(context, CHANNEL_LIVE_ID)
                 .setSmallIcon(R.drawable.ic_buddy_status)
                 .setContentTitle(context.getString(R.string.goal_title))
-                .setContentText(context.getString(R.string.goal_body))
-                .setStyle(NotificationCompat.BigTextStyle().bigText(context.getString(R.string.goal_body)))
+                .setContentText(body)
+                .setStyle(NotificationCompat.BigTextStyle().bigText(body))
+                .setOnlyAlertOnce(true)
                 .setContentIntent(openApp)
                 .setOngoing(true)
                 .setCategory(Notification.CATEGORY_SERVICE)
@@ -71,6 +73,11 @@ object OverlayNotification {
             .addAction(0, context.getString(R.string.point_at_something), point)
             .addAction(0, context.getString(R.string.stop_buddy), stop)
             .build()
+    }
+
+    /** Refresh the text of the ongoing notification without restarting the foreground service. */
+    fun update(context: Context, live: Boolean, working: Boolean, progress: String?) {
+        context.getSystemService(NotificationManager::class.java)?.notify(ID, build(context, live, working, progress))
     }
 
     private fun serviceIntent(context: Context, requestCode: Int, action: String): PendingIntent =

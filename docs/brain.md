@@ -1,98 +1,70 @@
 # Brain
 
-The model does not move the cursor and does not walk the tree. It returns tools. The app executes them.
+The model does not move the cursor and does not walk the tree. It names an action; the app executes it and shows the model what changed. One action space serves everything — a live “tap Wi‑Fi”, a typed “turn off Bluetooth”, and a twelve-step “free up some space”.
 
-| Tool | App does |
-|------|----------|
-| `say` | Android TTS — warm words only |
-| `point_to(element_id)` | `BuddyScreenEyes.pointTo` on the snapshot used for that turn |
-| `fly_to(place)` | `CursorLanding` → `BuddyCursorController.animateToNormalized` |
-| `tap(element_id?)` | Fly to that control (or the tip), then a real tap |
-| `hold(element_id?)` | Fly, then long-press |
-| `swipe` / `drag` | Quick slide, or hold-then-slide |
-| `type(text, element_id?, submit?)` | Fill a text field, optionally press Search / Send |
-| `run_goal(goal)` | Hand a multi-step job to the chat runner — Live / typed door only |
-| `open_app(name)` / `done` | Runner only — launch by label, or stop the loop |
+| Layer | Role |
+|-------|------|
+| **Senses** — `accessibility/` | Eyes (`BuddyScreenEyes`), hands (`BuddyHands`), type (`BuddyType`), keys (`BuddyGlobal`) |
+| **Perception** — `brain/agent/SceneDescriber`, `SceneDiff` | Snapshot → SCREEN text; before/after → “what changed” |
+| **Mind** — `brain/agent/AgentDecider`, `AgentPrompt`, `AgentGuard`, `AgentMemory` | One structured decision per step, with memory and judgement |
+| **Body** — `brain/agent/AgentExecutor` | `AgentAction` → senses → `Outcome` |
+| **Runner** — `brain/agent/AgentRunner` | The see → think → act → see loop; ask and answer; wrap-up |
+| **Doors** — `brain/BuddyBrain`, `brain/live/BuddyLive` | Typed words and live voice hand goals to the runner |
 
-`place` is a named spot (`top_left`, `center`, …), not pixels. Not Computer Use. **Live** is a second brain adapter on these same tools (except `say` — Live speaks with native audio). See `docs/live.md`.
+See `docs/agent.md` for the loop, the action space, and the guard.
 
-Sliding the buddy around is on-device (`BuddyMoveIntent`) — “move up”, “go to the top left”. Tap / hold / swipe / drag at the current tip is also on-device (`BuddyHandIntent`) — “tap”, “hold this”, “swipe left”. “Type hello” / “search for pizza” / “press enter” is on-device (`BuddyTypeIntent`). Gemini is for named controls (“tap Wi‑Fi”, “type pizza in the search box”). A DNS miss cannot block a nudge, a tap-here, or a type-here.
+## Flow of a request
 
-## Flow
+1. **Buddy itself** (“move up”, “go to the top left”) — on-device `BuddyMoveIntent`, no network.
+2. **Here** (“tap”, “hold this”, “swipe left”, “type hello”, “press enter”) — on-device `BuddyHandIntent` / `BuddyTypeIntent`.
+3. **Live one-shot** (“tap Wi‑Fi”, “scroll down”, “go back”) — Live's function call → `LiveTools.intent` → `AgentExecutor.perform` on the snapshot the model saw → tool response carries the new SCREEN.
+4. **Everything else** — a goal for `AgentRunner`: typed asks go straight there; Live calls `run_goal`. The runner speaks “On it.”, works the steps, speaks the result, and hands talk back to Live if that is where it came from.
+5. **A question mid-run** — the runner asks out loud, the ask sheet opens with the question, and the next words answer it.
 
-1. If they asked the buddy itself to move, fly or nudge locally and speak. No network.
-2. If they asked to type, search, or press enter *here*, do that locally. No network.
-3. If they asked to tap / hold / swipe / drag *here*, do that locally. No network.
-4. Spoken or typed: close the ask panel first and wait a beat. A voice tap used to land on the still-open sheet (scrim dismiss → job cancel). The sheet must be gone before eyes, hands, or type run.
-5. Snapshot the screen they are looking at (`GuidanceCatalog` — ids and labels, no pixels), including the launcher under the overlay. Strip a node whose label is the question itself. Text fields are marked `type`.
-6. If the radio is down, say so — do not wait on DNS. Otherwise send the user’s words + that list to Gemini Flash.
-7. Speak `say`. Then fly, point, type, or perform the hand stroke on **that** snapshot.
+The ask sheet is closed before eyes or hands run (a voice tap used to land on the still-open sheet).
 
-Typed send cancels leftover listening so a later STT miss cannot overwrite a real error.
+## Voice
 
-Voice **talk** is Gemini Live: raw mic PCM in, raw voice PCM out — no speech-to-text API, no captions, no screen-share video. Gemini’s “video Live” is JPEG frames at ≤1 fps, not a native share; we send the accessibility SCREEN list as realtime text instead, and we send it again when they change screens so the model sees the home screen, the notification shade, or the app in front of them. Voice **type** is still REST + Android TTS.
+Live talk is Gemini Live (`gemini-3.1-flash-live-preview`): raw mic PCM in, voice PCM out, no speech-to-text, no captions. SCREEN goes to Live as `realtimeInput` text whenever their screen changes. Typed asks and mid-run questions use the sheet (Android STT or keyboard) and Android TTS. See `docs/live.md`.
 
-Live replies arrive as binary JSON frames on the WebSocket. If those frames are ignored, `setupComplete` never lands and the session falls back to the type sheet. Speech is played through a jitter buffer (never drop, clocked at 24 kHz); cursor tools run off the main thread. See `docs/live.md`.
+## How we instruct the model
 
-## Typed vs live
+Two prompts, one action vocabulary:
 
-Typed send still closes the sheet, snapshots, and calls `generateContent`. Double-tap with a microphone starts Live instead of STT.
+- `brain/agent/AgentPrompt.kt` — the runner. Role, objective, what it receives, **how this phone works** (Settings search, maker names, scrolling, switches, dialogs), actions, how to decide, asking, showing vs doing, finishing, talking, rules. The step message carries GOAL, PROGRESS, RECENT STEPS, THEY SAID, NOTE, SCREEN NOW.
+- `brain/live/LivePrompt.kt` — the talk. Greet, wait, one quick tool when asked, `run_goal` for more.
 
-## Why “move to the top-left” used to do nothing useful
+Both repeat the matching rule: the name they say is the quoted label; the value you pass is that line's id, copied character for character.
 
-Typed Ask snapshotted **while the panel was open**. The text field’s accessibility label was the question, so its id became a 40-character slug of those words (`move_the_cursor_in_the_top_left_corner_o`). Gemini called `say` + `point_to` on that field — `Brain.point found=true ok=true` — and the cursor flew to the sheet, not a corner. There was also no `fly_to` tool, so a spatial ask could not be honored even on a clean catalog.
+The API key is `gemini.api.key` in `local.properties` (gitignored) → `BuildConfig.GEMINI_API_KEY`. Never commit it.
+
+Models: runner `gemini-3.5-flash-lite` (fast) and `gemini-3.8-flash` (when stuck), both `thinkingLevel: low`, structured JSON output. Live `gemini-3.1-flash-live-preview`, `thinkingLevel: minimal`, 220 ms VAD.
 
 ## Composition
 
 | File | Role |
 |------|------|
-| `brain/BuddyBrain.kt` | Orchestrator |
-| `brain/GeminiClient.kt` | Gemini Developer API (REST) |
-| `brain/GeminiTools.kt` | `say` / `point_to` / `fly_to` / `tap` / `hold` / `swipe` / `drag` / `type` |
-| `brain/GuidancePrompt.kt` | System + user prompt — sectioned contract for the model |
-| `brain/GuidanceCatalog.kt` | Snapshot → compact list |
-| `brain/GuidancePlan.kt` | `say` + `element_id` + `place` + `hand` + `type` |
-| `brain/HandPlan.kt` | Tap / hold / stroke from the model |
-| `brain/TypePlan.kt` | Text + field id + submit from the model |
-| `brain/GuidanceActor.kt` | Shared tap / fly / point / type executor |
-| `brain/goal/` | Multi-step runner — Live/typed hands off; chat loop owns continue |
-| `brain/live/` | Gemini Live WebSocket + jitter-buffered speaker + AEC mic + screen follow |
-| `brain/BuddyHandIntent.kt` | On-device “tap / hold / swipe left” |
+| `brain/BuddyBrain.kt` | Typed door — on-device verbs, else the runner; answers routed to a waiting run |
+| `brain/agent/` | The runner and its parts — see `docs/agent.md` |
+| `brain/live/` | Gemini Live socket, audio, listen gate, prompt, tools — see `docs/live.md` |
+| `brain/GeminiClient.kt` | `generateContent` HTTP |
+| `brain/BuddyMoveIntent.kt` | On-device “move up” / “top left” |
+| `brain/BuddyHandIntent.kt` | On-device “tap / hold / swipe left” at the tip |
 | `brain/BuddyTypeIntent.kt` | On-device “type hello” / “search for pizza” |
 | `brain/Reachability.kt` | Online check + network-error detect |
-| `brain/BuddyVoice.kt` | STT + TTS |
-| `brain/BrainSession.kt` | Listening / thinking / ask sheet |
+| `brain/BuddyVoice.kt` | Android STT + TTS |
+| `brain/BrainSession.kt` | Phase, note, sheet / live / work flags, progress line |
 | `overlay/CursorLanding.kt` | Named spots → 0…1 |
 | `ui/home/AskBuddySheet.kt` | Ask panel UI |
 | `overlay/AskOverlayWindow.kt` | Hosts that panel over any app |
 | `debug/BuddyLog.kt` | `Buddy===TRACE` logcat lines |
 
-## How we instruct the model
-
-`GuidancePrompt` is the first message. It is written like a production system prompt, not a paragraph of vibes: **role, objective, input contract, tool policy, matching rule, speech, hard rules, goal** — then the same matching rule again on the user turn.
-
-The important contract, repeated on purpose:
-
-- Latest SCREEN is the only truth.
-- The name they say is the quoted **label**. The tool argument is that line’s **element_id**, copied exactly (`Pinterest` on screen may be `apps_icon_4`, never an invented `pinterest`).
-- One spoken sentence. One phone step — or `run_goal` when the job takes many steps. Point is not tap. Flying the buddy is not pointing at a control.
-- If SCREEN is empty, say so. Do not guess.
-
-REST (`SYSTEM`) must call `say`. Live (`LIVE`) speaks with native audio and has no `say` tool. Tool declarations in `GeminiTools` repeat the same id rule so the schema and the prompt agree.
-
-The API key is `gemini.api.key` in `local.properties` (gitignored) → `BuildConfig.GEMINI_API_KEY`. Never commit it.
-
-Model (REST): `gemini-3.5-flash-lite` only. Model (Live): `gemini-3.1-flash-live-preview` with `thinkingLevel: minimal` and a short server VAD (220 ms silence).
-
-## How to try it
+## Try it
 
 1. Start the buddy, turn on **Buddy Assistant**, allow the microphone once via **Ask buddy**.
-2. Leave the app. Double-tap the cursor — a live talk starts (or the type sheet if the mic is off).
-3. Speak naturally. Ask “open Calculator” — Gemini should talk, then tap. Ask “log me out of Pinterest” — Live hands off to the goal runner; watch the cursor do the steps. Type the same kind of job and typed ask will hand off too.
-4. Ask “move up” or “move to the top-left” — the cursor should fly even with no internet.
-5. Ask “tap” or “hold this” — it should press where it is. Ask “tap Wi‑Fi” on a list — it should fly there and tap.
-6. Open a search box and ask “type hello” — it should fill the field. Ask “search for pizza” — it should type and press search.
-7. Ask something on this screen (or type it) — Buddy should speak and point or tap a real control, not the ask field.
-8. Open Settings, pull the notification, tap **Ask buddy**. After the shade closes it asks what you need, then points, taps, types, or speaks.
+2. Double-tap the cursor from any screen. Say “open Calculator” — Live taps. Say “how much storage do I have left?” — Live hands off; watch the cursor open Settings, search, tap, then hear the answer. Talk continues afterwards.
+3. Type the same things in the sheet — same runner, spoken result.
+4. “Move up”, “tap”, “type hello” work with no internet.
+5. Say “delete this photo” — Buddy asks before the delete. Say “show me where the font size is” — it points instead of pressing.
 
-See `docs/eyes.md`, `docs/cursor-hands.md`, `docs/hands.md`, `docs/type.md`, and `docs/goal.md`.
+See `docs/agent.md`, `docs/eyes.md`, `docs/hands.md`, `docs/type.md`, and `docs/live.md`.

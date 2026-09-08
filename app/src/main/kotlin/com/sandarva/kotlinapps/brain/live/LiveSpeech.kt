@@ -2,15 +2,25 @@ package com.sandarva.kotlinapps.brain.live
 
 import kotlin.math.abs
 
-/** Client-side speech gate — room noise is not an order. */
+/**
+ * Hangover energy gate on 16-bit PCM. AEC on `VOICE_COMMUNICATION` dips below a hard floor
+ * between syllables — resetting the streak on every quiet chunk never reached “heard”.
+ */
 class LiveSpeech {
-    private var hits = 0
+    private var loudHits = 0
+    private var quietHits = 0
 
-    fun reset() { hits = 0 }
+    fun reset() { loudHits = 0; quietHits = 0 }
 
     fun feed(pcm: ByteArray): Boolean {
-        if (loud(pcm)) hits++ else hits = 0
-        return hits >= NEED
+        if (loud(pcm)) {
+            loudHits += 1
+            quietHits = 0
+        } else if (loudHits > 0) {
+            quietHits += 1
+            if (quietHits > HANGOVER) { loudHits = 0; quietHits = 0 }
+        }
+        return loudHits >= NEED
     }
 
     private fun loud(pcm: ByteArray): Boolean {
@@ -28,7 +38,10 @@ class LiveSpeech {
     }
 
     companion object {
-        private const val FLOOR = 1400
-        private const val NEED = 6
+        /** ~1.2% of full scale — AEC-attenuated speech still counts; room hiss usually does not. */
+        private const val FLOOR = 400
+        private const val NEED = 4
+        /** Keep the streak through ~160 ms of AEC holes. */
+        private const val HANGOVER = 8
     }
 }

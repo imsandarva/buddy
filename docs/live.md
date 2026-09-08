@@ -2,22 +2,22 @@
 
 Voice is Gemini Live. Typed asks stay on the turn-based chat API. Same cursor tools.
 
-Until now we used REST `generateContent` (`gemini-3.5-flash-lite`) plus the accessibility list — not a screenshot. Android STT in, Android TTS out. That path still runs when you type.
+Typed asks go to the agent runner (`docs/agent.md`) over REST `generateContent` — Android STT in, Android TTS out. Voice is Live.
 
 Live is a **brain adapter**. Eyes and hands do not change.
 
 ## What Live is
 
-A stateful WebSocket (`BidiGenerateContent`) to the Gemini Developer API. **Mic PCM goes straight to Gemini; Gemini PCM comes straight back.** There is no Android speech-to-text step, no chat REST hop, and no captions. When it wants the buddy to move, tap, or type, it calls the same functions: `point_to`, `fly_to`, `tap`, `hold`, `swipe`, `drag`, `type`. A multi-step job is `run_goal` — Live speaks “on it,” then the chat runner takes the screen. There is no `say` tool — the model’s own voice is the speech. See `docs/goal.md`.
+A stateful WebSocket (`BidiGenerateContent`) to the Gemini Developer API. **Mic PCM goes straight to Gemini; Gemini PCM comes straight back.** There is no Android speech-to-text step, no chat REST hop, and no captions. For one quick thing on the screen in front of them it calls a tool — `tap`, `hold`, `scroll`, `swipe`, `drag`, `type`, `back`, `home`, `open_app`, `point_to`, `fly_to` — which `LiveTools` maps onto the shared `AgentAction` space and `AgentExecutor` performs. Anything longer is `run_goal` — Live speaks “on it,” then the agent runner takes the screen and Live resumes when it is done. There is no `say` tool — the model’s own voice is the speech.
 
-| | Chat REST | Live |
+| | Agent runner (typed) | Live |
 |--|-----------|------|
-| Model | `gemini-3.5-flash-lite` | `gemini-3.1-flash-live-preview` |
-| Transport | HTTP `generateContent` | WebSocket `BidiGenerateContent` |
+| Model | `gemini-3.5-flash-lite` → `gemini-3.8-flash` when stuck | `gemini-3.1-flash-live-preview` |
+| Transport | HTTP `generateContent`, structured JSON | WebSocket `BidiGenerateContent` |
 | Voice in | Android `SpeechRecognizer` | 16 kHz PCM mic stream (no STT) |
 | Voice out | Android TTS | 24 kHz PCM from Gemini (no captions) |
-| Screen | Accessibility catalog in the prompt | Catalog as `realtimeInput` text after mic is open |
-| Tools | `say` + cursor tools + `type` | Cursor tools + `type` |
+| Screen | SCREEN block in each step message | SCREEN block as `realtimeInput` text after mic is open |
+| Tools | Full action space, many steps | One-shot tools + `run_goal` |
 
 Not Computer Use. Not video Live. Not ElevenLabs. Not ChatGPT.
 
@@ -57,11 +57,11 @@ Long pauses after “tap Wi‑Fi” can still be a tree walk or a tool, not the 
 
 1. Start the buddy, turn on **Buddy Assistant**, allow the microphone once.
 2. Double-tap the cursor (or **Ask buddy**). Buddy says a short hello and waits. It must not tap or move until you ask.
-3. Talk. You will not see your words or Buddy’s words as text — you only hear each other. Ask it to open Calculator, move, tap, hold, drag, or type. After a multi-step job, talk continues on its own.
+3. Talk. You will not see your words or Buddy’s words as text — you only hear each other. Ask it to open Calculator, move, tap, hold, scroll, drag, or type. Ask for anything longer — “how much storage do I have left?” — and the runner takes over; talk continues on its own when it is done.
 
 ## Not speech-to-text, then chat
 
-Live is **audio in, audio out** on one socket — the same shape as the official Gemini app. We used to also ask Gemini for transcripts and paint them on the bar. That extra job is billed and delivered late, so it *looked* like we waited for STT before thinking. We do not request `inputAudioTranscription` / `outputAudioTranscription`. The mic opens after a short hello (not on `setupComplete`), so room noise and the SCREEN list cannot look like an order. Tools stay blocked until we hear real speech. The screen list is sent only after that, as context — not as a request.
+Live is **audio in, audio out** on one socket — the same shape as the official Gemini app. We used to also ask Gemini for transcripts and paint them on the bar. That extra job is billed and delivered late, so it *looked* like we waited for STT before thinking. We do not request `inputAudioTranscription` / `outputAudioTranscription`. The mic opens after a short hello (not on `setupComplete`). SCREEN goes as context once the ears are open — it is not an order. Greeting-turn tools stay blocked. After that, tools run when the server has treated the turn as theirs: hangover mic energy (AEC on `VOICE_COMMUNICATION` punches holes in a consecutive-loud streak), model audio after a short hello-grace, barge-in, or a tool that already holds their words (`run_goal`, `open_app`, `type`). A raw energy gate alone used to block every `run_goal` after “On it.”
 4. **End** in the notification, or a second double-tap, ends the talk. **Type instead** opens the old sheet (REST).
 
 The full ask sheet covers the screen, so Live never uses it. That was the bug when a spoken tap hit the sheet.
@@ -88,30 +88,34 @@ Setup JSON must stay on fields this `v1beta` socket actually knows. Extra keys s
 
 ## Why the cursor felt hung
 
-Live tools ran on the main thread: a full accessibility walk, then fly + tap (up to ~2.4 s), then another walk. The overlay could not move or take taps. Tools now run on a background dispatcher; window moves stay on main. A live SCREEN list is capped so the model can call the next tool sooner.
+Live tools ran on the main thread: a full accessibility walk, then fly + tap (up to ~2.4 s), then another walk. The overlay could not move or take taps. Tools now run on a background dispatcher; window moves stay on main. A live SCREEN list is capped (64 lines) so the model can call the next tool sooner.
 
 A spoken tap that then sits still is usually the tree or the tool, not VAD. Voice gap after they stop talking should now be a short silence (about 220 ms) plus model start, not a multi-second think.
 
-After a tap that opens another app, the first accessibility tree is often empty (`Eyes.snapshot … nodes=0`). We wait and retry (same idea as UI Automator’s new-window wait) so the tool’s SCREEN list is the new app, not “(nothing readable)”.
+After a tool, the tool response carries the new SCREEN taken after the event stream goes quiet (`awaitSettledSnapshot`) and retried while a new app's tree is still hollow — so the model sees the new app, not “(nothing readable)”.
 
 ## Composition
 
 | File | Role |
 |------|------|
-| `brain/live/BuddyLive.kt` | Session facade — start / stop / tools / follow screen |
+| `brain/live/BuddyLive.kt` | Session facade — start / stop / tools / follow screen / `run_goal` handoff |
+| `brain/live/LiveListen.kt` | Greeting vs asked — when a tool may run |
+| `brain/live/LiveSpeech.kt` | Hangover energy on mic PCM (AEC-safe) |
+| `brain/live/LiveTools.kt` | Function declarations; call → `AgentAction` / `RunGoal` |
+| `brain/live/LivePrompt.kt` | The talk contract — greet, wait, one tool when asked, `run_goal` for more |
 | `accessibility/ScreenSceneTracker.kt` | Debounced window follow while Live is on |
-| `accessibility/ScreenReady.kt` | Wait for a readable in-app tree after a tool |
+| `accessibility/ScreenReady.kt` | Settled / readable snapshot after a tool |
 | `brain/live/LiveSocket.kt` | OkHttp WebSocket (text + binary JSON, decode off the reader) |
 | `brain/live/LiveMessages.kt` | Setup, audio, catalog, toolResponse JSON |
 | `brain/live/LiveAudio.kt` | Shared session + AEC / NS / AGC |
 | `brain/live/LiveMic.kt` | 16 kHz capture + send queue |
 | `brain/live/LiveSpeaker.kt` | 24 kHz jitter-buffered playback |
 | `brain/live/LiveConfig.kt` | Model, rates, voice (`Aoede`) |
-| `brain/GuidanceActor.kt` | Shared executor for REST and Live |
+| `brain/agent/AgentExecutor.kt` | Shared executor for the runner and Live |
 | `overlay/OverlayNotification.kt` | Live talk controls in the notification shade (`buddy_live` channel) |
 | `overlay/OverlayNotifier.kt` | Syncs notification when live starts or stops |
 | `overlay/OverlayChrome.kt` | Cursor + ask pass through during a stroke |
 
 API key is still `gemini.api.key` in `local.properties`. The socket uses `?key=` on the Gemini Live URL.
 
-See `docs/brain.md`, `docs/hands.md`, and `docs/type.md`.
+See `docs/agent.md`, `docs/brain.md`, `docs/hands.md`, and `docs/type.md`.

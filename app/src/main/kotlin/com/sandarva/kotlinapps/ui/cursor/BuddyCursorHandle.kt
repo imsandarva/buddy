@@ -33,9 +33,11 @@ fun BuddyCursorHandle(
     var phase by remember { mutableStateOf(CursorPhase.Idle) }
     var velocity by remember { mutableStateOf(Offset.Zero) }
     val pressing by OverlaySession.pressing.collectAsState()
+    val thinking by OverlaySession.thinking.collectAsState()
     val effectivePhase = when {
         pressing -> CursorPhase.Lifted
         phase == CursorPhase.Drifting -> CursorPhase.Drifting
+        thinking && phase == CursorPhase.Idle -> CursorPhase.Thinking
         else -> phase
     }
     val motion = rememberCursorMotion(effectivePhase, velocity)

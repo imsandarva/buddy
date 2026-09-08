@@ -2,12 +2,12 @@
 <resources>
     <string name="app_name">Buddy</string>
     <string name="accessibility_service_label">Buddy Assistant</string>
-    <string name="accessibility_service_description">Buddy helps you navigate your phone by seeing what is on screen. It can point to the next step, or tap, hold, and drag for you — like a finger — when you ask.</string>
+    <string name="accessibility_service_description">Buddy helps you use your phone by seeing what is on screen. When you ask, it can point to the next step — or tap, scroll, type, and press back for you, step by step, like a patient friend.</string>
     <string name="home_eyebrow">Buddy</string>
     <string name="home_headline">A friend\non your screen.</string>
     <string name="home_headline_running">I’m with\nyou now.</string>
-    <string name="home_body">It lives quietly with you — pointing, tapping, holding, or dragging — so the confusing parts of your phone finally feel simple.</string>
-    <string name="home_body_running">Go ahead and leave this app. I’ll stay on your screen. Ask me to move, tap, hold, or drag — I’ll do it wherever you are.</string>
+    <string name="home_body">It lives quietly with you. Say what you need — find a setting, free up space, send a message — and it works through the steps on your screen while you watch.</string>
+    <string name="home_body_running">Go ahead and leave this app. I’ll stay on your screen. Double-tap me and tell me what you need — I’ll do the steps for you, wherever you are.</string>
     <string name="start_your_buddy">Start your buddy</string>
     <string name="stop_buddy">Stop buddy</string>
     <string name="watch_buddy_move">Watch it move</string>
@@ -17,9 +17,9 @@
     <string name="ask_title_listening">I’m listening.</string>
     <string name="ask_title_thinking">One moment.</string>
     <string name="ask_title_idle">What do you need?</string>
-    <string name="ask_body_listening">Say it in your own words — like “change the date.”</string>
+    <string name="ask_body_listening">Say it in your own words — like “how much storage do I have left?”</string>
     <string name="ask_body_thinking">I’m looking at what’s on your screen.</string>
-    <string name="ask_body_idle">You can speak, or type a few words.</string>
+    <string name="ask_body_idle">You can speak, or type a few words — anything from “open the camera” to “turn off notifications for this app.”</string>
     <string name="ask_placeholder">Type what you need</string>
     <string name="ask_not_now">Not now</string>
     <string name="ask_type_only">You can type it — or open Buddy once to allow the microphone.</string>
@@ -31,7 +31,7 @@
     <string name="live_title">I’m with you.</string>
     <string name="live_body">I’m listening. Just talk.</string>
     <string name="goal_title">I’m on it.</string>
-    <string name="goal_body">I’m working through that on your screen. Pull down to stop me.</string>
+    <string name="goal_body">I’m working through that on your screen, one step at a time. Tap End if you’d like me to stop.</string>
     <string name="live_thats_all">That’s all</string>
     <string name="live_end">End</string>
     <string name="live_type_instead">Type instead</string>

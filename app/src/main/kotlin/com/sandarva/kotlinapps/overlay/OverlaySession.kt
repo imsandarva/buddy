@@ -16,10 +16,14 @@ object OverlaySession {
 
     private val _pressing = MutableStateFlow(false)
     val pressing: StateFlow<Boolean> = _pressing.asStateFlow()
+    /** The agent is deciding its next step — the cursor glows softly so the wait feels alive. */
+    private val _thinking = MutableStateFlow(false)
+    val thinking: StateFlow<Boolean> = _thinking.asStateFlow()
 
     fun setActive(value: Boolean) { _active.value = value }
     fun setAwaitingPermission(value: Boolean) { _awaitingPermission.value = value }
     fun setPressing(value: Boolean) { _pressing.value = value }
+    fun setThinking(value: Boolean) { _thinking.value = value }
     fun savePlacement(xFraction: Float, yFraction: Float) {
         placement = BuddyCursorState(true, xFraction.coerceIn(0f, 1f), yFraction.coerceIn(0f, 1f))
     }

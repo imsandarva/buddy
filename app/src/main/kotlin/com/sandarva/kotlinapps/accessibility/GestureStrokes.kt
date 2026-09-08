@@ -24,6 +24,13 @@ object GestureStrokes {
         return GestureDescription.Builder().addStroke(press).addStroke(slide).build()
     }
 
+    /** Slide, then rest before lifting so the list does not fling past what they wanted to see. */
+    fun pan(x0: Float, y0: Float, x1: Float, y1: Float, moveMs: Long, restMs: Long): GestureDescription {
+        val slide = GestureDescription.StrokeDescription(line(x0, y0, x1, y1), 0, moveMs, true)
+        val rest = slide.continueStroke(dwell(x1, y1), 0, restMs, false)
+        return GestureDescription.Builder().addStroke(slide).addStroke(rest).build()
+    }
+
     private fun one(path: Path, durationMs: Long): GestureDescription =
         GestureDescription.Builder()
             .addStroke(GestureDescription.StrokeDescription(path, 0, durationMs.coerceAtLeast(1L)))
