@@ -56,12 +56,12 @@ Long pauses after “tap Wi‑Fi” can still be a tree walk or a tool, not the 
 ## How to talk
 
 1. Start the buddy, turn on **Buddy Assistant**, allow the microphone once.
-2. Double-tap the cursor (or **Ask buddy**). The screen stays open — pull notifications to see **I’m with you** with **End** and **Type instead**.
-3. Talk right away. You will not see your words or Buddy’s words as text — you only hear each other. Ask it to open Calculator, move, tap, hold, drag, or type.
+2. Double-tap the cursor (or **Ask buddy**). Buddy says a short hello and waits. It must not tap or move until you ask.
+3. Talk. You will not see your words or Buddy’s words as text — you only hear each other. Ask it to open Calculator, move, tap, hold, drag, or type. After a multi-step job, talk continues on its own.
 
 ## Not speech-to-text, then chat
 
-Live is **audio in, audio out** on one socket — the same shape as the official Gemini app. We used to also ask Gemini for transcripts and paint them on the bar. That extra job is billed and delivered late, so it *looked* like we waited for STT before thinking. We do not request `inputAudioTranscription` / `outputAudioTranscription`. The mic opens as soon as `setupComplete` arrives; the screen list is sent after, so talking is not blocked on a tree walk.
+Live is **audio in, audio out** on one socket — the same shape as the official Gemini app. We used to also ask Gemini for transcripts and paint them on the bar. That extra job is billed and delivered late, so it *looked* like we waited for STT before thinking. We do not request `inputAudioTranscription` / `outputAudioTranscription`. The mic opens after a short hello (not on `setupComplete`), so room noise and the SCREEN list cannot look like an order. Tools stay blocked until we hear real speech. The screen list is sent only after that, as context — not as a request.
 4. **End** in the notification, or a second double-tap, ends the talk. **Type instead** opens the old sheet (REST).
 
 The full ask sheet covers the screen, so Live never uses it. That was the bug when a spoken tap hit the sheet.

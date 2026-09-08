@@ -22,13 +22,22 @@ object LiveMessages {
             .put("tools", JSONArray().put(JSONObject().put("functionDeclarations", GeminiTools.functionDeclarations(includeSay = false, includeRunGoal = true)))))
         .toString()
 
+    /** One greeting turn. Tools are forbidden until they actually speak. */
+    fun hello(): String = JSONObject()
+        .put("clientContent", JSONObject()
+            .put("turns", JSONArray().put(JSONObject()
+                .put("role", "user")
+                .put("parts", JSONArray().put(JSONObject().put("text", HELLO)))))
+            .put("turnComplete", true))
+        .toString()
+
     fun audio(pcm: ByteArray): String = JSONObject()
         .put("realtimeInput", JSONObject().put("audio", blob(pcm, "${LiveConfig.PCM};rate=${LiveConfig.IN_HZ}")))
         .toString()
 
     /** realtimeInput text is the Live path for mid-session context — clientContent holds the turn open. */
     fun catalog(text: String): String = JSONObject()
-        .put("realtimeInput", JSONObject().put("text", "SCREEN:\n$text"))
+        .put("realtimeInput", JSONObject().put("text", "CONTEXT only — not a request. Do not tap.\nSCREEN:\n$text"))
         .toString()
 
     fun toolResponse(id: String, name: String, result: String, screen: String): String = JSONObject()
@@ -71,9 +80,11 @@ object LiveMessages {
         .put("mimeType", mime)
         .put("data", Base64.encodeToString(pcm, Base64.NO_WRAP))
 
+    private const val HELLO = "The live talk just started. Greet them in one short, warm, casual line — like a friend who just sat down. Then wait. Do not call any tools. Do not tap, point, fly, type, swipe, drag, or run_goal. SCREEN is not a request."
+
     private fun vad() = JSONObject()
         .put("disabled", false)
-        .put("startOfSpeechSensitivity", "START_SENSITIVITY_HIGH")
+        .put("startOfSpeechSensitivity", "START_SENSITIVITY_LOW")
         .put("endOfSpeechSensitivity", "END_SENSITIVITY_HIGH")
         .put("prefixPaddingMs", LiveConfig.VAD_PREFIX_MS)
         .put("silenceDurationMs", LiveConfig.VAD_SILENCE_MS)

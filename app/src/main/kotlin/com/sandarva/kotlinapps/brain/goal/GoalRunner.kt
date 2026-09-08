@@ -14,6 +14,7 @@ import com.sandarva.kotlinapps.brain.GuidanceActor
 import com.sandarva.kotlinapps.brain.GuidanceCatalog
 import com.sandarva.kotlinapps.brain.GuidancePlan
 import com.sandarva.kotlinapps.brain.Reachability
+import com.sandarva.kotlinapps.brain.live.BuddyLive
 import com.sandarva.kotlinapps.debug.BuddyLog
 import com.sandarva.kotlinapps.overlay.OverlayNotifier
 import kotlinx.coroutines.CancellationException
@@ -37,7 +38,7 @@ object GoalRunner {
         return Session(app).also { session = it }
     }
 
-    fun isActive(): Boolean = session?.active == true
+    fun isActive(): Boolean = session?.busy == true
     fun start(goal: String) { session?.start(goal) }
     fun cancel() { session?.cancel() }
 
@@ -47,14 +48,20 @@ object GoalRunner {
         private val voice = BuddyVoice(app)
         private val launcher = AppLauncher(app)
         private var job: Job? = null
+        private var wrap = 0
         @Volatile var active = false
             private set
+        @Volatile var wrapping = false
+            private set
+        val busy: Boolean get() = active || wrapping
 
         fun start(goal: String) {
             val trimmed = goal.trim()
             if (trimmed.isBlank()) return
             cancel()
+            wrapping = false
             active = true
+            wrap += 1
             BrainSession.setAskOpen(false)
             BrainSession.setLiveOpen(false)
             BrainSession.setGoalOpen(true)
@@ -66,10 +73,13 @@ object GoalRunner {
         }
 
         fun cancel() {
-            if (!active && job == null) return
+            if (!active && !wrapping && job == null) return
             BuddyLog.d("Goal.cancel", "wasActive=$active")
+            wrap += 1
+            wrapping = false
+            voice.cancelAll()
             job?.cancel(); job = null
-            finish(speak = false)
+            finish()
         }
 
         private suspend fun run(goal: String) {
@@ -117,13 +127,13 @@ object GoalRunner {
                             stuck = if (afterKey == key) stuck + 1 else 0
                             if (result.endsWith("failed")) stuck += 1
                             if (stuck >= STUCK_LIMIT) {
-                                stopSpeaking("I got stuck on this screen. Try telling me the next step.")
+                                stopSpeaking("I got stuck on this screen.")
                                 return
                             }
                         }
                     }
                 }
-                stopSpeaking("That’s as far as I could take it. Ask me again if you want me to keep going.")
+                stopSpeaking("That’s as far as I could take it.")
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Exception) {
@@ -134,11 +144,20 @@ object GoalRunner {
 
         private fun stopSpeaking(message: String) {
             if (!active) return
-            voice.speak(message)
-            finish(speak = false)
+            val id = wrap
+            active = false
+            wrapping = true
+            job = null
+            voice.speak(message) {
+                wrapping = false
+                if (id != wrap) return@speak
+                BuddyLog.d("Goal.resumeLive", "after=\"${message.take(40)}\"")
+                BrainSession.setGoalOpen(false)
+                BuddyLive.ensure(app).start(afterGoal = true)
+            }
         }
 
-        private fun finish(speak: Boolean) {
+        private fun finish() {
             val was = active
             active = false
             job = null
@@ -146,7 +165,6 @@ object GoalRunner {
             BrainSession.setGoalOpen(false)
             if (BrainSession.phase.value == BrainPhase.Working) BrainSession.setPhase(BrainPhase.Idle)
             OverlayNotifier.sync(app)
-            if (speak) { /* reserved — voice already handled */ }
         }
 
         fun release() {
@@ -174,7 +192,7 @@ object GoalRunner {
 
     private fun doneLine(status: String): String = when (status) {
         "succeeded" -> "That’s done."
-        "stuck" -> "I got stuck. Try telling me the next step."
+        "stuck" -> "I got stuck."
         else -> "I couldn’t finish that."
     }
 

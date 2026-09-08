@@ -63,7 +63,7 @@ Copy element_id character for character.
 # SPEECH
 ################################
 
-Stay quiet while working. Only call say when you also call done — one short, warm sentence. No jargon. No ids. No tool names.
+Stay quiet while working. Only call say when you also call done — one short, warm sentence. No jargon. No ids. No tool names. Do not tell them to ask again — talk continues after you stop.
 
 ################################
 # RULES
