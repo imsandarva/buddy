@@ -12,6 +12,7 @@ import com.sandarva.kotlinapps.brain.GeminiTools
 import com.sandarva.kotlinapps.brain.GuidanceActor
 import com.sandarva.kotlinapps.brain.GuidanceCatalog
 import com.sandarva.kotlinapps.brain.Reachability
+import com.sandarva.kotlinapps.brain.goal.GoalRunner
 import com.sandarva.kotlinapps.debug.BuddyLog
 import com.sandarva.kotlinapps.overlay.OverlayNotifier
 import kotlinx.coroutines.CoroutineScope
@@ -103,9 +104,9 @@ object BuddyLive {
             }
         }
 
-        fun stop(user: Boolean) {
+        fun stop(user: Boolean, handoff: Boolean = false) {
             if (!active && socket == null) return
-            BuddyLog.d("Live.stop", "user=$user")
+            BuddyLog.d("Live.stop", "user=$user handoff=$handoff")
             gen += 1
             active = false
             BuddyScreenEyes.setWatching(false)
@@ -116,7 +117,7 @@ object BuddyLive {
             audio?.release(); audio = null
             socket?.close(); socket = null
             BrainSession.setLiveOpen(false)
-            if (BrainSession.phase.value == BrainPhase.Live) BrainSession.setPhase(BrainPhase.Idle)
+            if (!handoff && BrainSession.phase.value == BrainPhase.Live) BrainSession.setPhase(BrainPhase.Idle)
             OverlayNotifier.sync(app)
         }
 
@@ -130,15 +131,25 @@ object BuddyLive {
         private suspend fun runTools(calls: List<LiveFunctionCall>) {
             for (call in calls) {
                 if (!active) return
-                val snap = BuddyScreenEyes.snapshot()
                 val plan = GeminiTools.planFromCall(call.name, call.args)
                 BuddyLog.d("Live.tool", "name=${call.name} id=${call.id}")
+                if (!plan.runGoal.isNullOrBlank()) {
+                    handoffGoal(plan.runGoal)
+                    return
+                }
+                val snap = BuddyScreenEyes.snapshot()
                 val result = GuidanceActor.run(plan, snap)
                 delay(TREE_SETTLE_MS)
                 val after = awaitReadableSnapshot()
                 lastScene = after.sceneKey()
                 socket?.send(LiveMessages.toolResponse(call.id, call.name, result, GuidanceCatalog.format(after, LIVE_CATALOG)))
             }
+        }
+
+        private fun handoffGoal(goal: String) {
+            BuddyLog.d("Live.handoff", "goal=\"${goal.take(80)}\"")
+            stop(user = false, handoff = true)
+            GoalRunner.ensure(app).start(goal)
         }
 
         private suspend fun followScreen(id: Int) {

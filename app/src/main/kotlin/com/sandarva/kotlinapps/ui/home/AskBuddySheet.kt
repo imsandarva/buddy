@@ -64,7 +64,7 @@ fun AskBuddySheet(
                 .fillMaxSize()
                 .background(BuddyColors.Scrim)
                 .clickable(
-                    enabled = phase != BrainPhase.Thinking,
+                    enabled = phase != BrainPhase.Thinking && phase != BrainPhase.Working,
                     indication = null,
                     interactionSource = remember { MutableInteractionSource() }
                 ) {
@@ -106,13 +106,13 @@ private fun AskBuddyBody(phase: BrainPhase, note: String?, onAskText: (String) -
     var draft by remember { mutableStateOf("") }
     val title = when (phase) {
         BrainPhase.Listening, BrainPhase.Live -> R.string.ask_title_listening
-        BrainPhase.Thinking -> R.string.ask_title_thinking
+        BrainPhase.Thinking, BrainPhase.Working -> R.string.ask_title_thinking
         BrainPhase.Idle -> R.string.ask_title_idle
     }
     val body = note ?: stringResource(
         when (phase) {
             BrainPhase.Listening, BrainPhase.Live -> R.string.ask_body_listening
-            BrainPhase.Thinking -> R.string.ask_body_thinking
+            BrainPhase.Thinking, BrainPhase.Working -> R.string.ask_body_thinking
             BrainPhase.Idle -> R.string.ask_body_idle
         }
     )
@@ -127,7 +127,7 @@ private fun AskBuddyBody(phase: BrainPhase, note: String?, onAskText: (String) -
             modifier = Modifier.fillMaxWidth(),
             placeholder = { Text(stringResource(R.string.ask_placeholder), color = BuddyColors.Mist) },
             singleLine = true,
-            enabled = phase != BrainPhase.Thinking,
+            enabled = phase != BrainPhase.Thinking && phase != BrainPhase.Working,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
             keyboardActions = KeyboardActions(onSend = {
                 BuddyLog.d("AskPanel", "typed send len=${draft.trim().length}")

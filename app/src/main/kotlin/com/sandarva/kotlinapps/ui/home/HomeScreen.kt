@@ -43,6 +43,7 @@ fun HomeScreen(
     listening: Boolean,
     thinking: Boolean,
     live: Boolean,
+    working: Boolean,
     onStartBuddy: () -> Unit,
     onStopBuddy: () -> Unit,
     onWatchMove: () -> Unit,
@@ -54,7 +55,7 @@ fun HomeScreen(
     Box(modifier.fillMaxSize()) {
         AmbientBackdrop(alive = isRunning, modifier = Modifier.fillMaxSize())
         HomeForeground(
-            isRunning, awaitingPermission, canSeeScreen, awaitingAccess, listening, thinking, live,
+            isRunning, awaitingPermission, canSeeScreen, awaitingAccess, listening, thinking, live, working,
             onStartBuddy, onStopBuddy, onWatchMove, onRequestAccess, onPointAtControl, onAskBuddy,
             Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)
         )
@@ -70,6 +71,7 @@ private fun HomeForeground(
     listening: Boolean,
     thinking: Boolean,
     live: Boolean,
+    working: Boolean,
     onStartBuddy: () -> Unit,
     onStopBuddy: () -> Unit,
     onWatchMove: () -> Unit,
@@ -85,7 +87,7 @@ private fun HomeForeground(
     ) {
         HomeHero(isRunning, Modifier.fillMaxWidth().padding(top = 80.dp))
         HomeCta(
-            isRunning, awaitingPermission, canSeeScreen, awaitingAccess, listening, thinking, live,
+            isRunning, awaitingPermission, canSeeScreen, awaitingAccess, listening, thinking, live, working,
             onStartBuddy, onStopBuddy, onWatchMove, onRequestAccess, onPointAtControl, onAskBuddy,
             Modifier.fillMaxWidth().padding(bottom = 40.dp)
         )
@@ -142,6 +144,7 @@ private fun HomeCta(
     listening: Boolean,
     thinking: Boolean,
     live: Boolean,
+    working: Boolean,
     onStartBuddy: () -> Unit,
     onStopBuddy: () -> Unit,
     onWatchMove: () -> Unit,
@@ -151,6 +154,7 @@ private fun HomeCta(
     modifier: Modifier = Modifier
 ) {
     val footnote = when {
+        working -> R.string.home_footnote_working
         live -> R.string.home_footnote_live
         thinking -> R.string.home_footnote_thinking
         listening -> R.string.home_footnote_listening

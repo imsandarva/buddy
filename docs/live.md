@@ -8,7 +8,7 @@ Live is a **brain adapter**. Eyes and hands do not change.
 
 ## What Live is
 
-A stateful WebSocket (`BidiGenerateContent`) to the Gemini Developer API. **Mic PCM goes straight to Gemini; Gemini PCM comes straight back.** There is no Android speech-to-text step, no chat REST hop, and no captions. When it wants the buddy to move, tap, or type, it calls the same functions: `point_to`, `fly_to`, `tap`, `hold`, `swipe`, `drag`, `type`. There is no `say` tool — the model’s own voice is the speech.
+A stateful WebSocket (`BidiGenerateContent`) to the Gemini Developer API. **Mic PCM goes straight to Gemini; Gemini PCM comes straight back.** There is no Android speech-to-text step, no chat REST hop, and no captions. When it wants the buddy to move, tap, or type, it calls the same functions: `point_to`, `fly_to`, `tap`, `hold`, `swipe`, `drag`, `type`. A multi-step job is `run_goal` — Live speaks “on it,” then the chat runner takes the screen. There is no `say` tool — the model’s own voice is the speech. See `docs/goal.md`.
 
 | | Chat REST | Live |
 |--|-----------|------|

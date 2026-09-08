@@ -11,6 +11,8 @@ The model does not move the cursor and does not walk the tree. It returns tools.
 | `hold(element_id?)` | Fly, then long-press |
 | `swipe` / `drag` | Quick slide, or hold-then-slide |
 | `type(text, element_id?, submit?)` | Fill a text field, optionally press Search / Send |
+| `run_goal(goal)` | Hand a multi-step job to the chat runner — Live / typed door only |
+| `open_app(name)` / `done` | Runner only — launch by label, or stop the loop |
 
 `place` is a named spot (`top_left`, `center`, …), not pixels. Not Computer Use. **Live** is a second brain adapter on these same tools (except `say` — Live speaks with native audio). See `docs/live.md`.
 
@@ -53,6 +55,7 @@ Typed Ask snapshotted **while the panel was open**. The text field’s accessibi
 | `brain/HandPlan.kt` | Tap / hold / stroke from the model |
 | `brain/TypePlan.kt` | Text + field id + submit from the model |
 | `brain/GuidanceActor.kt` | Shared tap / fly / point / type executor |
+| `brain/goal/` | Multi-step runner — Live/typed hands off; chat loop owns continue |
 | `brain/live/` | Gemini Live WebSocket + jitter-buffered speaker + AEC mic + screen follow |
 | `brain/BuddyHandIntent.kt` | On-device “tap / hold / swipe left” |
 | `brain/BuddyTypeIntent.kt` | On-device “type hello” / “search for pizza” |
@@ -72,7 +75,7 @@ The important contract, repeated on purpose:
 
 - Latest SCREEN is the only truth.
 - The name they say is the quoted **label**. The tool argument is that line’s **element_id**, copied exactly (`Pinterest` on screen may be `apps_icon_4`, never an invented `pinterest`).
-- One spoken sentence. One phone step. Point is not tap. Flying the buddy is not pointing at a control.
+- One spoken sentence. One phone step — or `run_goal` when the job takes many steps. Point is not tap. Flying the buddy is not pointing at a control.
 - If SCREEN is empty, say so. Do not guess.
 
 REST (`SYSTEM`) must call `say`. Live (`LIVE`) speaks with native audio and has no `say` tool. Tool declarations in `GeminiTools` repeat the same id rule so the schema and the prompt agree.
@@ -85,11 +88,11 @@ Model (REST): `gemini-3.5-flash-lite` only. Model (Live): `gemini-3.1-flash-live
 
 1. Start the buddy, turn on **Buddy Assistant**, allow the microphone once via **Ask buddy**.
 2. Leave the app. Double-tap the cursor — a live talk starts (or the type sheet if the mic is off).
-3. Speak naturally. Ask “open Calculator” — Gemini should talk, then tap. Type still uses the old one-shot ask.
+3. Speak naturally. Ask “open Calculator” — Gemini should talk, then tap. Ask “log me out of Pinterest” — Live hands off to the goal runner; watch the cursor do the steps. Type the same kind of job and typed ask will hand off too.
 4. Ask “move up” or “move to the top-left” — the cursor should fly even with no internet.
 5. Ask “tap” or “hold this” — it should press where it is. Ask “tap Wi‑Fi” on a list — it should fly there and tap.
 6. Open a search box and ask “type hello” — it should fill the field. Ask “search for pizza” — it should type and press search.
 7. Ask something on this screen (or type it) — Buddy should speak and point or tap a real control, not the ask field.
 8. Open Settings, pull the notification, tap **Ask buddy**. After the shade closes it asks what you need, then points, taps, types, or speaks.
 
-See `docs/eyes.md`, `docs/cursor-hands.md`, `docs/hands.md`, and `docs/type.md`.
+See `docs/eyes.md`, `docs/cursor-hands.md`, `docs/hands.md`, `docs/type.md`, and `docs/goal.md`.

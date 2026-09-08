@@ -11,6 +11,7 @@ import com.sandarva.kotlinapps.accessibility.BuddyScreenEyes
 import com.sandarva.kotlinapps.accessibility.BuddyType
 import com.sandarva.kotlinapps.accessibility.ScreenSnapshot
 import com.sandarva.kotlinapps.accessibility.awaitReadableSnapshot
+import com.sandarva.kotlinapps.brain.goal.GoalRunner
 import com.sandarva.kotlinapps.brain.live.BuddyLive
 import com.sandarva.kotlinapps.debug.BuddyLog
 import com.sandarva.kotlinapps.overlay.BuddyCursorController
@@ -32,6 +33,7 @@ object BuddyBrain {
     fun ensure(app: Application): Engine {
         engine?.let { return it }
         BuddyLive.ensure(app)
+        GoalRunner.ensure(app)
         return Engine(app).also { engine = it }
     }
 
@@ -55,8 +57,8 @@ object BuddyBrain {
         fun listen() = openAsk()
 
         fun openAsk() {
-            if (BuddyLive.isActive()) {
-                BuddyLog.d("Brain.openAsk", "toggle live off")
+            if (BuddyLive.isActive() || GoalRunner.isActive()) {
+                BuddyLog.d("Brain.openAsk", "toggle off live=${BuddyLive.isActive()} goal=${GoalRunner.isActive()}")
                 cancel()
                 return
             }
@@ -87,6 +89,7 @@ object BuddyBrain {
 
         fun openTypeAsk() {
             BuddyLog.d("Brain.openTypeAsk", "from live")
+            GoalRunner.cancel()
             BuddyLive.stop()
             cancelJob()
             voice.cancelListen()
@@ -117,6 +120,7 @@ object BuddyBrain {
             reopenAskOnFail = false
             cancelJob()
             voice.cancelAll()
+            GoalRunner.cancel()
             BuddyLive.stop()
             BrainSession.reset()
         }
@@ -145,7 +149,13 @@ object BuddyBrain {
                 BuddyLog.d("Brain.runGuide", "q=\"${question.take(80)}\" nodes=${snap.nodes.size} pkg=${snap.packageName} ids=${snap.nodes.take(12).joinToString { it.id }} hands=${BuddyCursorController.isAttached()}")
                 try {
                     val plan = gemini.guide(question, GuidanceCatalog.format(snap))
-                    BuddyLog.d("Brain.plan", "say=\"${plan.say?.take(80)}\" place=${plan.place} elementId=${plan.elementId} hand=${plan.hand} type=${plan.type}")
+                    BuddyLog.d("Brain.plan", "say=\"${plan.say?.take(80)}\" place=${plan.place} elementId=${plan.elementId} hand=${plan.hand} type=${plan.type} runGoal=${plan.runGoal != null}")
+                    if (!plan.runGoal.isNullOrBlank()) {
+                        sessionActive = false
+                        reopenAskOnFail = false
+                        GoalRunner.start(plan.runGoal)
+                        return@launch
+                    }
                     apply(plan, snap)
                 } catch (error: CancellationException) {
                     BuddyLog.d("Brain.guideCancel", "job cancelled — not a think failure")

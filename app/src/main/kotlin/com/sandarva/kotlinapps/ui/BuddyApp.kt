@@ -52,6 +52,7 @@ fun BuddyApp(session: BuddySessionViewModel = viewModel()) {
                 listening = brainPhase == BrainPhase.Listening || brainPhase == BrainPhase.Live,
                 thinking = brainPhase == BrainPhase.Thinking,
                 live = brainPhase == BrainPhase.Live,
+                working = brainPhase == BrainPhase.Working,
                 onStartBuddy = session::startBuddy,
                 onStopBuddy = session::stopBuddy,
                 onWatchMove = session::watchBuddyMove,

@@ -19,7 +19,7 @@ object LiveMessages {
                 .put("thinkingConfig", JSONObject().put("thinkingLevel", "minimal")))
             .put("realtimeInputConfig", JSONObject().put("automaticActivityDetection", vad()))
             .put("systemInstruction", JSONObject().put("parts", JSONArray().put(JSONObject().put("text", GuidancePrompt.LIVE))))
-            .put("tools", JSONArray().put(JSONObject().put("functionDeclarations", GeminiTools.functionDeclarations(includeSay = false)))))
+            .put("tools", JSONArray().put(JSONObject().put("functionDeclarations", GeminiTools.functionDeclarations(includeSay = false, includeRunGoal = true)))))
         .toString()
 
     fun audio(pcm: ByteArray): String = JSONObject()

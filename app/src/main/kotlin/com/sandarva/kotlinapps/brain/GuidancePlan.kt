@@ -6,5 +6,8 @@ data class GuidancePlan(
     val elementId: String?,
     val place: String?,
     val hand: HandPlan? = null,
-    val type: TypePlan? = null
+    val type: TypePlan? = null,
+    val runGoal: String? = null,
+    val openApp: String? = null,
+    val done: String? = null
 )

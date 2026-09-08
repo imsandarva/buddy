@@ -16,13 +16,29 @@ object OverlayNotification {
     private const val CHANNEL_ID = "buddy_overlay"
     private const val CHANNEL_LIVE_ID = "buddy_live"
 
-    fun build(context: Context, live: Boolean = false): Notification {
+    fun build(context: Context, live: Boolean = false, working: Boolean = false): Notification {
         ensureChannels(context)
         val openApp = PendingIntent.getActivity(
             context, 0, Intent(context, MainActivity::class.java),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         val stop = serviceIntent(context, 1, BuddyOverlayService.ACTION_STOP)
+        if (working) {
+            val end = serviceIntent(context, 4, BuddyOverlayService.ACTION_END_LIVE)
+            return NotificationCompat.Builder(context, CHANNEL_LIVE_ID)
+                .setSmallIcon(R.drawable.ic_buddy_status)
+                .setContentTitle(context.getString(R.string.goal_title))
+                .setContentText(context.getString(R.string.goal_body))
+                .setStyle(NotificationCompat.BigTextStyle().bigText(context.getString(R.string.goal_body)))
+                .setContentIntent(openApp)
+                .setOngoing(true)
+                .setCategory(Notification.CATEGORY_SERVICE)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
+                .addAction(0, context.getString(R.string.live_end), end)
+                .addAction(0, context.getString(R.string.stop_buddy), stop)
+                .build()
+        }
         if (live) {
             val end = serviceIntent(context, 4, BuddyOverlayService.ACTION_END_LIVE)
             val typeInstead = serviceIntent(context, 5, BuddyOverlayService.ACTION_TYPE_INSTEAD)

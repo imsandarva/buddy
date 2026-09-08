@@ -30,7 +30,7 @@ Android will not let a normal app keep a window after a force-stop. Minimize / l
 | `overlay/CursorLanding.kt` | Named spots for `fly_to` |
 | `overlay/CursorFlightAnimator.kt` | Arc flight between points |
 | `overlay/OverlaySession.kt` | Process-wide active flag and rest position |
-| `overlay/OverlayNotification.kt` | Ongoing notification — **Stop buddy**, live talk **End** / **Type instead** (`buddy_live` channel) |
+| `overlay/OverlayNotification.kt` | Ongoing notification — **Stop buddy**, live talk **End** / **Type instead**, goal run **End** (`buddy_live` channel) |
 | `overlay/OverlayNotifier.kt` | Pushes notification sync on live start/stop |
 | `overlay/OverlayComposeOwner.kt` | Lifecycle for Compose without an Activity |
 | `ui/cursor/BuddyCursorHandle.kt` | Grab, jiggle, drag deltas |

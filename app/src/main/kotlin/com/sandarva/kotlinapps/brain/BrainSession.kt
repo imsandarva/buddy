@@ -5,7 +5,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-enum class BrainPhase { Idle, Listening, Thinking, Live }
+enum class BrainPhase { Idle, Listening, Thinking, Live, Working }
 
 /** Process-wide brain UI. Hands and eyes stay unaware of Gemini. */
 object BrainSession {
@@ -18,6 +18,8 @@ object BrainSession {
 
     private val _liveOpen = MutableStateFlow(false)
     val liveOpen: StateFlow<Boolean> = _liveOpen.asStateFlow()
+    private val _goalOpen = MutableStateFlow(false)
+    val goalOpen: StateFlow<Boolean> = _goalOpen.asStateFlow()
 
     fun setPhase(value: BrainPhase) {
         if (_phase.value != value) BuddyLog.d("BrainSession.phase", "${_phase.value} -> $value")
@@ -32,11 +34,16 @@ object BrainSession {
         if (_liveOpen.value != value) BuddyLog.d("BrainSession.liveOpen", "${_liveOpen.value} -> $value")
         _liveOpen.value = value
     }
+    fun setGoalOpen(value: Boolean) {
+        if (_goalOpen.value != value) BuddyLog.d("BrainSession.goalOpen", "${_goalOpen.value} -> $value")
+        _goalOpen.value = value
+    }
     fun reset() {
-        BuddyLog.d("BrainSession.reset", "wasOpen=${_askOpen.value} live=${_liveOpen.value} phase=${_phase.value}")
+        BuddyLog.d("BrainSession.reset", "wasOpen=${_askOpen.value} live=${_liveOpen.value} goal=${_goalOpen.value} phase=${_phase.value}")
         _phase.value = BrainPhase.Idle
         _note.value = null
         _askOpen.value = false
         _liveOpen.value = false
+        _goalOpen.value = false
     }
 }

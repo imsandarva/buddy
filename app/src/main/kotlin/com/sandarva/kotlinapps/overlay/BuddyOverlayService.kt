@@ -15,6 +15,7 @@ import com.sandarva.kotlinapps.accessibility.AccessibilitySession
 import com.sandarva.kotlinapps.accessibility.BuddyScreenEyes
 import com.sandarva.kotlinapps.brain.BrainSession
 import com.sandarva.kotlinapps.brain.BuddyBrain
+import com.sandarva.kotlinapps.brain.goal.GoalRunner
 import com.sandarva.kotlinapps.brain.live.BuddyLive
 import com.sandarva.kotlinapps.debug.BuddyLog
 import kotlinx.coroutines.CoroutineScope
@@ -72,6 +73,7 @@ class BuddyOverlayService : Service() {
         BuddyLog.d("OverlayService", "onDestroy")
         mainHandler.removeCallbacksAndMessages(null)
         scope.cancel()
+        GoalRunner.cancel()
         BuddyLive.stop()
         hideAsk()
         CursorSurface.release()
@@ -93,7 +95,7 @@ class BuddyOverlayService : Service() {
             AccessibilitySession.bound.collect { if (OverlaySession.active.value || cursor != null) presentCursor() }
         }
         scope.launch {
-            combine(BrainSession.askOpen, BrainSession.liveOpen) { askOpen, liveOpen -> askOpen to liveOpen }.collect { (askOpen, _) ->
+            combine(BrainSession.askOpen, BrainSession.liveOpen, BrainSession.goalOpen) { askOpen, _, _ -> askOpen }.collect { askOpen ->
                 syncNotification()
                 if (askOpen) showAsk() else hideAsk()
             }
@@ -114,12 +116,13 @@ class BuddyOverlayService : Service() {
     private fun syncNotification() {
         val askOpen = BrainSession.askOpen.value
         val liveOpen = BrainSession.liveOpen.value
-        applyFgs(mic = askOpen || liveOpen, live = liveOpen)
+        val goalOpen = BrainSession.goalOpen.value
+        applyFgs(mic = askOpen || liveOpen, live = liveOpen, working = goalOpen)
     }
 
-    private fun applyFgs(mic: Boolean, live: Boolean = false) {
+    private fun applyFgs(mic: Boolean, live: Boolean = false, working: Boolean = false) {
         val wantMic = mic && ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
-        ServiceCompat.startForeground(this, OverlayNotification.ID, OverlayNotification.build(this, live), fgsType(wantMic))
+        ServiceCompat.startForeground(this, OverlayNotification.ID, OverlayNotification.build(this, live, working), fgsType(wantMic))
     }
 
     private fun fgsType(mic: Boolean): Int {

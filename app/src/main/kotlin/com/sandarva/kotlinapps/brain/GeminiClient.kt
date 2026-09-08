@@ -16,20 +16,25 @@ class GeminiClient(
 ) {
     suspend fun guide(question: String, catalog: String): GuidancePlan = withContext(Dispatchers.IO) {
         BuddyLog.d("Gemini.post", "model=$MODEL catalogChars=${catalog.length}")
-        return@withContext GeminiTools.parse(post(MODEL, question, catalog))
+        return@withContext GeminiTools.parse(post(GeminiTools.body(question, catalog)))
     }
 
-    private fun post(model: String, question: String, catalog: String): String {
-        val body = GeminiTools.body(question, catalog).toRequestBody(JSON)
+    suspend fun goalStep(goal: String, catalog: String, trail: String, step: Int): GuidancePlan = withContext(Dispatchers.IO) {
+        BuddyLog.d("Gemini.goal", "step=$step catalogChars=${catalog.length} trailChars=${trail.length}")
+        return@withContext GeminiTools.parse(post(GeminiTools.goalBody(goal, catalog, trail, step)))
+    }
+
+    private fun post(bodyJson: String): String {
+        val body = bodyJson.toRequestBody(JSON)
         val request = Request.Builder()
-            .url("https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent")
+            .url("https://generativelanguage.googleapis.com/v1beta/models/$MODEL:generateContent")
             .addHeader("x-goog-api-key", apiKey)
             .addHeader("Content-Type", "application/json")
             .post(body)
             .build()
         http.newCall(request).execute().use { response ->
             val text = response.body?.string().orEmpty()
-            BuddyLog.d("Gemini.response", "model=$model code=${response.code} body=${text.take(800)}")
+            BuddyLog.d("Gemini.response", "model=$MODEL code=${response.code} body=${text.take(800)}")
             if (!response.isSuccessful) throw IllegalStateException("gemini ${response.code} ${text.take(180)}")
             return text
         }
