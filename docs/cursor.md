@@ -15,7 +15,7 @@ BuddyCursor is the on-screen pointer. After Start, it lives in a system overlay 
 
 ## Geometry
 
-The pointer is a plain desktop mouse arrow — white fill, black outline, drawn on Canvas. The tip sits at the top-left of the 24 dp glyph; `Cursor.tipOffsetPx` maps that tip to overlay coordinates so window placement stays exact. Touch target = 24 dp glyph + 16 dp pad on each side.
+The pointer matches `render-cursor.kt` / `buddycursor_icon.png` — blue fill (`#4A9EFF`), black outline, rounded joints, drawn on Canvas. The tip sits at the top-left of the 28 dp glyph; `Cursor.tipOffsetPx` maps that tip to overlay coordinates so window placement stays exact. Touch target = 28 dp glyph + 16 dp pad on each side. Tweak the preview script, then copy constants into `ui/cursor/Cursor.kt`.
 
 ## Interaction
 
