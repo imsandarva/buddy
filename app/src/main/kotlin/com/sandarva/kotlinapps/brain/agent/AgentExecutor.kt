@@ -10,6 +10,7 @@ import com.sandarva.kotlinapps.accessibility.ScreenSnapshot
 import com.sandarva.kotlinapps.debug.BuddyLog
 import com.sandarva.kotlinapps.overlay.BuddyCursorController
 import com.sandarva.kotlinapps.overlay.CursorLanding
+import com.sandarva.kotlinapps.overlay.CursorMoodSignals
 import kotlinx.coroutines.delay
 
 /** What an action did, in words the model (and the log) can use. */
@@ -101,7 +102,11 @@ class AgentExecutor(private val launcher: AppLauncher) {
         false -> Outcome.fail("the stroke did not go through")
     }
 
-    private fun missing(id: String) = Outcome.fail("no control with id [$id] on this screen — use an id from SCREEN NOW")
+    /** Buddy couldn't find what it was looking for — a brief, honest wobble, never a silent freeze (docs/cursor.md §5). */
+    private fun missing(id: String): Outcome {
+        CursorMoodSignals.pulseUncertain()
+        return Outcome.fail("no control with id [$id] on this screen — use an id from SCREEN NOW")
+    }
 
     private companion object {
         val ASSISTANT_OFF = Outcome.fail("Buddy Assistant is off, so I cannot touch the screen")

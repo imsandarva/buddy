@@ -17,6 +17,17 @@ object BuddyColors {
     val Glow = Color(0x3D635BFF)
     val GlowSoft = Color(0x18635BFF)
     val GlowLilac = Color(0x248B83F4)
-    val CursorBlue = Color(0xFF4A9EFF)
     val Scrim = Color(0x3D1C1730)
+
+    // BuddyCursor — one glassy blue-violet material, denser/focused in Action form,
+    // ambient/diffuse in Voice form. See docs/cursor.md.
+    val CursorCore = Color(0xFF4740D6) // deep periwinkle-blue, lit from within
+    val CursorMid = Color(0xFF6C63F2)
+    val CursorRim = Color(0xFFC9C3FB) // lavender rim the glow fades into
+    val CursorFocus = Color(0xFF5850FF) // brighter, denser core for the Action point
+    val CursorHighlight = Color(0xFFEFECFF) // inner sheen catching light like glass
+    val CursorGlow = Color(0x445850FF) // scarce resource — only bloom for real signal
+    val CursorGlowFaint = Color(0x1A5850FF)
+    val CursorShadow = Color(0x332A1F55) // neutral contact shadow, legible on any host app
+    val CursorLightRim = Color(0x99FFFFFF) // thin outer rim so the shape reads on dark hosts too
 }

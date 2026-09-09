@@ -14,6 +14,7 @@ import com.sandarva.kotlinapps.brain.live.BuddyLive
 import com.sandarva.kotlinapps.debug.BuddyLog
 import com.sandarva.kotlinapps.overlay.BuddyCursorController
 import com.sandarva.kotlinapps.overlay.CursorLanding
+import com.sandarva.kotlinapps.overlay.CursorMoodSignals
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -41,6 +42,16 @@ object BuddyBrain {
     fun openAsk() { engine?.openAsk() }
     fun openTypeAsk() { engine?.openTypeAsk() }
     fun cancel() { engine?.cancel() }
+
+    /**
+     * Buddycursor's own kill switch (single tap while it works — docs/cursor.md §7). A no-op
+     * while idle, so tapping a resting buddy stays a harmless, friendly tick.
+     */
+    fun interrupt() {
+        if (BrainSession.phase.value == BrainPhase.Idle) return
+        CursorMoodSignals.pulsePaused()
+        cancel()
+    }
 
     class Engine(private val app: Application) {
         private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)

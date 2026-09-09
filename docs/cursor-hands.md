@@ -19,7 +19,7 @@ The AI does not move the window. It calls this API. Finger drag uses the same wi
 | `cancelFlight()` | Grab or a new command wins |
 | `isAttached()` | Overlay window is live |
 
-Flight is a quadratic arc (`cursor/CursorArc.kt`) driven by `ValueAnimator`. Grabbing the cursor cancels the flight. Drag follow is linear so the tip stays on the finger stroke.
+Flight is a quadratic arc (`cursor/CursorArc.kt`) driven by `ValueAnimator`. Grabbing the cursor cancels the flight. Drag follow is linear so the tip stays on the finger stroke. Every frame of motion reports into `overlay/CursorMoodSignals` (traveling + velocity) so the cursor can draw a trailing comet while it moves — see `docs/cursor.md`.
 
 ## Wiring now
 

@@ -6,6 +6,7 @@ import android.media.AudioRecord
 import android.media.MediaRecorder
 import android.os.Process
 import com.sandarva.kotlinapps.debug.BuddyLog
+import com.sandarva.kotlinapps.overlay.CursorMoodSignals
 import java.util.concurrent.LinkedBlockingQueue
 import kotlin.concurrent.thread
 
@@ -45,6 +46,7 @@ class LiveMic(private val onChunk: (ByteArray) -> Unit) {
         running = false
         outgoing.clear()
         outgoing.offer(WAKE)
+        CursorMoodSignals.setVoiceAmplitude(0f)
         val current = record ?: return
         record = null
         try { current.stop() } catch (_: Exception) { }
@@ -59,6 +61,7 @@ class LiveMic(private val onChunk: (ByteArray) -> Unit) {
             val n = record?.read(buf, 0, buf.size) ?: break
             if (n <= 0) continue
             val pcm = if (n == buf.size) buf.copyOf() else buf.copyOf(n)
+            CursorMoodSignals.setVoiceAmplitude(LiveSpeech.amplitude(pcm)) // buddycursor visibly "hears" the person
             if (!outgoing.offer(pcm)) {
                 outgoing.poll()
                 outgoing.offer(pcm)

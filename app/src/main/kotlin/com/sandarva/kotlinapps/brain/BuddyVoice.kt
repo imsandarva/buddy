@@ -11,6 +11,7 @@ import android.speech.SpeechRecognizer
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import com.sandarva.kotlinapps.debug.BuddyLog
+import com.sandarva.kotlinapps.overlay.CursorMoodSignals
 import java.util.Locale
 
 /** On-device speak and listen. Gemini never hears raw audio in this path. */
@@ -81,6 +82,7 @@ class BuddyVoice(private val context: Context) {
         accepting = false
         onHeard = null
         onListenFailed = null
+        CursorMoodSignals.setVoiceAmplitude(0f)
         main.post { recognizer?.cancel() }
     }
 
@@ -110,11 +112,14 @@ class BuddyVoice(private val context: Context) {
     private val listener = object : RecognitionListener {
         override fun onReadyForSpeech(params: Bundle?) = BuddyLog.d("Voice.stt", "readyForSpeech")
         override fun onBeginningOfSpeech() = BuddyLog.d("Voice.stt", "beginning")
-        override fun onRmsChanged(rmsdB: Float) = Unit
+        // Android reports this roughly in 0..10 dB above the noise floor — buddycursor's glow
+        // reacts to the real mic level rather than a canned loop (docs/cursor.md §2).
+        override fun onRmsChanged(rmsdB: Float) { CursorMoodSignals.setVoiceAmplitude(rmsdB / RMS_LOUD_DB) }
         override fun onBufferReceived(buffer: ByteArray?) = Unit
-        override fun onEndOfSpeech() = BuddyLog.d("Voice.stt", "endOfSpeech")
+        override fun onEndOfSpeech() { CursorMoodSignals.setVoiceAmplitude(0f); BuddyLog.d("Voice.stt", "endOfSpeech") }
         override fun onError(error: Int) {
             BuddyLog.d("Voice.sttError", "code=$error accepting=$accepting")
+            CursorMoodSignals.setVoiceAmplitude(0f)
             if (!accepting) return
             accepting = false
             onListenFailed?.invoke("I missed that. Try again, or type it.")
@@ -122,6 +127,7 @@ class BuddyVoice(private val context: Context) {
         override fun onResults(results: Bundle?) {
             val text = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()?.trim().orEmpty()
             BuddyLog.d("Voice.sttResults", "accepting=$accepting text=\"${text.take(80)}\"")
+            CursorMoodSignals.setVoiceAmplitude(0f)
             if (!accepting) return
             accepting = false
             if (text.isBlank()) onListenFailed?.invoke("I missed that. Try again, or type it.")
@@ -129,5 +135,10 @@ class BuddyVoice(private val context: Context) {
         }
         override fun onPartialResults(partialResults: Bundle?) = Unit
         override fun onEvent(eventType: Int, params: Bundle?) = Unit
+    }
+
+    private companion object {
+        /** onRmsChanged tops out around here on real devices — a rough, good-enough normalizer. */
+        const val RMS_LOUD_DB = 8f
     }
 }

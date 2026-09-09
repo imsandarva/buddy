@@ -8,15 +8,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalView
 
-/** Touch target around the pointer; drag and double-tap stay on this layer. */
+/** Touch target around the being; tap, double-tap, hold, and drag all stay on this layer. */
 @Composable
 fun BuddyCursorHandle(
+    mood: CursorMood,
     onDrag: (Float, Float) -> Unit,
     onRelease: () -> Unit,
     label: String,
     modifier: Modifier = Modifier,
     onGrab: () -> Unit = {},
-    onDoubleTap: () -> Unit = {}
+    onDoubleTap: () -> Unit = {},
+    onInterrupt: () -> Unit = {}
 ) {
     val view = LocalView.current
     Box(
@@ -24,7 +26,10 @@ fun BuddyCursorHandle(
             .size(Cursor.touchWidth, Cursor.touchHeight)
             .pointerInput(Unit) {
                 cursorGestures(
-                    onTap = { view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK) },
+                    onTap = {
+                        view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                        onInterrupt() // safety-critical: a single tap while buddy is busy stops it (§7)
+                    },
                     onSummon = {
                         view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
                         onDoubleTap()
@@ -36,6 +41,6 @@ fun BuddyCursorHandle(
                 )
             }
     ) {
-        BuddyCursor(contentDescription = label)
+        BuddyCursor(mood = mood, contentDescription = label)
     }
 }

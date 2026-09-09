@@ -5,6 +5,7 @@ import android.media.AudioFormat
 import android.media.AudioTrack
 import android.os.Process
 import com.sandarva.kotlinapps.debug.BuddyLog
+import com.sandarva.kotlinapps.overlay.CursorMoodSignals
 import java.util.concurrent.LinkedBlockingQueue
 import kotlin.concurrent.thread
 
@@ -54,6 +55,7 @@ class LiveSpeaker {
         flush = true
         drain = false
         queue.offer(WAKE)
+        CursorMoodSignals.setVoiceAmplitude(0f)
         BuddyLog.d("Live.speaker", "interrupt")
     }
 
@@ -67,6 +69,7 @@ class LiveSpeaker {
         running = false
         queue.clear()
         queue.offer(WAKE)
+        CursorMoodSignals.setVoiceAmplitude(0f)
         val current = track ?: return
         track = null
         try { current.pause(); current.flush(); current.stop() } catch (_: Exception) { }
@@ -99,6 +102,7 @@ class LiveSpeaker {
                     prerollBytes = 0
                 }
                 drain = false
+                CursorMoodSignals.setVoiceAmplitude(0f) // utterance drained — buddy's mouth is quiet again
                 continue
             }
             if (!primed) {
@@ -128,6 +132,7 @@ class LiveSpeaker {
 
     private fun write(pcm: ByteArray) {
         val t = track ?: return
+        CursorMoodSignals.setVoiceAmplitude(LiveSpeech.amplitude(pcm)) // buddycursor visibly "speaks" its reply
         var off = 0
         while (running && !flush && off < pcm.size) {
             val n = t.write(pcm, off, pcm.size - off, AudioTrack.WRITE_BLOCKING)

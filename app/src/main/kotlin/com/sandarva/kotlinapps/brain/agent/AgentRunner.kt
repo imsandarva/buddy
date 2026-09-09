@@ -12,8 +12,8 @@ import com.sandarva.kotlinapps.brain.BrainSession
 import com.sandarva.kotlinapps.brain.GeminiClient
 import com.sandarva.kotlinapps.brain.Reachability
 import com.sandarva.kotlinapps.debug.BuddyLog
+import com.sandarva.kotlinapps.overlay.CursorMoodSignals
 import com.sandarva.kotlinapps.overlay.OverlayNotifier
-import com.sandarva.kotlinapps.overlay.OverlaySession
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -93,7 +93,7 @@ object AgentRunner {
             desk = null
             pendingAnswer?.cancel(); pendingAnswer = null
             job?.cancel(); job = null
-            OverlaySession.setThinking(false)
+            CursorMoodSignals.setConsidering(false)
             _state.value = AgentState.Idle
             BrainSession.setGoalOpen(false)
             BrainSession.setProgress(null)
@@ -168,11 +168,11 @@ object AgentRunner {
         }
 
         private suspend fun think(memory: AgentMemory, scene: ScreenSnapshot, hint: String?, guard: AgentGuard): AgentDecision? {
-            OverlaySession.setThinking(true)
+            CursorMoodSignals.setConsidering(true)
             val decision = try {
                 decider.decide(memory, SceneDescriber.describe(scene), hint, guard.deeperThought())
             } finally {
-                OverlaySession.setThinking(false)
+                CursorMoodSignals.setConsidering(false)
             }
             val empty = decision.action == AgentAction.None && decision.finish == null
             if (empty) { guard.observeInvalidReply(); return null }

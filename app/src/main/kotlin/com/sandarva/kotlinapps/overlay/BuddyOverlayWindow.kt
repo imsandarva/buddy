@@ -6,7 +6,9 @@ import android.os.Build
 import android.os.Looper
 import android.view.Gravity
 import android.view.WindowManager
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.ComposeView
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.lifecycle.setViewTreeViewModelStoreOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
@@ -16,11 +18,18 @@ import com.sandarva.kotlinapps.ui.cursor.BuddyCursorHandle
 import com.sandarva.kotlinapps.ui.cursor.Cursor
 import com.sandarva.kotlinapps.ui.theme.BuddyTheme
 
-/** Small WRAP_CONTENT window. Drag or animateTo moves the same LayoutParams. */
+/**
+ * Small, fixed-size WRAP_CONTENT window. Drag or animateTo moves the same LayoutParams; the
+ * window itself never resizes as buddy morphs — see [Cursor.touchWidth]. Also reports the raw
+ * motion/drag facts a mood needs (traveling, velocity, user-drag, dismiss-zone) into
+ * [CursorMoodSignals] — this class owns the *physical* truths, never the drawn mood itself.
+ */
 class BuddyOverlayWindow(
     private val context: Context,
     private val windowType: Int = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-    private val onAsk: () -> Unit = {}
+    private val onAsk: () -> Unit = {},
+    private val onInterrupt: () -> Unit = {},
+    private val onDismiss: () -> Unit = {}
 ) : BuddyCursorMover, OverlayChrome.Layer {
     private val windowManager = context.getSystemService(WindowManager::class.java)
     private val owner = OverlayComposeOwner()
@@ -28,6 +37,8 @@ class BuddyOverlayWindow(
     private var params: WindowManager.LayoutParams? = null
     private var flight: CursorFlightAnimator? = null
     private var pathGen = 0
+    private var lastWindowX = 0f
+    private var lastWindowY = 0f
     val isShowing: Boolean get() = view != null
 
     fun show() {
@@ -46,18 +57,23 @@ class BuddyOverlayWindow(
             x = ((screen.first * start.xFraction) - tipOx).toInt()
             y = ((screen.second * start.yFraction) - tipOy).toInt()
         }
+        lastWindowX = layout.x.toFloat()
+        lastWindowY = layout.y.toFloat()
         val compose = ComposeView(context).apply {
             hideFromBuddyEyes()
             setViewTreeLifecycleOwner(owner)
             setViewTreeViewModelStoreOwner(owner)
             setViewTreeSavedStateRegistryOwner(owner)
             setContent {
+                val mood by CursorMoodResolver.mood.collectAsStateWithLifecycle()
                 BuddyTheme {
                     BuddyCursorHandle(
-                        onGrab = { cancelFlight() },
+                        mood = mood,
+                        onGrab = { cancelFlight(); CursorMoodSignals.setUserDragging(true) },
                         onDrag = { dx, dy -> moveBy(dx, dy) },
-                        onRelease = { persist() },
+                        onRelease = { release() },
                         onDoubleTap = onAsk,
+                        onInterrupt = onInterrupt,
                         label = context.getString(R.string.buddy_cursor_label)
                     )
                 }
@@ -81,7 +97,7 @@ class BuddyOverlayWindow(
     fun dismiss() {
         OverlayChrome.detach(this)
         cancelFlight()
-        OverlaySession.setPressing(false)
+        CursorMoodSignals.reset()
         flight = null
         val current = view ?: return
         current.disposeComposition()
@@ -96,6 +112,7 @@ class BuddyOverlayWindow(
         pathGen += 1
         val gen = pathGen
         val anim = flight
+        CursorMoodSignals.setTraveling(true)
         if (anim == null) {
             applyPixels(xPx, yPx)
             persist()
@@ -113,6 +130,7 @@ class BuddyOverlayWindow(
         pathGen += 1
         val gen = pathGen
         val anim = flight
+        CursorMoodSignals.setTraveling(true)
         if (anim == null) {
             applyPixels(xPx, yPx)
             persist()
@@ -160,6 +178,8 @@ class BuddyOverlayWindow(
     override fun cancelFlight() {
         pathGen += 1
         flight?.cancel()
+        CursorMoodSignals.setTraveling(false)
+        CursorMoodSignals.setVelocity(0f, 0f)
     }
 
     private fun flyStep(index: Int, points: List<Pair<Float, Float>>, gen: Int) {
@@ -172,6 +192,22 @@ class BuddyOverlayWindow(
     private fun moveBy(dx: Float, dy: Float) {
         val now = currentTipXY()
         applyPixels(now.first + dx, now.second + dy)
+        updateDismissArm()
+    }
+
+    /** Releasing a user-drag inside the bottom band stops Buddy entirely (§7/§8 — chat-head pattern). */
+    private fun updateDismissArm() {
+        val screen = screenSize()
+        if (screen.second <= 0) return
+        val (_, ty) = currentTipXY()
+        CursorMoodSignals.setArmedToDismiss(ty / screen.second.toFloat() >= DISMISS_ZONE_Y_FRACTION)
+    }
+
+    private fun release() {
+        val dismissing = CursorMoodSignals.armedToDismiss.value
+        CursorMoodSignals.setUserDragging(false)
+        CursorMoodSignals.setVelocity(0f, 0f)
+        if (dismissing) onDismiss() else persist()
     }
 
     /** [x],[y] are tip pixels on screen; window origin is offset by [Cursor]. */
@@ -193,6 +229,9 @@ class BuddyOverlayWindow(
         val h = host?.height?.takeIf { it > 0 } ?: (Cursor.touchHeight.value * density).toInt()
         layout.x = x.toInt().coerceIn(0, (screen.first - w).coerceAtLeast(0))
         layout.y = y.toInt().coerceIn(0, (screen.second - h).coerceAtLeast(0))
+        CursorMoodSignals.setVelocity(layout.x - lastWindowX, layout.y - lastWindowY)
+        lastWindowX = layout.x.toFloat()
+        lastWindowY = layout.y.toFloat()
         host?.let { windowManager.updateViewLayout(it, layout) }
     }
 
@@ -211,6 +250,8 @@ class BuddyOverlayWindow(
     }
 
     private fun persist() {
+        CursorMoodSignals.setTraveling(false)
+        CursorMoodSignals.setVelocity(0f, 0f)
         val (tx, ty) = currentTipXY()
         val screen = screenSize()
         if (screen.first > 0 && screen.second > 0) {
@@ -235,5 +276,10 @@ class BuddyOverlayWindow(
             WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) flags = flags or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
         return flags
+    }
+
+    private companion object {
+        /** Bottom band that arms a drag-release dismiss — mirrors the Messenger chat-head zone. */
+        const val DISMISS_ZONE_Y_FRACTION = 0.9f
     }
 }

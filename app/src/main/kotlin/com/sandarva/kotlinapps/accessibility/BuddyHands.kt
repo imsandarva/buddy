@@ -2,8 +2,10 @@ package com.sandarva.kotlinapps.accessibility
 
 import com.sandarva.kotlinapps.debug.BuddyLog
 import com.sandarva.kotlinapps.overlay.BuddyCursorController
+import com.sandarva.kotlinapps.overlay.CursorMoodSignals
 import com.sandarva.kotlinapps.overlay.OverlayChrome
-import com.sandarva.kotlinapps.overlay.OverlaySession
+import com.sandarva.kotlinapps.ui.cursor.CursorGestureKind
+import com.sandarva.kotlinapps.ui.theme.CursorMotion
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
@@ -78,6 +80,7 @@ object BuddyHands {
         return block(tip.first, tip.second)
     }
 
+    /** Lands, then holds the anticipation beat (docs/cursor.md §6 — Targeting) before any stroke fires. */
     private suspend fun land(x: Float, y: Float): Boolean {
         val ok = withTimeoutOrNull(FLIGHT_TIMEOUT_MS) {
             suspendCancellableCoroutine { cont ->
@@ -85,7 +88,10 @@ object BuddyHands {
                 if (!started && cont.isActive) cont.resume(false)
             }
         } ?: false
-        if (ok) delay(LAND_SETTLE_MS)
+        if (ok) {
+            CursorMoodSignals.setTargeting(true)
+            delay(CursorMotion.TARGETING_SETTLE_MS)
+        }
         return ok
     }
 
@@ -96,7 +102,8 @@ object BuddyHands {
             return false
         }
         BuddyLog.d("Hands.stroke", "kind=$kind from=$x0,$y0 to=$x1,$y1")
-        OverlaySession.setPressing(true)
+        CursorMoodSignals.setTargeting(false)
+        CursorMoodSignals.setGesture(kind.gesture)
         OverlayChrome.setPassthrough(true)
         return try {
             delay(PASSTHROUGH_MS)
@@ -119,7 +126,7 @@ object BuddyHands {
             ok
         } finally {
             OverlayChrome.setPassthrough(false)
-            OverlaySession.setPressing(false)
+            CursorMoodSignals.setGesture(null)
         }
     }
 
@@ -131,11 +138,14 @@ object BuddyHands {
     }
 
     /** How the cursor keeps up with the finger: swipes and drags are linear follows of the stroke. */
-    private enum class Kind(val moves: Boolean, val followMs: Long) {
-        Tap(false, 0L), Hold(false, 0L), Swipe(true, SWIPE_FOLLOW_MS), Scroll(true, GesturePlayer.PAN_MS), Drag(true, DRAG_FOLLOW_MS)
+    private enum class Kind(val moves: Boolean, val followMs: Long, val gesture: CursorGestureKind) {
+        Tap(false, 0L, CursorGestureKind.TAP),
+        Hold(false, 0L, CursorGestureKind.HOLD),
+        Swipe(true, SWIPE_FOLLOW_MS, CursorGestureKind.SWIPE),
+        Scroll(true, GesturePlayer.PAN_MS, CursorGestureKind.SCROLL),
+        Drag(true, DRAG_FOLLOW_MS, CursorGestureKind.DRAG)
     }
 
-    private const val LAND_SETTLE_MS = 40L
     private const val FLIGHT_TIMEOUT_MS = 2400L
     private const val PASSTHROUGH_MS = 48L
     private const val SWIPE_FOLLOW_MS = 460L

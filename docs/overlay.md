@@ -23,19 +23,21 @@ Android will not let a normal app keep a window after a force-stop. Minimize / l
 | `overlay/BuddyOverlayController.kt` | Start/stop + resume after Settings |
 | `overlay/BuddyOverlayService.kt` | Foreground service; owns the window lifetime |
 | `overlay/CursorSurface.kt` | Picks accessibility overlay vs appear-on-top |
-| `overlay/BuddyOverlayWindow.kt` | Small WindowManager view; drag, double-tap, `animateTo`, or pass-through for a stroke |
+| `overlay/BuddyOverlayWindow.kt` | Fixed-size WindowManager view; drag, double-tap, single-tap interrupt, `animateTo`, or pass-through for a stroke — owns the physical motion/drag truths, never a mood |
 | `overlay/AskOverlayWindow.kt` | Full-screen type-to-ask panel |
 | `overlay/OverlayChrome.kt` | Pass-through for cursor + ask during a stroke |
 | `overlay/BuddyCursorController.kt` | Hands API attached while the service runs |
 | `overlay/CursorLanding.kt` | Named spots for `fly_to` |
 | `overlay/CursorFlightAnimator.kt` | Arc flight between points |
 | `overlay/OverlaySession.kt` | Process-wide active flag and rest position |
+| `overlay/CursorMoodSignals.kt` | Raw buddycursor facts (gesture, traveling, targeting, drag, voice amplitude, uncertain pulses) |
+| `overlay/CursorMoodResolver.kt` | Turns those facts into the single `CursorMood` the cursor draws — see `docs/cursor.md` |
 | `overlay/OverlayNotification.kt` | Ongoing notification — **Stop buddy**, live talk **End** / **Type instead**, agent run **I’m on it** with the current step and **End** (`buddy_live` channel) |
 | `overlay/OverlayNotifier.kt` | Pushes notification sync on live / run start and stop; the run's progress line updates in place |
 | `overlay/OverlayComposeOwner.kt` | Lifecycle for Compose without an Activity |
 | `ui/cursor/BuddyCursorHandle.kt` | Grab, drag deltas |
 
-Touches outside the cursor pass through (`FLAG_NOT_FOCUSABLE` + `FLAG_NOT_TOUCH_MODAL` + `WRAP_CONTENT`). Double-tap the cursor to talk live — controls live in the notification shade; type-to-ask is a separate overlay. During a stroke, `OverlayChrome` makes every Buddy window pass through so the finger hits the app. Cursor and ask sheet hide from accessibility (`hideFromBuddyEyes`) so they are never “what is on screen.” The Buddy **activity** is the screen when they open this app. See `docs/live.md` and `docs/ask.md`.
+Touches outside the cursor pass through (`FLAG_NOT_FOCUSABLE` + `FLAG_NOT_TOUCH_MODAL` + `WRAP_CONTENT`). Double-tap the cursor to talk live — controls live in the notification shade; type-to-ask is a separate overlay. A single tap on the cursor interrupts whatever it's doing (`BuddyBrain.interrupt()`), a no-op while idle. During a stroke, `OverlayChrome` makes every Buddy window pass through so the finger hits the app. Cursor and ask sheet hide from accessibility (`hideFromBuddyEyes`) so they are never “what is on screen.” The Buddy **activity** is the screen when they open this app. See `docs/live.md`, `docs/ask.md`, and `docs/cursor.md`.
 
 ## User flow
 

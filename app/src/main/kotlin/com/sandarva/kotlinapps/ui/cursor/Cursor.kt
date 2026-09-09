@@ -1,87 +1,189 @@
 package com.sandarva.kotlinapps.ui.cursor
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.lerp as lerpDp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sandarva.kotlinapps.overlay.CursorMoodSignals
 import com.sandarva.kotlinapps.ui.theme.BuddyColors
-import kotlin.math.hypot
-import kotlin.math.min
+import com.sandarva.kotlinapps.ui.theme.CursorMotion
+import kotlinx.coroutines.launch
+import kotlin.math.PI
+import kotlin.math.sin
 
-/** Bounds and draw constants for the on-screen pointer. */
+/** Bounds shared with the overlay window — see docs/cursor.md §12. */
 object Cursor {
-    val size: Dp = 44.dp
-    val pad: Dp = 16.dp
-    val stroke: Dp = 1.6.dp
-    val touchWidth: Dp = size + pad * 2
-    val touchHeight: Dp = size + pad * 2
+    val voiceDiameter: Dp = 60.dp
+    val actionDiameter: Dp = 24.dp
 
+    /**
+     * Generous, fixed hit-region (§7 touch-target note) — it never resizes as buddy morphs, so
+     * the OS window never relayouts mid-animation; only the drawn content inside it scales.
+     */
+    val touchWidth: Dp = 116.dp
+    val touchHeight: Dp = 116.dp
+
+    /** The contact point is always this box's exact center, in both forms — no arrow, no offset tip. */
     fun tipOffsetPx(density: Float): Pair<Float, Float> {
-        val p = pad.value * density
-        return p to p
+        val half = touchWidth.value * density / 2f
+        return half to half
     }
 }
 
-private const val CORNER_RADIUS = 2f // 24-unit space
-private const val NOTCH_X = 5.5f
-private const val NOTCH_Y = 13.5f
-private const val SHAFT_BOTTOM = 20f
-
+/**
+ * The whole being. Wires every animated number the design calls for and composes the shared
+ * glassy material plus whichever form's extras apply. See docs/cursor.md. The actual legibility
+ * cues are pure draw functions in [VoiceForm], [ActionForm], and [CursorEffects] — this file only
+ * decides *when* they play.
+ */
 @Composable
-fun BuddyCursor(modifier: Modifier = Modifier, contentDescription: String) {
+fun BuddyCursor(modifier: Modifier = Modifier, mood: CursorMood, contentDescription: String) {
+    val scope = rememberCoroutineScope()
+    val view = LocalView.current
+
+    // §4 — one entity reshaping. A single continuously-eased number drives size, density, and
+    // which form's extras are audible; nothing here ever swaps between two separate assets.
+    val morph by animateFloatAsState(if (mood.form == CursorForm.Voice) 1f else 0f, CursorMotion.morph(), label = "cursorMorph")
+
+    val infinite = rememberInfiniteTransition(label = "cursorLoop")
+    val breathePhase by infinite.animateFloat(0f, 1f, infiniteRepeatable(CursorMotion.breathe(), RepeatMode.Reverse), label = "breathe")
+    val ringPhase by infinite.animateFloat(0f, 1f, infiniteRepeatable(tween(900, easing = LinearEasing)), label = "ringPhase")
+    val sheenAngle by infinite.animateFloat(0f, (2 * PI).toFloat(), infiniteRepeatable(tween(4200, easing = LinearEasing)), label = "sheen")
+
+    val amplitude by animateFloatAsState((mood as? CursorMood.Listening)?.amplitude ?: 0f, CursorMotion.quick(), label = "amplitude")
+    val velocityPx by CursorMoodSignals.velocity.collectAsStateWithLifecycle()
+
+    // Edge-triggered one-shots: each runs to completion in its own job so a fast mood change can
+    // never cut a ripple or a hold-ring mid-animation (§6 — "never a cut").
+    val ripple = remember { Animatable(-1f) }
+    LaunchedEffect(mood is CursorMood.Acting) {
+        if (mood is CursorMood.Acting) {
+            // The only haptic buddy's own hand ever fires — exactly at real contact, so it stays meaningful (§10).
+            view.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
+            scope.launch { ripple.snapTo(0f); ripple.animateTo(1f, CursorMotion.ripple()); ripple.snapTo(-1f) }
+        }
+    }
+    val holdRing = remember { Animatable(-1f) }
+    LaunchedEffect(mood is CursorMood.Holding) {
+        if (mood is CursorMood.Holding) scope.launch { holdRing.snapTo(0f); holdRing.animateTo(1f, tween(CursorMotion.HOLD_VISUAL_MS)) }
+        else holdRing.snapTo(-1f)
+    }
+    val wobble = remember { Animatable(0f) }
+    LaunchedEffect(Unit) {
+        CursorMoodSignals.uncertainPulses.collect {
+            scope.launch { wobble.snapTo(0f); wobble.animateTo(1f, tween(CursorMotion.UNCERTAIN_MS.toInt(), easing = LinearEasing)) }
+        }
+    }
+
+    val targetPresence = presenceFor(mood)
+    val presenceScale by animateFloatAsState(targetPresence.scale, CursorMotion.quick(), label = "presenceScale")
+    val presenceAlpha by animateFloatAsState(targetPresence.alpha, CursorMotion.quick(), label = "presenceAlpha")
+    val radiusDp = lerpDp(Cursor.actionDiameter, Cursor.voiceDiameter, morph) / 2f
+    val glow by animateFloatAsState(glowIntensity(mood, amplitude), CursorMotion.quick(), label = "glow")
+    val breathe = 1f + sin(breathePhase * PI.toFloat()) * BREATHE_SCALE * morph
+
     Canvas(
         modifier
             .size(Cursor.touchWidth, Cursor.touchHeight)
             .semantics { this.contentDescription = contentDescription }
+            .graphicsLayer {
+                val squeeze = sin(morph.coerceIn(0f, 1f) * PI.toFloat()) * SQUEEZE_AMOUNT
+                scaleX = presenceScale * breathe * (1f - squeeze)
+                scaleY = presenceScale * breathe * (1f + squeeze)
+                alpha = presenceAlpha
+                translationX = CursorEffects.uncertainOffset(wobble.value, 3.dp.toPx()).x
+            }
     ) {
-        val glyph = Cursor.size.toPx()
-        val stroke = Cursor.stroke.toPx()
-        val inset = stroke / 2f
-        val path = buddyArrowPath(glyph - stroke)
-        translate(Cursor.pad.toPx() + inset, Cursor.pad.toPx() + inset) {
-            drawPath(path, BuddyColors.CursorBlue)
-            drawPath(path, Color.Black, style = Stroke(width = stroke, join = StrokeJoin.Round))
-        }
+        val radiusPx = radiusDp.toPx()
+        val velocity = Offset(velocityPx.first, velocityPx.second)
+        val considering = mood is CursorMood.Considering
+        val dragging = mood is CursorMood.Dragging
+        val armed = (mood as? CursorMood.Dragging)?.armedToDismiss == true
+
+        with(CursorEffects) { drawGlow(radiusPx * 2.4f, glow) }
+        drawContactShadow(radiusPx)
+        drawSharedMaterial(radiusPx, morph)
+        with(VoiceForm) { draw(radiusPx, amplitude, ringPhase, sheenAngle, thinking = mood is CursorMood.Thinking, alpha = morph) }
+        with(ActionForm) { draw(radiusPx, velocity, ripple.value, holdRing.value, dragging, armed, considering, sheenAngle, alpha = 1f - morph) }
+        drawLightRim(radiusPx)
     }
 }
 
-/** Arrow pointer — left shaft, sloped inner leg, horizontal shelf, outer diagonal. */
-private fun buddyArrowPath(size: Float): Path = Path().apply {
-    val u = size / 24f
-    val pts = listOf(
-        Offset(0f, 0f),
-        Offset(0f, SHAFT_BOTTOM * u),
-        Offset(NOTCH_X * u, NOTCH_Y * u),
-        Offset(NOTCH_Y * u, NOTCH_Y * u)
+/** The one material both forms share — denser/focused core in Action, ambient/diffuse in Voice (§1, §3). */
+private fun DrawScope.drawSharedMaterial(radiusPx: Float, t: Float) {
+    val stops = arrayOf(
+        0f to lerp(BuddyColors.CursorFocus, BuddyColors.CursorCore, t),
+        0.5f to BuddyColors.CursorMid,
+        0.82f to lerp(BuddyColors.CursorRim.copy(alpha = 0.95f), BuddyColors.CursorRim.copy(alpha = 0.7f), t),
+        1f to BuddyColors.CursorRim.copy(alpha = 0f)
     )
-    roundedPolygon(pts, CORNER_RADIUS * u, sharpCorners = setOf(0))
+    drawCircle(brush = Brush.radialGradient(*stops, radius = radiusPx), radius = radiusPx)
 }
 
-private fun Path.roundedPolygon(pts: List<Offset>, radius: Float, sharpCorners: Set<Int>) {
-    val n = pts.size
-    for (i in 0 until n) {
-        val prev = pts[(i - 1 + n) % n]
-        val curr = pts[i]
-        val next = pts[(i + 1) % n]
-        val inVec = curr - prev
-        val outVec = next - curr
-        val inLen = hypot(inVec.x, inVec.y)
-        val outLen = hypot(outVec.x, outVec.y)
-        val trim = if (i in sharpCorners) 0f else min(radius, min(inLen * 0.42f, outLen * 0.42f))
-        val entry = curr - inVec / inLen * trim
-        val exit = curr + outVec / outLen * trim
-        if (i == 0) moveTo(entry.x, entry.y) else lineTo(entry.x, entry.y)
-        if (i in sharpCorners) lineTo(curr.x, curr.y) else quadraticTo(curr.x, curr.y, exit.x, exit.y)
-    }
-    close()
+/** Neutral, soft, always-on — legible whether the host app underneath is pure white or pure black (§9). */
+private fun DrawScope.drawContactShadow(radiusPx: Float) {
+    val shadowCenter = center + Offset(0f, radiusPx * 0.18f)
+    drawCircle(
+        brush = Brush.radialGradient(0f to BuddyColors.CursorShadow, 1f to Color.Transparent, center = shadowCenter, radius = radiusPx * 1.35f),
+        radius = radiusPx * 1.35f,
+        center = shadowCenter
+    )
 }
+
+/** A thin soft outer light rim so the shape stays visible on a dark host app, without ever going "dark mode" (§9). */
+private fun DrawScope.drawLightRim(radiusPx: Float) {
+    drawCircle(color = BuddyColors.CursorLightRim, radius = radiusPx, style = Stroke(width = radiusPx * 0.035f))
+}
+
+private data class Presence(val scale: Float, val alpha: Float)
+
+/** Idle recedes into peripheral vision; every active state reads at full presence (§8). */
+private fun presenceFor(mood: CursorMood): Presence = when (mood) {
+    CursorMood.Idle -> Presence(0.82f, 0.5f)
+    CursorMood.Paused -> Presence(1f, 0.62f)
+    CursorMood.Targeting -> Presence(1.1f, 1f) // brightening + a slight scale-up before contact (§5)
+    else -> Presence(1f, 1f)
+}
+
+/** Glow is a scarce signal, never wallpaper (§4) — idle stays quiet so a real cue has somewhere to go. */
+private fun glowIntensity(mood: CursorMood, amplitude: Float): Float = when (mood) {
+    CursorMood.Idle -> 0.1f
+    is CursorMood.Listening -> 0.32f + amplitude * 0.4f
+    CursorMood.Thinking -> 0.4f
+    CursorMood.Considering -> 0.3f
+    CursorMood.Traveling -> 0.3f
+    CursorMood.Targeting -> 0.58f
+    CursorMood.Acting -> 0.7f
+    is CursorMood.Holding -> 0.5f
+    is CursorMood.Dragging -> 0.45f
+    CursorMood.Paused -> 0.2f
+}
+
+private const val BREATHE_SCALE = 0.03f
+private const val SQUEEZE_AMOUNT = 0.12f

@@ -42,7 +42,13 @@ object CursorSurface {
         }
         window = null
         type = 0
-        val next = BuddyOverlayWindow(host, want) { BuddyBrain.openAsk() }
+        val next = BuddyOverlayWindow(
+            host,
+            want,
+            onAsk = { BuddyBrain.openAsk() },
+            onInterrupt = { BuddyBrain.interrupt() },
+            onDismiss = { BuddyOverlayController.stop(overlay) }
+        )
         try {
             next.show()
         } catch (error: Exception) {
