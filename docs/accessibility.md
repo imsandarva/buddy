@@ -59,6 +59,6 @@ See `docs/eyes.md` for the snapshot API.
 - Rebuild and reinstall after manifest or service changes for the entry to appear in Settings.
 - Snapshots stay on demand unless Live is watching — then window, content, and scroll events (debounced) refresh the SCREEN list so the model follows a new app **and** a new page in the same app (app drawer swipe).
 - Opening an app used to send `On screen: (nothing readable)` because the first tree after `WINDOW_STATE_CHANGED` is empty and Compose nodes were dropped. Eyes now prefetch, wait, and keep on-screen controls so Gemini can see inside the app.
-- The overlay is often the active window after a tap. Eyes skip **all** of our package and still read the launcher or the app underneath.
+- The overlay is often the active window after a tap. Eyes skip Buddy chrome, and skip leftover Buddy activity windows whenever another covering app is in front, so Home and other apps stay visible.
 - Pulling down the shade is a covering System UI window. Eyes keep that panel (Wi‑Fi, tiles, notifications) and skip the slim status bar. The cursor uses `TYPE_ACCESSIBILITY_OVERLAY` while Buddy Assistant is on so it stays above the shade.
 - Rebuild and toggle **Buddy Assistant** after service-config changes so `typeWindowsChanged` is delivered.

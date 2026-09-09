@@ -5,14 +5,12 @@ import com.sandarva.kotlinapps.debug.BuddyLog
 import org.json.JSONArray
 import org.json.JSONObject
 
-/** Which brain thinks this step. Fast by default; the stronger one when the fast one is stuck. */
+/** Which brain thinks this step. For now both tiers are 3.5 Flash Lite with high thinking. */
 object AgentModels {
     class Tier(val id: String, val thinking: String)
 
-    /** Cheapest 3.5-class model; `low` thinking is tuned for short agentic steps. */
     val FAST = Tier("gemini-3.5-flash-lite", "high")
-    /** Most capable Flash — pulled in only when the run stalls, so cost stays near the fast tier. */
-    val STRONG = Tier("gemini-3.8-flash", "medium")
+    val STRONG = Tier("gemini-3.5-flash-lite", "high")
 }
 
 /**
@@ -53,6 +51,6 @@ class AgentDecider(private val client: GeminiClient) {
 
     private companion object {
         const val TEMPERATURE = 0.2
-        const val MAX_OUTPUT_TOKENS = 1024
+        const val MAX_OUTPUT_TOKENS = 8192
     }
 }

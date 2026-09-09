@@ -12,7 +12,7 @@ A stateful WebSocket (`BidiGenerateContent`) to the Gemini Developer API. **Mic 
 
 | | Agent runner (typed) | Live |
 |--|-----------|------|
-| Model | `gemini-3.5-flash-lite` → `gemini-3.8-flash` when stuck | `gemini-3.1-flash-live-preview` |
+| Model | `gemini-3.5-flash-lite`, thinking `high` | `gemini-3.1-flash-live-preview` |
 | Transport | HTTP `generateContent`, structured JSON | WebSocket `BidiGenerateContent` |
 | Voice in | Android `SpeechRecognizer` | 16 kHz PCM mic stream (no STT) |
 | Voice out | Android TTS | 24 kHz PCM from Gemini (no captions) |

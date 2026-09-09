@@ -41,7 +41,7 @@ class WindowRootPicker(private val service: AccessibilityService) {
         val chosen = if (shade.isNotEmpty()) {
             apps.forEach { AccessibilityNodes.recycle(it.root) }
             shade
-        } else pickFront(apps)
+        } else pickFront(withoutStaleBuddy(apps))
         val result = chosen.ifEmpty { fallback(screenW, screenH) }
         BuddyLog.d("Eyes.windows", "raw=${windows.size} kept=${result.size} pkgs=${result.map { it.pkg }} shade=${shade.size} keyboard=$keyboard")
         return Roots(result.map { it.root }, keyboard)
@@ -72,6 +72,22 @@ class WindowRootPicker(private val service: AccessibilityService) {
         val keep = apps.subList(0, topIndex + 1).toList()
         apps.drop(topIndex + 1).forEach { AccessibilityNodes.recycle(it.root) }
         return keep
+    }
+
+    /**
+     * OEM leftover: Buddy's activity can stay in the window list as a full-screen covering
+     * window after they press Home. That used to hide the launcher and every other app.
+     * Buddy is the scene only when no other covering app is present.
+     */
+    private fun withoutStaleBuddy(apps: ArrayList<Candidate>): ArrayList<Candidate> {
+        val ours = service.packageName
+        if (apps.none { it.covering && it.pkg != ours }) return apps
+        val kept = ArrayList<Candidate>(apps.size)
+        for (candidate in apps) {
+            if (candidate.pkg == ours) AccessibilityNodes.recycle(candidate.root) else kept += candidate
+        }
+        if (kept.size != apps.size) BuddyLog.d("Eyes.windows", "dropped leftover Buddy — other app is in front")
+        return kept
     }
 
     private fun fallback(screenW: Int, screenH: Int): List<Candidate> {

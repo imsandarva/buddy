@@ -38,7 +38,7 @@ Both repeat the matching rule: the name they say is the quoted label; the value 
 
 The API key is `gemini.api.key` in `local.properties` (gitignored) → `BuildConfig.GEMINI_API_KEY`. Never commit it.
 
-Models: runner `gemini-3.5-flash-lite` (fast) and `gemini-3.8-flash` (when stuck), both `thinkingLevel: low`, structured JSON output. Live `gemini-3.1-flash-live-preview`, `thinkingLevel: minimal`, 220 ms VAD.
+Models: runner `gemini-3.5-flash-lite` with `thinkingLevel: high` (for now, both fast and strong). Live `gemini-3.1-flash-live-preview`, `thinkingLevel: minimal`, 220 ms VAD.
 
 ## Composition
 

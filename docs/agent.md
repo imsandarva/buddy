@@ -90,8 +90,8 @@ Lists marked scrollable may hold more below or above — scroll to see it.
 
 | Tier | Model | When |
 |------|-------|------|
-| Fast | `gemini-3.5-flash-lite`, thinking `low` | Every ordinary step |
-| Strong | `gemini-3.8-flash`, thinking `low` | The run stalls (stuck, repeats, failures, unreadable reply) |
+| Fast | `gemini-3.5-flash-lite`, thinking `high` | Every step (for now) |
+| Strong | `gemini-3.5-flash-lite`, thinking `high` | Same — stall escalation is a no-op until we split tiers again |
 
 Structured output via `generationConfig.responseJsonSchema` (falls back to the OpenAPI `responseSchema` dialect on a 400). Same prompt, same form.
 
