@@ -18,9 +18,9 @@ import com.sandarva.kotlinapps.ui.theme.BuddyColors
 import kotlin.math.hypot
 import kotlin.math.min
 
-/** Bounds and draw constants — keep in sync with `render-cursor.kt`. */
+/** Bounds and draw constants for the on-screen pointer. */
 object Cursor {
-    val size: Dp = 28.dp
+    val size: Dp = 44.dp
     val pad: Dp = 16.dp
     val stroke: Dp = 1.6.dp
     val touchWidth: Dp = size + pad * 2
@@ -32,7 +32,7 @@ object Cursor {
     }
 }
 
-private const val CORNER_RADIUS = 2f // 24-unit space — matches render-cursor.kt
+private const val CORNER_RADIUS = 2f // 24-unit space
 private const val NOTCH_X = 5.5f
 private const val NOTCH_Y = 13.5f
 private const val SHAFT_BOTTOM = 20f
