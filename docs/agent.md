@@ -69,7 +69,7 @@ Lists marked scrollable may hold more below or above — scroll to see it.
 |--------|-------|
 | `tap`, `long_press` | Fly to the control, then `dispatchGesture` |
 | `type` (target?, text, submit) | Tap the field, `ACTION_SET_TEXT`, optional IME enter |
-| `scroll` (direction, target?) | Measured pan inside the list (40% of it, rests before lift so nothing flings past) |
+| `scroll` (direction, target?) | List’s own scroll action when it can; otherwise a one-finger pan across about half the list |
 | `swipe` (direction) | Page pull across the screen — launcher pages, dismiss |
 | `drag` (from, to) | Press, hold, slide |
 | `back`, `home`, `recents`, `notifications`, `quick_settings` | `performGlobalAction` |

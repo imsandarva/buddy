@@ -7,8 +7,6 @@ import com.sandarva.kotlinapps.overlay.OverlayChrome
 import com.sandarva.kotlinapps.ui.cursor.CursorGestureKind
 import com.sandarva.kotlinapps.ui.theme.CursorMotion
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.coroutines.resume
@@ -19,9 +17,18 @@ import kotlin.coroutines.resume
  */
 object BuddyHands {
     @Volatile private var player: GesturePlayer? = null
+    @Volatile private var lists: NodeScroller? = null
 
-    fun attach(next: GesturePlayer) { player = next }
-    fun detach(current: GesturePlayer) { if (player === current) player = null }
+    fun attach(next: GesturePlayer, scroller: NodeScroller) {
+        player = next
+        lists = scroller
+    }
+
+    fun detach(current: GesturePlayer, scroller: NodeScroller) {
+        if (player === current) player = null
+        if (lists === scroller) lists = null
+    }
+
     fun isReady(): Boolean = player != null
 
     suspend fun tapHere(): Boolean = atTip { x, y -> stroke(x, y, x, y, kind = Kind.Tap) }
@@ -50,14 +57,31 @@ object BuddyHands {
 
     /**
      * Reveal more content in [direction] inside [within] (a list) — or the middle of the screen when
-     * no list is named. The finger moves the opposite way, about 40% of the container, then rests.
+     * no list is named. Prefers the node’s own scroll action (TalkBack); falls back to one finger.
      */
-    suspend fun scrollWithin(within: ScreenBounds?, direction: Direction): Boolean {
+    suspend fun scrollWithin(within: ScreenBounds?, direction: Direction, viewId: String? = null): Boolean {
         val screen = BuddyCursorController.screenPixels() ?: return false
-        val box = within ?: ScreenBounds((screen.first * 0.08f).toInt(), (screen.second * 0.16f).toInt(), (screen.first * 0.92f).toInt(), (screen.second * 0.86f).toInt())
+        val box = within ?: ScreenBounds(
+            (screen.first * 0.08f).toInt(), (screen.second * 0.16f).toInt(),
+            (screen.first * 0.92f).toInt(), (screen.second * 0.86f).toInt()
+        )
         val span = HandReach.scrollPan(box, direction)
         if (!land(span.x0, span.y0)) return false
+        if (scrollByNode(direction, within, viewId, span)) return true
         return stroke(span.x0, span.y0, span.x1, span.y1, Kind.Scroll)
+    }
+
+    private suspend fun scrollByNode(direction: Direction, within: ScreenBounds?, viewId: String?, span: HandReach.Span): Boolean {
+        val scroller = lists ?: return false
+        CursorMoodSignals.setTargeting(false)
+        CursorMoodSignals.setGesture(CursorGestureKind.SCROLL)
+        return try {
+            if (!scroller.scroll(direction, within, viewId)) return false
+            follow(span.x1, span.y1, GesturePlayer.PAN_MS)
+            true
+        } finally {
+            CursorMoodSignals.setGesture(null)
+        }
     }
 
     private suspend fun slideHere(dxNorm: Float, dyNorm: Float, kind: Kind): Boolean {
@@ -107,21 +131,15 @@ object BuddyHands {
         OverlayChrome.setPassthrough(true)
         return try {
             delay(PASSTHROUGH_MS)
-            val ok = supervisorScope {
-                if (kind.moves) {
-                    launch {
-                        if (kind == Kind.Drag) delay(hands.holdMs())
-                        follow(x1, y1, kind.followMs)
-                    }
-                }
-                when (kind) {
-                    Kind.Tap -> hands.tap(x0, y0)
-                    Kind.Hold -> hands.hold(x0, y0)
-                    Kind.Swipe -> hands.swipe(x0, y0, x1, y1)
-                    Kind.Scroll -> hands.pan(x0, y0, x1, y1)
-                    Kind.Drag -> hands.drag(x0, y0, x1, y1)
-                }
+            val ok = when (kind) {
+                Kind.Tap -> hands.tap(x0, y0)
+                Kind.Hold -> hands.hold(x0, y0)
+                Kind.Swipe -> hands.swipe(x0, y0, x1, y1)
+                Kind.Scroll -> hands.pan(x0, y0, x1, y1)
+                Kind.Drag -> hands.drag(x0, y0, x1, y1)
             }
+            // Moving the overlay while dispatchGesture is in flight cancels the finger on many OEMs.
+            if (ok && kind.moves) follow(x1, y1, SETTLE_FOLLOW_MS)
             BuddyLog.d("Hands.stroke", "kind=$kind ok=$ok")
             ok
         } finally {
@@ -137,17 +155,15 @@ object BuddyHands {
         }
     }
 
-    /** How the cursor keeps up with the finger: swipes and drags are linear follows of the stroke. */
-    private enum class Kind(val moves: Boolean, val followMs: Long, val gesture: CursorGestureKind) {
-        Tap(false, 0L, CursorGestureKind.TAP),
-        Hold(false, 0L, CursorGestureKind.HOLD),
-        Swipe(true, SWIPE_FOLLOW_MS, CursorGestureKind.SWIPE),
-        Scroll(true, GesturePlayer.PAN_MS, CursorGestureKind.SCROLL),
-        Drag(true, DRAG_FOLLOW_MS, CursorGestureKind.DRAG)
+    private enum class Kind(val moves: Boolean, val gesture: CursorGestureKind) {
+        Tap(false, CursorGestureKind.TAP),
+        Hold(false, CursorGestureKind.HOLD),
+        Swipe(true, CursorGestureKind.SWIPE),
+        Scroll(true, CursorGestureKind.SCROLL),
+        Drag(true, CursorGestureKind.DRAG)
     }
 
     private const val FLIGHT_TIMEOUT_MS = 2400L
-    private const val PASSTHROUGH_MS = 48L
-    private const val SWIPE_FOLLOW_MS = 460L
-    private const val DRAG_FOLLOW_MS = 520L
+    private const val PASSTHROUGH_MS = 160L
+    private const val SETTLE_FOLLOW_MS = 220L
 }

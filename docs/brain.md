@@ -16,7 +16,7 @@ See `docs/agent.md` for the loop, the action space, and the guard.
 ## Flow of a request
 
 1. **Buddy itself** (“move up”, “go to the top left”) — on-device `BuddyMoveIntent`, no network.
-2. **Here** (“tap”, “hold this”, “swipe left”, “type hello”, “press enter”) — on-device `BuddyHandIntent` / `BuddyTypeIntent`.
+2. **Here** (“tap”, “hold this”, “swipe left”, “scroll down”, “type hello”, “press enter”) — on-device `BuddyHandIntent` / `BuddyTypeIntent`.
 3. **Live one-shot** (“tap Wi‑Fi”, “scroll down”, “move up”, “go back”) — Live's function call → `LiveTools.intent` → `AgentExecutor.perform` on the snapshot the model saw → tool response carries the new SCREEN.
 4. **A real multi-step job** — a goal for `AgentRunner`. Typed asks go straight there (`SpokenDesk`). Live may call `run_goal`; `LiveRouter` only starts a job when they asked for phone work. The runner is silent. Live stays on the same socket and tells them when it is done. See `docs/live-jobs.md`.
 5. **A question mid-run** — the runner asks through the desk. Live asks out loud and `answer_job` brings the words back. Typed asks still use the sheet.

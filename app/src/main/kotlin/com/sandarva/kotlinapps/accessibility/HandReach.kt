@@ -30,7 +30,7 @@ object HandReach {
 
     /**
      * Reveal content in [content] direction inside [box]: the finger moves the other way across
-     * the middle 40% of the container, so each scroll shows the next “half page”.
+     * about half the container, so each scroll shows the next page of the list.
      */
     fun scrollPan(box: ScreenBounds, content: Direction): Span {
         val finger = content.opposite
@@ -49,6 +49,6 @@ object HandReach {
 
     private const val NEAR = 0.12f
     private const val FAR = 0.88f
-    private const val PAN_NEAR = 0.30f
-    private const val PAN_FAR = 0.70f
+    private const val PAN_NEAR = 0.22f
+    private const val PAN_FAR = 0.78f
 }

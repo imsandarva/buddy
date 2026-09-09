@@ -183,6 +183,7 @@ object BuddyBrain {
                 is BuddyHandIntent.Action.Hold -> BuddyHands.holdHere()
                 is BuddyHandIntent.Action.Swipe -> BuddyHands.swipeHere(hand.dx, hand.dy)
                 is BuddyHandIntent.Action.Drag -> BuddyHands.dragHere(hand.dx, hand.dy)
+                is BuddyHandIntent.Action.Scroll -> BuddyHands.scrollWithin(null, hand.direction)
             }
             BuddyLog.d("Brain.localHand", "ok=$ok")
             finishTurn()

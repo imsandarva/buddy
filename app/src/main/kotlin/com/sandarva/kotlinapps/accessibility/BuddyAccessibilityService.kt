@@ -12,6 +12,7 @@ class BuddyAccessibilityService : AccessibilityService() {
     private val reader by lazy { AccessibilityTreeReader(this) }
     private val tracker by lazy { ScreenSceneTracker { reader.snapshot() } }
     private val player by lazy { GesturePlayer(this) }
+    private val scroller by lazy { NodeScroller(this) }
     private val writer by lazy { FieldWriter(this) }
 
     override fun onServiceConnected() {
@@ -31,7 +32,7 @@ class BuddyAccessibilityService : AccessibilityService() {
         }
         serviceInfo = info
         BuddyScreenEyes.attach(reader, tracker)
-        BuddyHands.attach(player)
+        BuddyHands.attach(player, scroller)
         BuddyType.attach(writer)
         BuddyGlobal.attach(this)
         AccessibilitySession.bind(this)
@@ -59,7 +60,7 @@ class BuddyAccessibilityService : AccessibilityService() {
     private fun releaseEyes() {
         BuddyGlobal.detach(this)
         BuddyType.detach(writer)
-        BuddyHands.detach(player)
+        BuddyHands.detach(player, scroller)
         BuddyScreenEyes.detach(reader)
         AccessibilitySession.unbind(this)
     }

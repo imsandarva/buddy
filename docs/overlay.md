@@ -37,7 +37,7 @@ Android will not let a normal app keep a window after a force-stop. Minimize / l
 | `overlay/OverlayComposeOwner.kt` | Lifecycle for Compose without an Activity |
 | `ui/cursor/BuddyCursorHandle.kt` | Grab, drag deltas |
 
-Touches outside the cursor pass through (`FLAG_NOT_FOCUSABLE` + `FLAG_NOT_TOUCH_MODAL` + `WRAP_CONTENT`). Double-tap the cursor to talk live — controls live in the notification shade; type-to-ask is a separate overlay. A single tap on the cursor interrupts whatever it's doing (`BuddyBrain.interrupt()`), a no-op while idle. During a stroke, `OverlayChrome` makes every Buddy window pass through so the finger hits the app. Cursor and ask sheet hide from accessibility (`hideFromBuddyEyes`) so they are never “what is on screen.” The Buddy **activity** is the screen when they open this app. See `docs/live.md`, `docs/ask.md`, and `docs/cursor.md`.
+Touches outside the cursor pass through (`FLAG_NOT_FOCUSABLE` + `FLAG_NOT_TOUCH_MODAL` + `WRAP_CONTENT`). Double-tap the cursor to talk live — controls live in the notification shade; type-to-ask is a separate overlay. A single tap on the cursor interrupts whatever it's doing (`BuddyBrain.interrupt()`), a no-op while idle. During a stroke, `OverlayChrome` makes every Buddy window pass through so the finger hits the app. The cursor window stays still until the stroke finishes, then the tip slides to the lift point. Cursor and ask sheet hide from accessibility (`hideFromBuddyEyes`) so they are never “what is on screen.” The Buddy **activity** is the screen when they open this app. See `docs/live.md`, `docs/ask.md`, and `docs/cursor.md`.
 
 ## User flow
 

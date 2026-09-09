@@ -24,7 +24,8 @@ Buddy appears in **Settings → Accessibility → Installed apps** as **Buddy As
 | `accessibility/BuddyType.kt` | Type / submit API |
 | `accessibility/FieldWriter.kt` | Live field find + set-text / IME / paste |
 | `accessibility/GesturePlayer.kt` | `dispatchGesture` + result callback |
-| `accessibility/GestureStrokes.kt` | Finger-like `GestureDescription`s — tap, hold, swipe, drag, pan |
+| `accessibility/GestureStrokes.kt` | One-finger `GestureDescription`s — tap, hold, swipe, drag, pan |
+| `accessibility/NodeScroller.kt` | TalkBack-style `performAction` scroll on the live list |
 | `accessibility/WindowRootPicker.kt` | Front app + windows stacked above it; skip chrome; keyboard flag |
 | `accessibility/ScreenTreeWalker.kt` | Rows, roles, states, scrollable lists |
 | `accessibility/AccessibilityNodes.kt` | Prefetch a complete tree; do not recycle on API 33+ |
@@ -43,7 +44,7 @@ See `docs/eyes.md` for the snapshot API.
 1. Overlay cursor is already on screen.
 2. Tap **Let me see your screen**, turn on **Buddy Assistant**, return.
 3. **Point at something** — in the app, or from the notification while another app is open.
-4. Ask “tap” or “tap Wi‑Fi” — the buddy presses like a finger. Hold, scroll, drag, and type work the same way.
+4. Ask “tap” or “tap Wi‑Fi” — the buddy presses like a finger. Hold, scroll, swipe, drag, and type work the same way.
 5. Ask for a whole job — “turn off notifications for this app” — and the runner does every step while you watch.
 
 ## Capabilities enabled
@@ -51,7 +52,7 @@ See `docs/eyes.md` for the snapshot API.
 - `canRetrieveWindowContent` — read the on-screen UI tree.
 - `flagRetrieveInteractiveWindows` — read every interactive window, including the launcher under the overlay.
 - `flagReportViewIds` — stable ids when the app provides them.
-- `canPerformGestures` — tap, hold, scroll, swipe, drag (`BuddyHands`). Global keys need no extra capability (`BuddyGlobal`).
+- `canPerformGestures` — tap, hold, scroll, swipe, drag (`BuddyHands`). Scroll prefers the node’s own action, then a one-finger pan. Global keys need no extra capability (`BuddyGlobal`).
 - `flagInputMethodEditor` — Android 13+ parallel IME so type can `commitText` without replacing Gboard.
 
 ## Notes

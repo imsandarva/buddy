@@ -63,7 +63,7 @@ class AgentExecutor(private val launcher: AppLauncher) {
         if (!BuddyHands.isReady()) return ASSISTANT_OFF
         val list = action.target?.let { snapshot.node(it) } ?: mainList(snapshot)
         if (action.target != null && list == null) return missing(action.target)
-        val ok = BuddyHands.scrollWithin(list?.bounds, action.direction)
+        val ok = BuddyHands.scrollWithin(list?.bounds, action.direction, list?.viewId)
         return if (ok) Outcome.ok("scrolled ${action.direction.word}${list?.let { " in \"${it.label.take(24)}\"" } ?: ""}") else Outcome.fail("scroll did not go through")
     }
 

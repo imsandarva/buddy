@@ -1,5 +1,6 @@
 package com.sandarva.kotlinapps.overlay
 
+import android.os.Looper
 import android.view.View
 import android.view.WindowManager
 
@@ -27,9 +28,10 @@ object OverlayChrome {
 fun WindowManager.applyPassthrough(host: View, layout: WindowManager.LayoutParams, on: Boolean, baseFlags: Int) {
     layout.flags = if (on) baseFlags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE else baseFlags
     layout.alpha = if (on) PASS_ALPHA else 1f
-    host.post {
+    val apply = Runnable {
         try { updateViewLayout(host, layout) } catch (_: IllegalArgumentException) { }
     }
+    if (Looper.myLooper() == Looper.getMainLooper()) apply.run() else host.post(apply)
 }
 
 private const val PASS_ALPHA = 0.79f

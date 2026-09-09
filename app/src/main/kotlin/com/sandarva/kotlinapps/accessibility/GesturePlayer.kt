@@ -2,9 +2,11 @@ package com.sandarva.kotlinapps.accessibility
 
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.GestureDescription
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.view.ViewConfiguration
+import android.view.WindowManager
 import com.sandarva.kotlinapps.debug.BuddyLog
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
@@ -35,11 +37,11 @@ class GesturePlayer(private val service: AccessibilityService) {
         return play(GestureStrokes.drag(a.first, a.second, b.first, b.second, holdMs(), DRAG_MS))
     }
 
-    /** Controlled scroll: slower than a swipe and resting before lift, so nothing flies past. */
+    /** One-finger pan — same motion a person uses to scroll a list or a gallery grid. */
     suspend fun pan(x0: Float, y0: Float, x1: Float, y1: Float): Boolean {
         val a = clamp(x0, y0)
         val b = clamp(x1, y1)
-        return play(GestureStrokes.pan(a.first, a.second, b.first, b.second, PAN_MS, PAN_REST_MS))
+        return play(GestureStrokes.pan(a.first, a.second, b.first, b.second, PAN_MS))
     }
 
     fun holdMs(): Long = ViewConfiguration.getLongPressTimeout().toLong() + HOLD_PAD_MS
@@ -66,19 +68,29 @@ class GesturePlayer(private val service: AccessibilityService) {
     }
 
     private fun clamp(x: Float, y: Float): Pair<Float, Float> {
-        val m = service.resources.displayMetrics
-        val maxX = (m.widthPixels - EDGE).toFloat().coerceAtLeast(EDGE)
-        val maxY = (m.heightPixels - EDGE).toFloat().coerceAtLeast(EDGE)
+        val (w, h) = screenSize()
+        val maxX = (w - EDGE).coerceAtLeast(EDGE)
+        val maxY = (h - EDGE).coerceAtLeast(EDGE)
         return x.coerceIn(EDGE, maxX) to y.coerceIn(EDGE, maxY)
+    }
+
+    /** Same coordinate space the overlay uses, so a landed tip is a legal stroke start. */
+    private fun screenSize(): Pair<Float, Float> {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val bounds = service.getSystemService(WindowManager::class.java).currentWindowMetrics.bounds
+            bounds.width().toFloat() to bounds.height().toFloat()
+        } else {
+            val m = service.resources.displayMetrics
+            m.widthPixels.toFloat() to m.heightPixels.toFloat()
+        }
     }
 
     companion object {
         private const val TAP_MS = 60L
-        private const val SWIPE_MS = 460L
-        private const val DRAG_MS = 520L
-        const val PAN_MS = 620L
-        private const val PAN_REST_MS = 110L
+        private const val SWIPE_MS = 320L
+        private const val DRAG_MS = 450L
+        const val PAN_MS = 380L
         private const val HOLD_PAD_MS = 140L
-        private const val EDGE = 3f
+        private const val EDGE = 8f
     }
 }
