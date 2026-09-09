@@ -31,6 +31,9 @@ never a cross-fade between two separate assets.
 | `ui/cursor/BuddyCursorHandle.kt` | Touch target — tap, double-tap, hold, drag |
 | `ui/cursor/CursorGestures.kt` | Gesture recognizer |
 | `overlay/BuddyOverlayWindow.kt` | Owns the *physical* truths only — flight/drag lifecycle, velocity, the dismiss-zone check — never decides a mood itself |
+| `overlay/DismissZone.kt` | Circle hit-test + gentle magnet toward the X (56dp rest, 68dp armed — chat-head scale) |
+| `overlay/DismissTargetWindow.kt` | Bottom overlay for the X; not-touchable so the cursor keeps the drag |
+| `ui/cursor/DismissTarget.kt` | Drawn X — ink glass at rest, muted rose when armed |
 | `overlay/BuddyCursorController.kt` | Flight API — programmatic move |
 | `overlay/CursorLanding.kt` | Named spots for `fly_to` |
 
@@ -39,7 +42,7 @@ never a cross-fade between two separate assets.
 Exactly one `CursorMood` is true at a time; `CursorMoodResolver` decides the winner when several
 raw signals overlap (highest priority first):
 
-1. **Dragging** — the person is repositioning buddycursor, or buddy's own hand is mid swipe/scroll/drag. A trailing ribbon follows the point; dragging it into the bottom band arms a dismiss (release there and Buddy stops — the same idea as a Messenger chat-head).
+1. **Dragging** — the person is repositioning buddycursor, or buddy's own hand is mid swipe/scroll/drag. A trailing ribbon follows the point; a compact circular X rises at the bottom, and dragging onto it arms a dismiss (release there and Buddy stops — the same idea as a Messenger chat-head).
 2. **Paused** — a single tap just interrupted a busy buddy. Steady, unmoving, dimmed glow for a deliberate beat before it settles back to idle.
 3. **Holding** — a long-press is in flight. A ring fills clockwise so the wait has a visible end.
 4. **Acting** — the exact moment of a tap. A quick squash and an outward ripple, paired with one light haptic tick.
@@ -60,7 +63,7 @@ freezing silently, then moves on. Called from `AgentExecutor.missing()`.
 |---------|--------|
 | **Single tap** | Always a light haptic tick. If buddy is busy (`BuddyBrain.interrupt()`, gated on `BrainPhase != Idle`), it also stops whatever it's doing — the safety-critical control lives right where the person is already looking, not buried in a sheet. |
 | **Double-tap** | Talk to buddy — unchanged. |
-| **Long-press + drag** | Reposition. Dragging into the bottom band and releasing stops Buddy entirely. |
+| **Long-press + drag** | Reposition. A compact X appears at the bottom; dragging onto it and releasing stops Buddy entirely. |
 
 No fourth gesture. Every extra one is something the user has to remember and Buddy has to teach.
 
@@ -83,7 +86,7 @@ to a "dark mode."
 1. Tap **Start your buddy** → grant appear-on-top if asked → cursor appears, dimmed, at rest.
 2. **Single tap** — a light haptic; interrupts if buddy is mid-task.
 3. **Double-tap** — live talk starts (or the type sheet if the mic is off); the orb takes over. See `docs/live.md`.
-4. **Press and hold** (~110 ms) — then the cursor follows your finger; drag to the bottom band to dismiss.
+4. **Press and hold** (~110 ms) — then the cursor follows your finger; a compact X rises at the bottom. Drop Buddy onto it to stop.
 5. Tap **Watch it move** → the cursor flies a short path (same API AI will call later).
 6. Tap **Stop buddy** (or the notification action) → the overlay is removed.
 

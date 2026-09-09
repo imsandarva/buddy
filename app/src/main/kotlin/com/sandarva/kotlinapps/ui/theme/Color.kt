@@ -30,4 +30,12 @@ object BuddyColors {
     val CursorGlowFaint = Color(0x1A5850FF)
     val CursorShadow = Color(0x332A1F55) // neutral contact shadow, legible on any host app
     val CursorLightRim = Color(0x99FFFFFF) // thin outer rim so the shape reads on dark hosts too
+
+    // Drag-to-dismiss target — ink glass at rest, muted rose when the cursor is over it.
+    val DismissFill = Color(0xE81C1730)
+    val DismissFillArmed = Color(0xF2C45D6A)
+    val DismissCross = Color(0xFFF7F6FB)
+    val DismissGlow = Color(0x331C1730)
+    val DismissGlowArmed = Color(0x66C45D6A)
+    val DismissRim = Color(0x73FFFFFF)
 }

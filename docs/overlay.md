@@ -9,7 +9,7 @@ BuddyCursor floats above the phone, including the notification shade. Android wi
 | Home, switch apps, stay on the launcher | Yes |
 | Leave Buddy with Back | Yes |
 | Swipe Buddy away in Recents | Usually yes (foreground service) |
-| **Stop buddy** or the notification action | No — this is the intended off switch |
+| **Stop buddy**, the notification, or drop onto the X | No — this is the intended off switch |
 | Force stop Buddy in system Settings | No — Android kills the process |
 | Reboot | No (not wired yet) |
 
@@ -24,6 +24,9 @@ Android will not let a normal app keep a window after a force-stop. Minimize / l
 | `overlay/BuddyOverlayService.kt` | Foreground service; owns the window lifetime |
 | `overlay/CursorSurface.kt` | Picks accessibility overlay vs appear-on-top |
 | `overlay/BuddyOverlayWindow.kt` | Fixed-size WindowManager view; drag, double-tap, single-tap interrupt, `animateTo`, or pass-through for a stroke — owns the physical motion/drag truths, never a mood |
+| `overlay/DismissZone.kt` | Hit radius and magnet for the bottom X — proximity, not a full-width band |
+| `overlay/DismissTargetWindow.kt` | Not-touchable overlay under the cursor; hosts the X while the person repositions Buddy |
+| `ui/cursor/DismissTarget.kt` | Compact circular X (56dp rest, 68dp armed) — rises on grab, blooms when the cursor is over it |
 | `overlay/AskOverlayWindow.kt` | Full-screen type-to-ask panel |
 | `overlay/OverlayChrome.kt` | Pass-through for cursor + ask during a stroke |
 | `overlay/BuddyCursorController.kt` | Hands API attached while the service runs |
@@ -37,13 +40,13 @@ Android will not let a normal app keep a window after a force-stop. Minimize / l
 | `overlay/OverlayComposeOwner.kt` | Lifecycle for Compose without an Activity |
 | `ui/cursor/BuddyCursorHandle.kt` | Grab, drag deltas |
 
-Touches outside the cursor pass through (`FLAG_NOT_FOCUSABLE` + `FLAG_NOT_TOUCH_MODAL` + `WRAP_CONTENT`). Double-tap the cursor to talk live — controls live in the notification shade; type-to-ask is a separate overlay. A single tap on the cursor interrupts whatever it's doing (`BuddyBrain.interrupt()`), a no-op while idle. During a stroke, `OverlayChrome` makes every Buddy window pass through so the finger hits the app. The cursor window stays still until the stroke finishes, then the tip slides to the lift point. Cursor and ask sheet hide from accessibility (`hideFromBuddyEyes`) so they are never “what is on screen.” The Buddy **activity** is the screen when they open this app. See `docs/live.md`, `docs/ask.md`, and `docs/cursor.md`.
+Touches outside the cursor pass through (`FLAG_NOT_FOCUSABLE` + `FLAG_NOT_TOUCH_MODAL` + `WRAP_CONTENT`). Double-tap the cursor to talk live — controls live in the notification shade; type-to-ask is a separate overlay. A single tap on the cursor interrupts whatever it's doing (`BuddyBrain.interrupt()`), a no-op while idle. During a stroke, `OverlayChrome` makes every Buddy window pass through so the finger hits the app. The cursor window stays still until the stroke finishes, then the tip slides to the lift point. Hold-and-drag shows a compact X at the bottom (`DismissTargetWindow`, not-touchable so the cursor keeps the gesture); drop Buddy on it to stop. Cursor, dismiss X, and ask sheet hide from accessibility (`hideFromBuddyEyes`) so they are never “what is on screen.” The Buddy **activity** is the screen when they open this app. See `docs/live.md`, `docs/ask.md`, and `docs/cursor.md`.
 
 ## User flow
 
 1. Tap **Start your buddy**.
 2. If needed, allow **Appear on top** / **Display over other apps**, then return.
-3. The cursor appears on every screen; hold and drag as before. Double-tap it to speak or type.
+3. The cursor appears on every screen; hold and drag as before. A compact X appears at the bottom while you drag — drop Buddy onto it to stop. Double-tap the cursor to speak or type.
 4. Tap **Watch it move** to see a programmed flight.
 5. Tap **Let me see your screen**, then **Ask buddy** — or double-tap the cursor from any app.
 6. Tap **Stop buddy** in the app or in the notification to remove it.

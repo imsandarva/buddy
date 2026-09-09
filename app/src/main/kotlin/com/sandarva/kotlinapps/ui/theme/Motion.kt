@@ -32,5 +32,8 @@ object CursorMotion {
     const val HOLD_VISUAL_MS = 650 // ring-fill duration approximating the real long-press dispatch
     const val UNCERTAIN_MS = 900L // brief honest "I'm confused" wobble
     const val PAUSED_HOLD_MS = 700L // how long the stop acknowledgement stays visible before idling
+    fun <T> dismissEnter() = tween<T>(durationMillis = 420, easing = Ease) // X rises from the bottom as a drag starts
+    fun <T> dismissExit() = tween<T>(durationMillis = 220, easing = Ease)
+    val DismissArm = spring<Float>(dampingRatio = 0.78f, stiffness = Spring.StiffnessMediumLow) // bloom when the cursor enters the X
     private fun travelMs(distancePx: Float): Int = (200 + (distancePx / 1400f).coerceIn(0f, 1f) * 300).toInt()
 }
