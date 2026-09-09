@@ -21,11 +21,13 @@ object LiveMessages {
         .toString()
 
     /** One greeting turn. Tools are forbidden until they actually speak. */
-    fun hello(): String = JSONObject()
+    fun hello(): String = turn(HELLO)
+
+    private fun turn(text: String): String = JSONObject()
         .put("clientContent", JSONObject()
             .put("turns", JSONArray().put(JSONObject()
                 .put("role", "user")
-                .put("parts", JSONArray().put(JSONObject().put("text", HELLO)))))
+                .put("parts", JSONArray().put(JSONObject().put("text", text)))))
             .put("turnComplete", true))
         .toString()
 
@@ -46,6 +48,10 @@ object LiveMessages {
                 .put("response", JSONObject().put("result", result).put("screen", screen))
         )))
         .toString()
+
+    /** A closed user turn so the model speaks — same session, not a new talk. */
+    fun jobAsk(question: String): String = turn(JOB_ASK + question.trim())
+    fun jobDone(message: String): String = turn(JOB_DONE + message.trim())
 
     fun parseAudio(parts: JSONArray?): List<ByteArray> {
         if (parts == null) return emptyList()
@@ -78,7 +84,9 @@ object LiveMessages {
         .put("mimeType", mime)
         .put("data", Base64.encodeToString(pcm, Base64.NO_WRAP))
 
-    private const val HELLO = "The live talk just started. Greet them in one short, warm, casual line — like a friend who just sat down. Then wait. Do not call any tools. Do not tap, point, fly, type, swipe, drag, or run_goal. SCREEN is not a request."
+    private const val HELLO = "The live talk just started. Greet them in one short, warm, casual line — like a friend who just sat down. Then wait. Do not call any tools. Do not tap, point, fly, nudge, type, swipe, drag, or run_goal. SCREEN is not a request. Talking is not a job."
+    private const val JOB_ASK = "JOB ASK — not a screen request. The runner needs this from them. Ask in one short warm line. When they answer, call answer_job with their words. Do not tap or run_goal.\n"
+    private const val JOB_DONE = "JOB DONE — same talk as before. Tell them this in your own voice, then wait. Do not call tools.\n"
 
     private fun vad() = JSONObject()
         .put("disabled", false)

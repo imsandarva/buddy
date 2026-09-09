@@ -27,12 +27,13 @@ sealed class AgentAction {
     data class OpenApp(val name: String) : AgentAction() { override fun describe() = "open app \"$name\"" }
     data class Point(val target: String) : AgentAction() { override fun describe() = "point at [$target]" }
     data class MoveCursor(val place: String) : AgentAction() { override fun describe() = "move cursor to $place" }
+    data class NudgeCursor(val dx: Float, val dy: Float) : AgentAction() { override fun describe() = "nudge cursor" }
     data class Ask(val question: String) : AgentAction() { override fun describe() = "ask \"${question.take(60)}\"" }
     object Wait : AgentAction() { override fun describe() = "wait" }
     object None : AgentAction() { override fun describe() = "no action" }
 
     /** Rough cost of the step for the guard — a finger action changes the phone, a social one does not. */
-    val changesPhone: Boolean get() = this !is Point && this !is MoveCursor && this !is Ask && this !is Wait && this !is None
+    val changesPhone: Boolean get() = this !is Point && this !is MoveCursor && this !is NudgeCursor && this !is Ask && this !is Wait && this !is None
 
     companion object {
         /** Verb names exactly as the model's schema spells them. */
@@ -66,9 +67,12 @@ sealed class AgentAction {
                 "wait" -> Wait
                 "point" -> target?.let(::Point) ?: None
                 "move_cursor" -> json.optString("place").trim().ifBlank { text }.ifBlank { null }?.let(::MoveCursor) ?: None
+                "nudge_cursor", "nudge" -> direction?.let { NudgeCursor(it.dx * NUDGE, it.dy * NUDGE) } ?: None
                 "ask" -> text.ifBlank { null }?.let(::Ask) ?: None
                 else -> None
             }
         }
+
+        const val NUDGE = 0.28f
     }
 }

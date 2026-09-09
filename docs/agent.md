@@ -97,25 +97,28 @@ Structured output via `generationConfig.responseJsonSchema` (falls back to the O
 
 ### Asking the person
 
-`ask` (or a guard confirmation) speaks the question, then opens the ask sheet with the question as its note and the microphone listening. Whatever they say or type next goes to the run, not to a new ask. “Not now” cancels the run.
+`ask` (or a guard confirmation) goes through [AgentDesk]. On a Live talk, Live asks out loud and `answer_job` brings the words back. On a typed ask, the sheet opens. Whatever they say next goes to the run. “Not now” / **End** cancels.
 
 ### Talking
 
-“On it.” at the start. `say` lines are rare milestones and never talk over a sentence still playing. The closing `done.message` is spoken, then — if the job came from a live talk — Live starts again on its own (mic open, no extra hello). Cancel (double-tap, **End**) does not reopen Live.
+The runner does not talk to the person. Milestones go to the notification. The closing `done.message` goes to the desk: Live tells them on the **same** socket; a typed ask uses Android TTS. See `docs/live-jobs.md`. Cancel (double-tap, **End**) stops the job and, if they were talking, the talk.
 
 ## Doors
 
 | Door | Path |
 |------|------|
-| Live voice | One-shot tools (`tap`, `scroll`, `back`, …) run through `AgentExecutor` immediately; `run_goal` hands off to the runner |
-| Typed / STT sheet | Nudge, tap-here, type-here stay on-device (`BuddyMoveIntent`, `BuddyHandIntent`, `BuddyTypeIntent`); everything else is a goal for the runner |
-| Runner waiting on `ask` | The next words are its answer |
+| Live voice | One-shot tools run through `AgentExecutor`; `run_goal` starts the silent runner on the **same** Live session (`docs/live-jobs.md`) |
+| Typed / STT sheet | Nudge, tap-here, type-here stay on-device; everything else is a goal; the runner speaks through `SpokenDesk` |
+| Runner waiting on `ask` | Live: `answer_job`. Typed: the next words on the sheet |
 
 ## Composition
 
 | File | Role |
 |------|------|
-| `brain/agent/AgentRunner.kt` | The loop, lifecycle, ask/answer, wrap-up, Live resume |
+| `brain/agent/AgentRunner.kt` | The loop, lifecycle, ask/answer, wrap-up through [AgentDesk] |
+| `brain/agent/AgentDesk.kt` | How a result or a question leaves the runner |
+| `brain/agent/SpokenDesk.kt` | Typed path — TTS + ask sheet |
+| `brain/live/LiveDesk.kt` | Live path — JOB ASK / JOB DONE on the same socket |
 | `brain/agent/AgentDecider.kt` | One structured decision per call; fast / strong tiers |
 | `brain/agent/AgentPrompt.kt` | System contract + step message |
 | `brain/agent/AgentSchema.kt` | Response JSON Schema (+ OpenAPI dialect) |
@@ -135,7 +138,7 @@ Structured output via `generationConfig.responseJsonSchema` (falls back to the O
 ## Try it
 
 1. Start the buddy, turn on **Buddy Assistant**, allow the microphone once.
-2. Double-tap the cursor and say: “How much storage do I have left?” — watch it open Settings, search, tap, and hear the number.
+2. Double-tap the cursor and say: “How much storage do I have left?” — keep talking; watch it open Settings, search, tap; then hear the number from Live, still the same talk.
 3. Type: “Turn off Bluetooth.” — it reads the switch state first and only taps if it is on.
 4. Say: “Delete the last photo.” — it navigates there, then asks before the delete.
 5. Say: “Show me where I change the font size.” — it goes there and points instead of pressing.

@@ -25,7 +25,7 @@ The cursor window is small and not focusable, so other apps keep getting touches
 | `overlay/BuddyOverlayService.kt` | Owns cursor + ask; watches `BrainSession`; live controls in notification |
 | `overlay/OverlayNotification.kt` | Live talk **End** / **Type instead** when talking |
 | `brain/BuddyBrain.kt` | Voice → Live; type → on-device verb or agent runner; answers → the waiting run |
-| `brain/agent/AgentRunner.kt` | Asks through the sheet (`AnswerDoor`), waits up to 90 s |
+| `brain/agent/AgentRunner.kt` | Asks through `AgentDesk` (Live or the sheet), waits up to 90 s |
 | `ui/home/AskBuddySheet.kt` | Speak / type panel |
 
 Microphone: allow it once in Buddy. After that, double-tap can listen over other apps (the service takes the microphone type only while the panel is open). If the mic is not allowed yet, you can still type.

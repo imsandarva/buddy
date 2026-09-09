@@ -9,6 +9,7 @@ import com.sandarva.kotlinapps.accessibility.sceneKey
 import com.sandarva.kotlinapps.brain.BrainPhase
 import com.sandarva.kotlinapps.brain.BrainSession
 import com.sandarva.kotlinapps.brain.Reachability
+import com.sandarva.kotlinapps.brain.agent.AgentAction
 import com.sandarva.kotlinapps.brain.agent.AgentExecutor
 import com.sandarva.kotlinapps.brain.agent.AgentRunner
 import com.sandarva.kotlinapps.brain.agent.AppLauncher
@@ -24,8 +25,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
- * Gemini Live adapter. Native audio in/out; one-shot cursor tools go through [AgentExecutor];
- * anything longer is handed to [AgentRunner]. Typed asks go straight to the runner in BuddyBrain.
+ * Gemini Live adapter. One socket for the whole talk. One-shot tools go through [AgentExecutor].
+ * A real job starts [AgentRunner] in the background — this session stays up, remembers the talk,
+ * and is the only voice. The runner reports through [LiveDesk].
  */
 object BuddyLive {
     @Volatile private var session: Session? = null
@@ -36,7 +38,7 @@ object BuddyLive {
     }
 
     fun isActive(): Boolean = session?.active == true
-    fun start(afterGoal: Boolean = false) { session?.start(afterGoal) }
+    fun start() { session?.start() }
     fun stop() { session?.stop(user = true) }
 
     class Session(private val app: Application) {
@@ -51,10 +53,9 @@ object BuddyLive {
         private var gen = 0
         @Volatile private var lastScene = ""
         private var followJob: Job? = null
-        @Volatile private var afterGoal = false
         private val listen = LiveListen()
 
-        fun start(afterGoal: Boolean = false) {
+        fun start() {
             if (active) return
             if (BuildConfig.GEMINI_API_KEY.isBlank()) {
                 fail("I don’t have a way to talk live yet.")
@@ -73,14 +74,12 @@ object BuddyLive {
             OverlayNotifier.sync(app)
             lastScene = ""
             listen.reset()
-            this.afterGoal = afterGoal
             BuddyScreenEyes.setWatching(true)
-            BuddyLog.d("Live.start", "model=${LiveConfig.MODEL} afterGoal=$afterGoal")
+            BuddyLog.d("Live.start", "model=${LiveConfig.MODEL}")
             val next = LiveSocket(BuildConfig.GEMINI_API_KEY, object : LiveSocket.Listener {
                 override fun onSetupComplete() {
                     if (id != gen) return
-                    if (afterGoal) openEars(id)
-                    else beginHello(id)
+                    beginHello(id)
                 }
                 override fun onAudio(pcm: ByteArray) {
                     if (id != gen) return
@@ -119,11 +118,12 @@ object BuddyLive {
             }
         }
 
-        fun stop(user: Boolean, handoff: Boolean = false) {
+        fun stop(user: Boolean) {
             if (!active && socket == null) return
-            BuddyLog.d("Live.stop", "user=$user handoff=$handoff")
+            BuddyLog.d("Live.stop", "user=$user")
             gen += 1
             active = false
+            AgentRunner.cancel()
             BuddyScreenEyes.setWatching(false)
             lastScene = ""
             followJob?.cancel(); followJob = null
@@ -132,7 +132,7 @@ object BuddyLive {
             audio?.release(); audio = null
             socket?.close(); socket = null
             BrainSession.setLiveOpen(false)
-            if (!handoff && BrainSession.phase.value == BrainPhase.Live) BrainSession.setPhase(BrainPhase.Idle)
+            if (BrainSession.phase.value == BrainPhase.Live) BrainSession.setPhase(BrainPhase.Idle)
             OverlayNotifier.sync(app)
         }
 
@@ -176,13 +176,14 @@ object BuddyLive {
                     continue
                 }
                 when (intent) {
-                    is LiveIntent.RunGoal -> { handoffGoal(intent.goal); return }
+                    is LiveIntent.RunGoal -> dispatchGoal(call, intent.goal)
+                    is LiveIntent.AnswerJob -> replyJob(call, intent.text)
+                    is LiveIntent.CancelJob -> stopJob(call)
                     is LiveIntent.Unknown -> socket?.send(LiveMessages.toolResponse(call.id, call.name, "not done — unknown tool or missing argument", describe(BuddyScreenEyes.snapshot())))
                     is LiveIntent.Act -> {
-                        val outcome = executor.perform(intent.action, BuddyScreenEyes.snapshot())
-                        val after = awaitSettledSnapshot()
-                        lastScene = after.sceneKey()
-                        socket?.send(LiveMessages.toolResponse(call.id, call.name, if (outcome.ok) outcome.detail else "not done — ${outcome.detail}", describe(after)))
+                        if (AgentRunner.isActive()) {
+                            socket?.send(LiveMessages.toolResponse(call.id, call.name, "ignored — a job has the screen. Just talk.", describe(BuddyScreenEyes.snapshot())))
+                        } else perform(call, intent.action)
                     }
                 }
             }
@@ -190,16 +191,73 @@ object BuddyLive {
 
         private fun describe(snap: ScreenSnapshot): String = SceneDescriber.describe(snap, SceneDescriber.LIVE_LINES)
 
-        /** Live steps aside; the runner does the job on the screen, then talk comes back on its own. */
-        private fun handoffGoal(goal: String) {
-            BuddyLog.d("Live.handoff", "goal=\"${goal.take(80)}\"")
-            stop(user = false, handoff = true)
-            AgentRunner.ensure(app).start(goal, resumeLive = true)
+        /** The model asked for a job — the router decides if it really is one. The socket stays up. */
+        private suspend fun dispatchGoal(call: LiveFunctionCall, goal: String) {
+            when (val route = LiveRouter.decide(goal)) {
+                is LiveRouter.Route.Talk -> {
+                    BuddyLog.d("Live.route", "talk detail=${route.detail} goal=\"${goal.take(80)}\"")
+                    socket?.send(LiveMessages.toolResponse(call.id, call.name, LiveRouter.talkReply(), describe(BuddyScreenEyes.snapshot())))
+                }
+                is LiveRouter.Route.Act -> {
+                    BuddyLog.d("Live.route", "act ${route.action.describe()} goal=\"${goal.take(80)}\"")
+                    if (AgentRunner.isActive()) {
+                        socket?.send(LiveMessages.toolResponse(call.id, call.name, "ignored — a job has the screen. Just talk.", describe(BuddyScreenEyes.snapshot())))
+                    } else perform(call, route.action)
+                }
+                is LiveRouter.Route.Goal -> startJob(call, route.goal)
+            }
+        }
+
+        /** Ack at once so Gemini 3.1 Flash Live can keep talking (sync tools only), then run the worker. */
+        private fun startJob(call: LiveFunctionCall, goal: String) {
+            if (AgentRunner.isActive()) {
+                socket?.send(LiveMessages.toolResponse(call.id, call.name, "already working — keep talking, or cancel_job if they asked to stop", describe(BuddyScreenEyes.snapshot())))
+                return
+            }
+            BuddyLog.d("Live.job", "start=\"${goal.take(80)}\"")
+            socket?.send(LiveMessages.toolResponse(call.id, call.name, "started — keep this talk. Do not use screen tools. JOB DONE will arrive when it finishes.", describe(BuddyScreenEyes.snapshot())))
+            AgentRunner.ensure(app).start(goal, LiveDesk(send = ::emit, onFinished = ::afterJob))
+        }
+
+        private fun replyJob(call: LiveFunctionCall, text: String) {
+            if (!AgentRunner.isAwaitingAnswer()) {
+                socket?.send(LiveMessages.toolResponse(call.id, call.name, "no question pending — just talk", describe(BuddyScreenEyes.snapshot())))
+                return
+            }
+            BuddyLog.d("Live.job", "answer=\"${text.take(60)}\"")
+            AgentRunner.answer(text)
+            socket?.send(LiveMessages.toolResponse(call.id, call.name, "got it — the job will go on", describe(BuddyScreenEyes.snapshot())))
+        }
+
+        private fun stopJob(call: LiveFunctionCall) {
+            if (!AgentRunner.isActive()) {
+                socket?.send(LiveMessages.toolResponse(call.id, call.name, "no job is running", describe(BuddyScreenEyes.snapshot())))
+                return
+            }
+            BuddyLog.d("Live.job", "cancel")
+            AgentRunner.cancel()
+            afterJob()
+            socket?.send(LiveMessages.toolResponse(call.id, call.name, "stopped — tell them you left that alone", describe(BuddyScreenEyes.snapshot())))
+        }
+
+        private fun emit(text: String) { if (active) socket?.send(text) }
+
+        private fun afterJob() {
+            lastScene = ""
+            if (active) pushCatalog()
+        }
+
+        private suspend fun perform(call: LiveFunctionCall, action: AgentAction) {
+            val outcome = executor.perform(action, BuddyScreenEyes.snapshot())
+            val after = awaitSettledSnapshot()
+            lastScene = after.sceneKey()
+            socket?.send(LiveMessages.toolResponse(call.id, call.name, if (outcome.ok) outcome.detail else "not done — ${outcome.detail}", describe(after)))
         }
 
         private suspend fun followScreen(id: Int) {
             BuddyScreenEyes.scenes.collect { snap ->
                 if (id != gen || !active || socket?.isReady != true || listen.greeting) return@collect
+                if (AgentRunner.isActive()) return@collect
                 pushCatalog(snap)
             }
         }

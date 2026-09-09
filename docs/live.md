@@ -8,7 +8,7 @@ Live is a **brain adapter**. Eyes and hands do not change.
 
 ## What Live is
 
-A stateful WebSocket (`BidiGenerateContent`) to the Gemini Developer API. **Mic PCM goes straight to Gemini; Gemini PCM comes straight back.** There is no Android speech-to-text step, no chat REST hop, and no captions. For one quick thing on the screen in front of them it calls a tool — `tap`, `hold`, `scroll`, `swipe`, `drag`, `type`, `back`, `home`, `open_app`, `point_to`, `fly_to` — which `LiveTools` maps onto the shared `AgentAction` space and `AgentExecutor` performs. Anything longer is `run_goal` — Live speaks “on it,” then the agent runner takes the screen and Live resumes when it is done. There is no `say` tool — the model’s own voice is the speech.
+A stateful WebSocket (`BidiGenerateContent`) to the Gemini Developer API. **Mic PCM goes straight to Gemini; Gemini PCM comes straight back.** There is no Android speech-to-text step, no chat REST hop, and no captions. Talk is the default. For one quick thing they asked for on the screen it calls a tool — `tap`, `hold`, `scroll`, `swipe`, `drag`, `type`, `back`, `home`, `open_app`, `point_to`, `fly_to`, `nudge` — which `LiveTools` maps onto the shared `AgentAction` space and `AgentExecutor` performs. A real multi-step job is `run_goal` after `LiveRouter` agrees — Live **acks and stays on the same socket**, the runner works the screen in silence, and Live tells them when `JOB DONE` arrives. Greetings, “what do you see”, and moving the buddy stay in the talk. There is no `say` tool — the model’s own voice is the speech. See `docs/live-jobs.md`.
 
 | | Agent runner (typed) | Live |
 |--|-----------|------|
@@ -17,7 +17,7 @@ A stateful WebSocket (`BidiGenerateContent`) to the Gemini Developer API. **Mic 
 | Voice in | Android `SpeechRecognizer` | 16 kHz PCM mic stream (no STT) |
 | Voice out | Android TTS | 24 kHz PCM from Gemini (no captions) |
 | Screen | SCREEN block in each step message | SCREEN block as `realtimeInput` text after mic is open |
-| Tools | Full action space, many steps | One-shot tools + `run_goal` |
+| Tools | Full action space, many steps; silent when Live is talking | One-shot tools; `run_goal` on the same session (`docs/live-jobs.md`) |
 
 Not Computer Use. Not video Live. Not ElevenLabs. Not ChatGPT.
 
@@ -57,11 +57,11 @@ Long pauses after “tap Wi‑Fi” can still be a tree walk or a tool, not the 
 
 1. Start the buddy, turn on **Buddy Assistant**, allow the microphone once.
 2. Double-tap the cursor (or **Ask buddy**). Buddy says a short hello and waits. It must not tap or move until you ask.
-3. Talk. You will not see your words or Buddy’s words as text — you only hear each other. Ask it to open Calculator, move, tap, hold, scroll, drag, or type. Ask for anything longer — “how much storage do I have left?” — and the runner takes over; talk continues on its own when it is done.
+3. Talk. You will not see your words or Buddy’s words as text — you only hear each other. Say hello, ask what it sees, or ask it to move — it stays with you. Ask it to open Calculator, tap, hold, scroll, drag, or type. Ask for a real job — “how much storage do I have left?” — Live stays with you while the runner works the screen, then Live tells you when it’s done.
 
 ## Not speech-to-text, then chat
 
-Live is **audio in, audio out** on one socket — the same shape as the official Gemini app. We used to also ask Gemini for transcripts and paint them on the bar. That extra job is billed and delivered late, so it *looked* like we waited for STT before thinking. We do not request `inputAudioTranscription` / `outputAudioTranscription`. The mic opens after a short hello (not on `setupComplete`). SCREEN goes as context once the ears are open — it is not an order. Greeting-turn tools stay blocked. After that, tools run when the server has treated the turn as theirs: hangover mic energy (AEC on `VOICE_COMMUNICATION` punches holes in a consecutive-loud streak), model audio after a short hello-grace, barge-in, or a tool that already holds their words (`run_goal`, `open_app`, `type`). A raw energy gate alone used to block every `run_goal` after “On it.”
+Live is **audio in, audio out** on one socket — the same shape as the official Gemini app. We used to also ask Gemini for transcripts and paint them on the bar. That extra job is billed and delivered late, so it *looked* like we waited for STT before thinking. We do not request `inputAudioTranscription` / `outputAudioTranscription`. The mic opens after a short hello (not on `setupComplete`). SCREEN goes as context once the ears are open — it is not an order. Greeting-turn tools stay blocked. After that, tools run when the server has treated the turn as theirs: hangover mic energy (AEC on `VOICE_COMMUNICATION` punches holes in a consecutive-loud streak), model audio after a short hello-grace, barge-in, or a tool that already holds their words (`run_goal`, `open_app`, `type`). A raw energy gate alone used to block every `run_goal` after “On it.” `run_goal` still goes through `LiveRouter` — speaking is not a job. See `docs/live-routing.md`.
 4. **End** in the notification, or a second double-tap, ends the talk. **Type instead** opens the old sheet (REST).
 
 The full ask sheet covers the screen, so Live never uses it. That was the bug when a spoken tap hit the sheet.
@@ -98,11 +98,13 @@ After a tool, the tool response carries the new SCREEN taken after the event str
 
 | File | Role |
 |------|------|
-| `brain/live/BuddyLive.kt` | Session facade — start / stop / tools / follow screen / `run_goal` handoff |
+| `brain/live/BuddyLive.kt` | Session facade — start / stop / tools / follow screen / jobs on the same socket |
 | `brain/live/LiveListen.kt` | Greeting vs asked — when a tool may run |
+| `brain/live/LiveRouter.kt` | Talk / Act / Goal — does not trust `run_goal` blindly |
+| `brain/live/LiveDesk.kt` | JOB ASK / JOB DONE back into this talk |
 | `brain/live/LiveSpeech.kt` | Hangover energy on mic PCM (AEC-safe) |
-| `brain/live/LiveTools.kt` | Function declarations; call → `AgentAction` / `RunGoal` |
-| `brain/live/LivePrompt.kt` | The talk contract — greet, wait, one tool when asked, `run_goal` for more |
+| `brain/live/LiveTools.kt` | Function declarations; call → `AgentAction` / `RunGoal` / `AnswerJob` |
+| `brain/live/LivePrompt.kt` | The talk contract — talk first, same session for jobs |
 | `accessibility/ScreenSceneTracker.kt` | Debounced window follow while Live is on |
 | `accessibility/ScreenReady.kt` | Settled / readable snapshot after a tool |
 | `brain/live/LiveSocket.kt` | OkHttp WebSocket (text + binary JSON, decode off the reader) |
@@ -118,4 +120,4 @@ After a tool, the tool response carries the new SCREEN taken after the event str
 
 API key is still `gemini.api.key` in `local.properties`. The socket uses `?key=` on the Gemini Live URL.
 
-See `docs/agent.md`, `docs/brain.md`, `docs/hands.md`, and `docs/type.md`.
+See `docs/live-routing.md`, `docs/live-jobs.md`, `docs/agent.md`, `docs/brain.md`, `docs/hands.md`, and `docs/type.md`.

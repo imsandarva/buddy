@@ -9,6 +9,7 @@ import com.sandarva.kotlinapps.R
 import com.sandarva.kotlinapps.accessibility.BuddyHands
 import com.sandarva.kotlinapps.accessibility.BuddyType
 import com.sandarva.kotlinapps.brain.agent.AgentRunner
+import com.sandarva.kotlinapps.brain.agent.SpokenDesk
 import com.sandarva.kotlinapps.brain.live.BuddyLive
 import com.sandarva.kotlinapps.debug.BuddyLog
 import com.sandarva.kotlinapps.overlay.BuddyCursorController
@@ -21,9 +22,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
- * Brain facade — the doors. Voice is Gemini Live. Typed words are routed: a nudge, a tap-here, or a
- * type-here runs on-device; everything else becomes a goal for the agent runner. While the runner
- * is waiting on a question, the next words are its answer.
+ * Brain facade — the doors. Voice is Gemini Live (one session). Typed words are routed: a nudge,
+ * a tap-here, or a type-here runs on-device; everything else becomes a goal for the silent runner.
+ * While the runner is waiting on a question from the typed sheet, the next words are its answer.
  */
 object BuddyBrain {
     @Volatile private var engine: Engine? = null
@@ -31,9 +32,8 @@ object BuddyBrain {
     fun ensure(app: Application): Engine {
         engine?.let { return it }
         BuddyLive.ensure(app)
-        val next = Engine(app)
-        AgentRunner.ensure(app).door = AgentRunner.AnswerDoor { question -> next.openAnswer(question) }
-        return next.also { engine = it }
+        AgentRunner.ensure(app)
+        return Engine(app).also { engine = it }
     }
 
     fun ask(text: String) { engine?.ask(text) }
@@ -144,7 +144,7 @@ object BuddyBrain {
                 if (!sessionActive) return@launch
                 if (tryLocalMove(request) || tryLocalType(request) || tryLocalHand(request)) return@launch
                 sessionActive = false
-                AgentRunner.start(request, resumeLive = false)
+                AgentRunner.start(request, SpokenDesk(voice, ::openAnswer) { BrainSession.reset() })
             }
         }
 

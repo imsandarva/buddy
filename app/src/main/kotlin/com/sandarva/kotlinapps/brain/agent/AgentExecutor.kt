@@ -40,6 +40,7 @@ class AgentExecutor(private val launcher: AppLauncher) {
             is AgentAction.OpenApp -> launcher.open(action.name)
             is AgentAction.Point -> withNode(action.target, snapshot) { node -> if (BuddyScreenEyes.pointTo(node)) Outcome.ok("pointed at \"${node.label.take(40)}\"") else Outcome.fail("the cursor is not on screen") }
             is AgentAction.MoveCursor -> moveCursor(action.place)
+            is AgentAction.NudgeCursor -> nudgeCursor(action.dx, action.dy)
             AgentAction.Wait -> { delay(WAIT_MS); Outcome.ok("waited a moment") }
             is AgentAction.Ask, AgentAction.None -> Outcome.ok("")
         }
@@ -76,6 +77,9 @@ class AgentExecutor(private val launcher: AppLauncher) {
         val xy = CursorLanding.normalized(place) ?: return Outcome.fail("unknown place $place")
         return if (BuddyCursorController.animateToNormalized(xy.first, xy.second)) Outcome.ok("moved to $place") else Outcome.fail("the cursor is not on screen")
     }
+
+    private fun nudgeCursor(dx: Float, dy: Float): Outcome =
+        if (BuddyCursorController.nudgeNormalized(dx, dy)) Outcome.ok("moved the buddy") else Outcome.fail("the cursor is not on screen")
 
     /** The tallest scrollable on screen is the page itself when the model does not name a list. */
     private fun mainList(snapshot: ScreenSnapshot): ScreenNode? = snapshot.scrollables().maxByOrNull { it.bounds.width.toLong() * it.bounds.height }

@@ -10,9 +10,9 @@ object AgentModels {
     class Tier(val id: String, val thinking: String)
 
     /** Cheapest 3.5-class model; `low` thinking is tuned for short agentic steps. */
-    val FAST = Tier("gemini-3.5-flash-lite", "low")
+    val FAST = Tier("gemini-3.5-flash-lite", "high")
     /** Most capable Flash — pulled in only when the run stalls, so cost stays near the fast tier. */
-    val STRONG = Tier("gemini-3.8-flash", "low")
+    val STRONG = Tier("gemini-3.8-flash", "medium")
 }
 
 /**

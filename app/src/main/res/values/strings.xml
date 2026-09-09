@@ -30,6 +30,7 @@
     <string name="home_footnote_working">I’m doing that on your screen. Pull down notifications to stop me, or double-tap me.</string>
     <string name="live_title">I’m with you.</string>
     <string name="live_body">I’m listening. Just talk.</string>
+    <string name="live_working_body">I’m on that. Keep talking — I’ll tell you when it’s done.</string>
     <string name="goal_title">I’m on it.</string>
     <string name="goal_body">I’m working through that on your screen, one step at a time. Tap End if you’d like me to stop.</string>
     <string name="live_thats_all">That’s all</string>

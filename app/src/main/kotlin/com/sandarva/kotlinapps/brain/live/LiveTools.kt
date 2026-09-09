@@ -7,22 +7,28 @@ import com.sandarva.kotlinapps.overlay.CursorLanding
 import org.json.JSONArray
 import org.json.JSONObject
 
-/** What a Live tool call asks for: one immediate hand move, a multi-step job, or something we do not know. */
+/** What a Live tool call asks for: one immediate hand move, a multi-step job, a job answer, or something we do not know. */
 sealed class LiveIntent {
     data class Act(val action: AgentAction) : LiveIntent()
     data class RunGoal(val goal: String) : LiveIntent()
+    data class AnswerJob(val text: String) : LiveIntent()
+    object CancelJob : LiveIntent()
     data class Unknown(val name: String) : LiveIntent()
 }
 
 /**
  * Function declarations for the Live session and the mapping back onto [AgentAction].
- * Live keeps one-shot tools for snappy “tap Wi‑Fi” moments; anything longer is `run_goal`.
+ * Live keeps one-shot tools for snappy “tap Wi‑Fi” moments. `run_goal` is only for a real
+ * multi-step job — the router still has to agree before the runner starts.
  */
 object LiveTools {
     fun declarations(): JSONArray = JSONArray()
-        .put(fn("run_goal", "Hand a job that takes more than one phone step to the on-screen runner — find a setting, log out, set up Wi‑Fi, go do this then that, answer a question that needs looking around the phone. Put their request in goal. Say a short on-it first. Do not tap yourself.", listOf(Arg("goal", "What they asked you to finish, in their words.")), listOf("goal")))
+        .put(fn("run_goal", RUN_GOAL_HELP, listOf(Arg("goal", "The phone job they asked you to finish, in their words.")), listOf("goal")))
+        .put(fn("answer_job", "Pass their answer to the job that asked a question. Only after a JOB ASK. Put their words in answer.", listOf(Arg("answer", "What they said, in their words.")), listOf("answer")))
+        .put(fn("cancel_job", "Stop the job that is on the screen. Only when they asked to stop, cancel, or never mind that job.", emptyList()))
         .put(fn("point_to", "Fly the cursor to a listed control to show it, without pressing. Use when they asked where or show me. Copy the id exactly from SCREEN.", listOf(Arg("element_id", ID_HELP)), listOf("element_id")))
-        .put(fn("fly_to", "Move the buddy cursor to a named place. Only when they asked the buddy itself to move.", listOf(Arg("place", "Where the buddy should go.", CursorLanding.PLACES)), listOf("place")))
+        .put(fn("fly_to", "Move the buddy itself to a named place — a corner, side, or middle. Not for “up” or “down”; that is nudge.", listOf(Arg("place", "Where the buddy should go.", CursorLanding.PLACES)), listOf("place")))
+        .put(fn("nudge", "Slide the buddy a bit up, down, left, or right. Only when they asked the buddy itself to move that way.", listOf(Arg("direction", "Which way to slide.", DIRS)), listOf("direction")))
         .put(fn("tap", "Tap a listed control like a finger. Copy the id exactly from SCREEN. Omit to tap where the buddy is now.", listOf(Arg("element_id", ID_HELP))))
         .put(fn("hold", "Press and hold a listed control. Copy the id exactly from SCREEN. Omit to hold where the buddy is now.", listOf(Arg("element_id", ID_HELP))))
         .put(fn("scroll", "Reveal more content in a list. direction is where the content is: down shows what is below.", listOf(Arg("direction", "Where the content is.", DIRS), Arg("element_id", "Optional list id from SCREEN when several lists exist."))))
@@ -38,8 +44,11 @@ object LiveTools {
         val id = a.optString("element_id").ifBlank { null }
         return when (call.name) {
             "run_goal" -> a.optString("goal").ifBlank { null }?.let { LiveIntent.RunGoal(it) } ?: LiveIntent.Unknown(call.name)
+            "answer_job" -> a.optString("answer").ifBlank { null }?.let { LiveIntent.AnswerJob(it) } ?: LiveIntent.Unknown(call.name)
+            "cancel_job" -> LiveIntent.CancelJob
             "point_to" -> id?.let { LiveIntent.Act(AgentAction.Point(it)) } ?: LiveIntent.Unknown(call.name)
-            "fly_to" -> a.optString("place").ifBlank { null }?.let { LiveIntent.Act(AgentAction.MoveCursor(it)) } ?: LiveIntent.Unknown(call.name)
+            "fly_to" -> fly(a.optString("place"))
+            "nudge" -> Direction.parse(a.optString("direction"))?.let { LiveIntent.Act(AgentAction.NudgeCursor(it.dx * AgentAction.NUDGE, it.dy * AgentAction.NUDGE)) } ?: LiveIntent.Unknown(call.name)
             "tap" -> LiveIntent.Act(AgentAction.Tap(id))
             "hold" -> LiveIntent.Act(AgentAction.LongPress(id))
             "scroll" -> LiveIntent.Act(AgentAction.Scroll(id, Direction.parse(a.optString("direction")) ?: Direction.Down))
@@ -57,6 +66,14 @@ object LiveTools {
         }
     }
 
+    /** Named landing, or a direction treated as a nudge so “fly up” still works. */
+    private fun fly(place: String): LiveIntent {
+        val raw = place.trim().ifBlank { return LiveIntent.Unknown("fly_to") }
+        if (CursorLanding.normalized(raw) != null) return LiveIntent.Act(AgentAction.MoveCursor(raw))
+        val dir = Direction.parse(raw) ?: return LiveIntent.Unknown("fly_to")
+        return LiveIntent.Act(AgentAction.NudgeCursor(dir.dx * AgentAction.NUDGE, dir.dy * AgentAction.NUDGE))
+    }
+
     private fun fn(name: String, description: String, args: List<Arg>, required: List<String> = emptyList()): JSONObject {
         val props = JSONObject()
         args.forEach { arg ->
@@ -72,5 +89,6 @@ object LiveTools {
     private data class Arg(val name: String, val help: String, val enumValues: List<String>? = null)
 
     private const val ID_HELP = "Exact id from the SCREEN line whose label they meant, copied character for character."
+    private const val RUN_GOAL_HELP = "Only for a multi-step phone job they asked you to finish — find a setting, log out, set up Wi-Fi, free storage. Invocation: they want the phone changed or something found that is not on this SCREEN. This talk stays open. Do not call for hi, how are you, what do you see, what’s on the screen, moving the buddy, or any one-shot. Put their job in goal. Say a short on-it first, then keep talking."
     private val DIRS = listOf("up", "down", "left", "right")
 }

@@ -102,7 +102,12 @@ class BuddyOverlayService : Service() {
         }
         scope.launch {
             BrainSession.progress.collect { progress ->
-                if (BrainSession.goalOpen.value) OverlayNotification.update(this@BuddyOverlayService, live = false, working = true, progress = progress)
+                if (BrainSession.goalOpen.value) OverlayNotification.update(
+                    this@BuddyOverlayService,
+                    live = BrainSession.liveOpen.value,
+                    working = true,
+                    progress = progress
+                )
             }
         }
     }

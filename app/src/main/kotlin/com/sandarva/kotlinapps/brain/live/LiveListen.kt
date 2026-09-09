@@ -12,6 +12,7 @@ import com.sandarva.kotlinapps.debug.BuddyLog
  *
  * Greeting tools stay blocked. After the mic is open, we arm on: hangover energy, leftover-hello
  * grace then model audio, barge-in, or a tool that already holds their words (`run_goal`, `open_app`, `type`).
+ * Arming only means they spoke — [LiveRouter] still decides whether `run_goal` is a real job.
  */
 class LiveListen {
     private val speech = LiveSpeech()
@@ -66,6 +67,8 @@ class LiveListen {
     /** Args that only exist if the model heard them — not an eager fly/tap from SCREEN. */
     private fun spokenRequest(intent: LiveIntent): Boolean = when (intent) {
         is LiveIntent.RunGoal -> intent.goal.isNotBlank()
+        is LiveIntent.AnswerJob -> intent.text.isNotBlank()
+        is LiveIntent.CancelJob -> true
         is LiveIntent.Act -> when (val action = intent.action) {
             is AgentAction.OpenApp -> action.name.isNotBlank()
             is AgentAction.Type -> action.text.isNotBlank()
