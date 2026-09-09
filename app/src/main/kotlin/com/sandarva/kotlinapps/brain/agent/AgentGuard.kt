@@ -22,6 +22,7 @@ class AgentGuard(goal: String) {
     private var repeats = 0
     private var lastAction: String? = null
     private var invalidReplies = 0
+    private var searches = 0
     var confirmed = false
 
     /** Escalate to the stronger model once the fast one is spinning its wheels. */
@@ -43,6 +44,7 @@ class AgentGuard(goal: String) {
 
     /** After acting: remember how it went so the next prompt can carry a nudge. */
     fun observe(action: AgentAction, outcome: Outcome, change: SceneDiff.Change?) {
+        if (action is AgentAction.SearchWeb) searches += 1
         val key = action.describe()
         repeats = if (key == lastAction) repeats + 1 else 0
         lastAction = key
@@ -58,7 +60,8 @@ class AgentGuard(goal: String) {
 
     /** Extra guidance woven into the next step when the run is not going well. */
     fun hint(): String? = when {
-        stuck >= 2 -> "Your last $stuck actions changed nothing on screen. Do something different: scroll to reveal more, use a search box, press back, or try another control. If the goal truly cannot be reached here, finish with status cannot."
+        searches >= 3 -> "You have searched $searches times. Use what you already found, or finish with the answer. Do not search again unless the last result was empty."
+        stuck >= 2 -> "Your last $stuck actions changed nothing on screen. Do something different: scroll to reveal more, use a search box, press back, search_web for the path, or try another control. If the goal truly cannot be reached here, finish with status cannot."
         stuck == 1 -> "Your last action changed nothing. Check the SCREEN before repeating it."
         repeats >= 2 -> "You have repeated the same action ${repeats + 1} times. Choose a different one."
         failed >= 1 -> "Your last action failed — the id may not exist on this SCREEN. Copy ids exactly from the list below."

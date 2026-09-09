@@ -11,23 +11,25 @@ import com.sandarva.kotlinapps.debug.BuddyLog
  * checks never trip and every tool is blocked after “On it.”
  *
  * Greeting tools stay blocked. After the mic is open, we arm on: hangover energy, leftover-hello
- * grace then model audio, barge-in, or a tool that already holds their words (`run_goal`, `open_app`, `type`).
+ * grace then model audio, barge-in, or a tool that already holds their words (`run_goal`, `open_app`, `type`, `search_web`).
  * Arming only means they spoke — [LiveRouter] still decides whether `run_goal` is a real job.
  */
 class LiveListen {
     private val speech = LiveSpeech()
     @Volatile private var hello = true
     @Volatile private var heard = false
+    private var speaking = false
     private var earsAt = 0L
 
     fun reset() {
         speech.reset()
         hello = true
         heard = false
+        speaking = false
         earsAt = 0L
     }
 
-    fun startHello() { hello = true; heard = false }
+    fun startHello() { hello = true; heard = false; speaking = false }
 
     fun startListening() {
         hello = false
@@ -37,8 +39,14 @@ class LiveListen {
     val theySpoke: Boolean get() = heard
     val greeting: Boolean get() = hello
 
-    /** First time the mic energy looks like speech after hello. */
-    fun onMic(pcm: ByteArray): Boolean = arm(speech.feed(pcm), "mic")
+    /** Mic energy. Returns true on the start of an utterance so Live can push a fresh SCREEN. */
+    fun onMic(pcm: ByteArray): Boolean {
+        val now = speech.feed(pcm)
+        val started = now && !speaking
+        speaking = now
+        arm(now, "mic")
+        return started && !hello
+    }
 
     /** Model audio after the hello-grace window — server VAD already decided they talked. */
     fun onModelAudio() {
@@ -68,6 +76,7 @@ class LiveListen {
     private fun spokenRequest(intent: LiveIntent): Boolean = when (intent) {
         is LiveIntent.RunGoal -> intent.goal.isNotBlank()
         is LiveIntent.AnswerJob -> intent.text.isNotBlank()
+        is LiveIntent.SearchWeb -> intent.query.isNotBlank()
         is LiveIntent.CancelJob -> true
         is LiveIntent.Act -> when (val action = intent.action) {
             is AgentAction.OpenApp -> action.name.isNotBlank()

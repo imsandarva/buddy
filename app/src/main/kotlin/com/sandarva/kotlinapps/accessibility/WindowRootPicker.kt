@@ -41,7 +41,7 @@ class WindowRootPicker(private val service: AccessibilityService) {
         val chosen = if (shade.isNotEmpty()) {
             apps.forEach { AccessibilityNodes.recycle(it.root) }
             shade
-        } else pickFront(withoutStaleBuddy(apps))
+        } else pickFront(withoutStaleCovering(withoutStaleBuddy(apps)))
         val result = chosen.ifEmpty { fallback(screenW, screenH) }
         BuddyLog.d("Eyes.windows", "raw=${windows.size} kept=${result.size} pkgs=${result.map { it.pkg }} shade=${shade.size} keyboard=$keyboard")
         return Roots(result.map { it.root }, keyboard)
@@ -68,10 +68,41 @@ class WindowRootPicker(private val service: AccessibilityService) {
      */
     private fun pickFront(apps: ArrayList<Candidate>): List<Candidate> {
         if (apps.isEmpty()) return emptyList()
-        val topIndex = apps.indexOfFirst { it.covering }.takeIf { it >= 0 } ?: 0
-        val keep = apps.subList(0, topIndex + 1).toList()
+        val livePkg = activePackage()
+        val topIndex = apps.indexOfFirst { it.covering && livePkg != null && it.pkg == livePkg }.takeIf { it >= 0 }
+            ?: apps.indexOfFirst { it.covering && (it.active || it.focused) }.takeIf { it >= 0 }
+            ?: apps.indexOfFirst { it.covering }.takeIf { it >= 0 }
+            ?: 0
+        val scene = apps[topIndex]
+        val above = apps.subList(0, topIndex)
+        above.filter { it.covering && it.pkg != scene.pkg && !it.active && !it.focused }.forEach { AccessibilityNodes.recycle(it.root) }
+        val stacked = above.filter { !it.covering || it.pkg == scene.pkg || it.active || it.focused }
         apps.drop(topIndex + 1).forEach { AccessibilityNodes.recycle(it.root) }
-        return keep
+        return stacked + scene
+    }
+
+    /**
+     * Paused full-screen activities (Settings after Home, Chrome after Recents) can stay in
+     * getWindows as covering. TalkBack follows the active/focused window; leftover covering
+     * apps are not the scene. Same idea as [withoutStaleBuddy], for every package.
+     */
+    private fun withoutStaleCovering(apps: ArrayList<Candidate>): ArrayList<Candidate> {
+        val livePkg = activePackage()
+        fun live(c: Candidate) = c.active || c.focused || (livePkg != null && c.pkg == livePkg)
+        if (apps.none { it.covering && live(it) }) return apps
+        val kept = ArrayList<Candidate>(apps.size)
+        for (candidate in apps) {
+            if (candidate.covering && !live(candidate)) AccessibilityNodes.recycle(candidate.root) else kept += candidate
+        }
+        if (kept.size != apps.size) BuddyLog.d("Eyes.windows", "dropped leftover covering app — livePkg=$livePkg")
+        return kept
+    }
+
+    private fun activePackage(): String? {
+        val root = service.rootInActiveWindow ?: return null
+        val pkg = root.packageName?.toString()?.ifBlank { null }
+        AccessibilityNodes.recycle(root)
+        return pkg
     }
 
     /**
@@ -142,10 +173,10 @@ class WindowRootPicker(private val service: AccessibilityService) {
     private fun candidate(window: AccessibilityWindowInfo, pkg: String, root: AccessibilityNodeInfo, screenW: Int, screenH: Int): Candidate {
         val box = Rect()
         window.getBoundsInScreen(box)
-        return Candidate(pkg, root, covering = box.height() > screenH * COVER_H && box.width() > screenW * COVER_W)
+        return Candidate(pkg, root, covering = box.height() > screenH * COVER_H && box.width() > screenW * COVER_W, active = window.isActive, focused = window.isFocused)
     }
 
-    private class Candidate(val pkg: String, val root: AccessibilityNodeInfo, val covering: Boolean)
+    private class Candidate(val pkg: String, val root: AccessibilityNodeInfo, val covering: Boolean, val active: Boolean = false, val focused: Boolean = false)
 
     companion object {
         private const val SHADE_MIN_H = 0.35f

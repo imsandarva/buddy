@@ -4,6 +4,7 @@ import android.os.Handler
 import android.os.Looper
 import android.view.accessibility.AccessibilityEvent
 import com.sandarva.kotlinapps.debug.BuddyLog
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -16,7 +17,7 @@ class ScreenSceneTracker(
     private val snapshot: () -> ScreenSnapshot
 ) {
     private val main = Handler(Looper.getMainLooper())
-    private val _scenes = MutableSharedFlow<ScreenSnapshot>(replay = 1, extraBufferCapacity = 1)
+    private val _scenes = MutableSharedFlow<ScreenSnapshot>(replay = 1, extraBufferCapacity = 8, onBufferOverflow = BufferOverflow.DROP_OLDEST)
     val scenes: SharedFlow<ScreenSnapshot> = _scenes.asSharedFlow()
     @Volatile private var watching = false
     @Volatile private var lastKey = ""

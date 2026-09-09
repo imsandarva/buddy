@@ -27,7 +27,7 @@ object LiveRouter {
     }
 
     fun talkReply(): String =
-        "not a job — answer with your voice only from SCREEN if they asked what you see. Do not call run_goal again."
+        "not a job — answer with your voice. Call search_web if you need a fact SCREEN does not have. Do not call run_goal again."
 
     private fun move(q: String): Route.Act? = when (val move = BuddyMoveIntent.parse(q)) {
         is BuddyMoveIntent.Move.ToPlace -> Route.Act(AgentAction.MoveCursor(move.place))

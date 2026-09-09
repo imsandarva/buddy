@@ -5,7 +5,7 @@ import com.sandarva.kotlinapps.accessibility.Direction
 import org.json.JSONObject
 
 /**
- * Everything Buddy's hands can do on a phone — what a finger does, plus the phone's own keys,
+ * Everything Buddy can do on a turn — a finger on the phone, the phone's own keys, a web lookup,
  * plus the two social moves (ask the person, tell the person). Targets are SCREEN ids, never pixels.
  */
 sealed class AgentAction {
@@ -29,17 +29,18 @@ sealed class AgentAction {
     data class MoveCursor(val place: String) : AgentAction() { override fun describe() = "move cursor to $place" }
     data class NudgeCursor(val dx: Float, val dy: Float) : AgentAction() { override fun describe() = "nudge cursor" }
     data class Ask(val question: String) : AgentAction() { override fun describe() = "ask \"${question.take(60)}\"" }
+    data class SearchWeb(val query: String) : AgentAction() { override fun describe() = "search web \"${query.take(60)}\"" }
     object Wait : AgentAction() { override fun describe() = "wait" }
     object None : AgentAction() { override fun describe() = "no action" }
 
     /** Rough cost of the step for the guard — a finger action changes the phone, a social one does not. */
-    val changesPhone: Boolean get() = this !is Point && this !is MoveCursor && this !is NudgeCursor && this !is Ask && this !is Wait && this !is None
+    val changesPhone: Boolean get() = this !is Point && this !is MoveCursor && this !is NudgeCursor && this !is Ask && this !is SearchWeb && this !is Wait && this !is None
 
     companion object {
         /** Verb names exactly as the model's schema spells them. */
         val TYPES = listOf(
             "tap", "long_press", "type", "scroll", "swipe", "drag", "back", "home", "recents", "notifications",
-            "quick_settings", "open_app", "wait", "point", "move_cursor", "ask", "none"
+            "quick_settings", "open_app", "wait", "point", "move_cursor", "ask", "search_web", "none"
         )
 
         /** Parses the model's `action` object; unknown shapes become [None] so the runner can hint the model. */
@@ -69,6 +70,7 @@ sealed class AgentAction {
                 "move_cursor" -> json.optString("place").trim().ifBlank { text }.ifBlank { null }?.let(::MoveCursor) ?: None
                 "nudge_cursor", "nudge" -> direction?.let { NudgeCursor(it.dx * NUDGE, it.dy * NUDGE) } ?: None
                 "ask" -> text.ifBlank { null }?.let(::Ask) ?: None
+                "search_web", "search" -> text.ifBlank { null }?.let(::SearchWeb) ?: None
                 else -> None
             }
         }

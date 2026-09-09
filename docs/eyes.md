@@ -35,6 +35,7 @@ The AI does not walk the accessibility tree. It calls this API. The overlay curs
 
 - `getWindows` is z-order, top first. The **front covering app window** is the scene; **every readable window above it** — the app's own dialogs, a permission prompt from another package, a popup menu — is part of it. Windows beneath are hidden and dropped.
 - **Buddy chrome** is skipped: accessibility overlays, the keyboard, our slim bars, and any Buddy window that hides its descendants (cursor, ask sheet). The **Buddy activity** is kept only when it is truly in front — if another covering app is in the window list (Home, Settings, Chrome), leftover Buddy windows are dropped so they cannot hide the real screen.
+- **Leftover covering apps** are dropped the same way: Settings after Home, Chrome after Recents, can stay in `getWindows` as full-screen covering while paused. TalkBack follows the active/focused window (`isActive` / `isFocused` / `rootInActiveWindow`); those leftovers are not the scene.
 - A **pulled-down notification / quick-settings shade** is what they see — we read that System UI window and skip the thin status/nav strips.
 - The keyboard window is not read, but its presence sets `keyboardShown`.
 - After a tap into another app the first tree is often hollow: uninterruptible prefetch, `refresh()` an empty root, retry until controls appear.

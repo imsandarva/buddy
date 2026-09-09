@@ -20,6 +20,7 @@ This replaces the old goal runner. Same eyes and hands underneath — a new mind
 observe  SceneDescriber.describe(snapshot)          — APP, KEYBOARD, one line per control with state and position
 decide   AgentDecider → structured JSON             — thought · progress (memory) · say · action · done
 guard    AgentGuard.review                          — limits, risky press → ask first
+search   WebSearch.lookup (only for search_web)     — grounded Google Search; result into RECENT STEPS
 act      AgentExecutor.perform(action, snapshot)    — eyes / hands / type / global keys / app launch
 settle   awaitSettledSnapshot()                     — wait for the accessibility event stream to go quiet
 reflect  SceneDiff.describe(before, after)          — “now in Settings”, “Wi‑Fi is now ON”, “nothing changed”
@@ -77,12 +78,14 @@ Lists marked scrollable may hold more below or above — scroll to see it.
 | `point` | Fly to show, don't press — for “where is”, “show me” |
 | `move_cursor` | Named place — only when they asked the buddy itself to move |
 | `ask` (question) | Pause, speak the question, listen; the reply arrives as THEY SAID |
+| `search_web` (query) | Grounded Google Search — not a finger; result comes back in RECENT STEPS (`docs/search.md`) |
 | `none` | Only together with `done` |
 
 ### Guard
 
 - **Stuck**: “nothing changed” once → a gentle note; twice → the stronger model + “do something different”; five → stop.
 - **Repeats**: same action three times → note; four → stop. Failures likewise.
+- **Search**: three lookups in one run → a note to use what you already found.
 - **Risky press**: tapping *Delete / Uninstall / Reset / Pay / Send / Sign out …* asks first — unless the goal already asked for exactly that (“log me out” → no extra question). A “no” ends the run untouched.
 - **Limits**: 30 steps, 4 minutes, 90 s for an answer.
 
@@ -93,7 +96,7 @@ Lists marked scrollable may hold more below or above — scroll to see it.
 | Fast | `gemini-3.5-flash-lite`, thinking `high` | Every step (for now) |
 | Strong | `gemini-3.5-flash-lite`, thinking `high` | Same — stall escalation is a no-op until we split tiers again |
 
-Structured output via `generationConfig.responseJsonSchema` (falls back to the OpenAPI `responseSchema` dialect on a 400). Same prompt, same form.
+Structured output via `generationConfig.responseJsonSchema` (falls back to the OpenAPI `responseSchema` dialect on a 400). Same prompt, same form. Web search is a **separate** `generateContent` call — JSON schema on the decision call would silently drop grounding. See `docs/search.md`.
 
 ### Asking the person
 
@@ -125,7 +128,8 @@ The runner does not talk to the person. Milestones go to the notification. The c
 | `brain/agent/AgentDecision.kt` | thought · progress · say · action · done |
 | `brain/agent/AgentAction.kt` | Sealed action space + JSON parse |
 | `brain/agent/AgentExecutor.kt` | Action → eyes / hands / type / keys / launcher → `Outcome` |
-| `brain/agent/AgentGuard.kt` | Stuck, repeats, risky press, limits, tier escalation |
+| `brain/agent/AgentGuard.kt` | Stuck, repeats, risky press, limits, search cap, tier escalation |
+| `brain/agent/WebSearch.kt` | Grounded Google Search for one `search_web` turn |
 | `brain/agent/AgentMemory.kt` | Progress note + last steps + answers |
 | `brain/agent/SceneDescriber.kt` | Snapshot → SCREEN text |
 | `brain/agent/SceneDiff.kt` | Before/after change summary |
@@ -142,8 +146,9 @@ The runner does not talk to the person. Milestones go to the notification. The c
 3. Type: “Turn off Bluetooth.” — it reads the switch state first and only taps if it is on.
 4. Say: “Delete the last photo.” — it navigates there, then asks before the delete.
 5. Say: “Show me where I change the font size.” — it goes there and points instead of pressing.
-6. Pull down notifications during a run: **I’m on it** shows what Buddy is doing right now; **End** stops it.
+6. Type: “What’s the weather today?” — it searches the web and speaks the answer, without walking the phone.
+7. Pull down notifications during a run: **I’m on it** shows what Buddy is doing right now; **End** stops it.
 
-Logcat filter `Buddy===TRACE`: `Agent.decide`, `Agent.decision`, `Agent.act`, `Eyes.snapshot`, `Hands.stroke`, `Global.press`.
+Logcat filter `Buddy===TRACE`: `Agent.decide`, `Agent.decision`, `Agent.act`, `Agent.search`, `Eyes.snapshot`, `Hands.stroke`, `Global.press`.
 
-See `docs/brain.md`, `docs/eyes.md`, `docs/hands.md`, `docs/live.md`.
+See `docs/brain.md`, `docs/eyes.md`, `docs/hands.md`, `docs/live.md`, `docs/search.md`.

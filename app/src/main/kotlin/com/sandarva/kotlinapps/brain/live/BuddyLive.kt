@@ -9,11 +9,13 @@ import com.sandarva.kotlinapps.accessibility.sceneKey
 import com.sandarva.kotlinapps.brain.BrainPhase
 import com.sandarva.kotlinapps.brain.BrainSession
 import com.sandarva.kotlinapps.brain.Reachability
+import com.sandarva.kotlinapps.brain.GeminiClient
 import com.sandarva.kotlinapps.brain.agent.AgentAction
 import com.sandarva.kotlinapps.brain.agent.AgentExecutor
 import com.sandarva.kotlinapps.brain.agent.AgentRunner
 import com.sandarva.kotlinapps.brain.agent.AppLauncher
 import com.sandarva.kotlinapps.brain.agent.SceneDescriber
+import com.sandarva.kotlinapps.brain.agent.WebSearch
 import com.sandarva.kotlinapps.debug.BuddyLog
 import com.sandarva.kotlinapps.overlay.OverlayNotifier
 import kotlinx.coroutines.CoroutineScope
@@ -48,6 +50,7 @@ object BuddyLive {
         private var audio: LiveAudio? = null
         private val speaker = LiveSpeaker()
         private val executor = AgentExecutor(AppLauncher(app))
+        private val search = WebSearch(GeminiClient(BuildConfig.GEMINI_API_KEY))
         @Volatile var active = false
             private set
         private var gen = 0
@@ -100,7 +103,7 @@ object BuddyLive {
                 override fun onClosed(reason: String) {
                     if (id != gen) return
                     BuddyLog.d("Live.closed", reason)
-                    if (active) fail("The live talk ended. Double-tap me to try again.")
+                    if (active) fail(LiveFail.speak(reason))
                 }
             })
             socket = next
@@ -158,7 +161,7 @@ object BuddyLive {
             if (!active || mic != null) return
             val next = LiveMic { pcm ->
                 if (socket?.isReady != true) return@LiveMic
-                listen.onMic(pcm)
+                if (listen.onMic(pcm)) pushCatalog(force = true)
                 socket?.send(LiveMessages.audio(pcm))
             }
             mic = next
@@ -179,6 +182,7 @@ object BuddyLive {
                     is LiveIntent.RunGoal -> dispatchGoal(call, intent.goal)
                     is LiveIntent.AnswerJob -> replyJob(call, intent.text)
                     is LiveIntent.CancelJob -> stopJob(call)
+                    is LiveIntent.SearchWeb -> lookup(call, intent.query)
                     is LiveIntent.Unknown -> socket?.send(LiveMessages.toolResponse(call.id, call.name, "not done — unknown tool or missing argument", describe(BuddyScreenEyes.snapshot())))
                     is LiveIntent.Act -> {
                         if (AgentRunner.isActive()) {
@@ -244,7 +248,14 @@ object BuddyLive {
 
         private fun afterJob() {
             lastScene = ""
-            if (active) pushCatalog()
+            if (active) pushCatalog(force = true)
+        }
+
+        /** Same grounded lookup as the runner — not Live's built-in search, which can kill the socket. */
+        private suspend fun lookup(call: LiveFunctionCall, query: String) {
+            val outcome = search.lookup(query)
+            val result = if (outcome.ok) outcome.detail else "search failed — ${outcome.detail}. Answer from what you know, or say you could not look it up."
+            socket?.send(LiveMessages.toolResponse(call.id, call.name, result, describe(BuddyScreenEyes.snapshot())))
         }
 
         private suspend fun perform(call: LiveFunctionCall, action: AgentAction) {
@@ -257,17 +268,17 @@ object BuddyLive {
         private suspend fun followScreen(id: Int) {
             BuddyScreenEyes.scenes.collect { snap ->
                 if (id != gen || !active || socket?.isReady != true || listen.greeting) return@collect
-                if (AgentRunner.isActive()) return@collect
                 pushCatalog(snap)
             }
         }
 
-        private fun pushCatalog(snap: ScreenSnapshot = BuddyScreenEyes.snapshot()) {
+        /** Latest SCREEN only — force on each utterance so a leftover Wi‑Fi dump cannot linger. */
+        private fun pushCatalog(snap: ScreenSnapshot = BuddyScreenEyes.snapshot(), force: Boolean = false) {
             val key = snap.sceneKey()
-            if (key == lastScene) return
+            if (!force && key == lastScene) return
             lastScene = key
             val catalog = describe(snap)
-            BuddyLog.d("Live.catalog", "pkg=${snap.packageName} nodes=${snap.nodes.size} chars=${catalog.length}")
+            BuddyLog.d("Live.catalog", "pkg=${snap.packageName} nodes=${snap.nodes.size} chars=${catalog.length} force=$force")
             socket?.send(LiveMessages.catalog(catalog))
         }
 

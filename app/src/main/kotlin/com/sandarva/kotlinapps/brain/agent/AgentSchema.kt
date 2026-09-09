@@ -20,7 +20,7 @@ object AgentSchema {
                         "type" to enumStr("The one thing to do this turn.", AgentAction.TYPES),
                         "target" to str("Exact id from SCREEN for tap, long_press, type, scroll, point, and the start of drag. Copy it character for character."),
                         "to" to str("Exact id from SCREEN — where a drag ends."),
-                        "text" to str("Words to type; the app name for open_app; the question for ask."),
+                        "text" to str("Words to type; the app name for open_app; the question for ask; the search query for search_web."),
                         "direction" to enumStr("For scroll: where more content is (down = see what is below). For swipe: where the finger moves.", listOf("up", "down", "left", "right")),
                         "submit" to bool("For type: true to press Search, Send, or Enter after typing."),
                         "place" to enumStr("For move_cursor only.", CursorLanding.PLACES)

@@ -42,7 +42,7 @@ class AgentExecutor(private val launcher: AppLauncher) {
             is AgentAction.MoveCursor -> moveCursor(action.place)
             is AgentAction.NudgeCursor -> nudgeCursor(action.dx, action.dy)
             AgentAction.Wait -> { delay(WAIT_MS); Outcome.ok("waited a moment") }
-            is AgentAction.Ask, AgentAction.None -> Outcome.ok("")
+            is AgentAction.Ask, is AgentAction.SearchWeb, AgentAction.None -> Outcome.ok("")
         }
         BuddyLog.d("Agent.act", "${action.describe()} → ok=${outcome.ok} ${outcome.detail}")
         return outcome

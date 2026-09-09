@@ -7,9 +7,10 @@ import com.sandarva.kotlinapps.overlay.CursorLanding
 import org.json.JSONArray
 import org.json.JSONObject
 
-/** What a Live tool call asks for: one immediate hand move, a multi-step job, a job answer, or something we do not know. */
+/** What a Live tool call asks for: one immediate hand move, a web lookup, a multi-step job, a job answer, or something we do not know. */
 sealed class LiveIntent {
     data class Act(val action: AgentAction) : LiveIntent()
+    data class SearchWeb(val query: String) : LiveIntent()
     data class RunGoal(val goal: String) : LiveIntent()
     data class AnswerJob(val text: String) : LiveIntent()
     object CancelJob : LiveIntent()
@@ -26,6 +27,7 @@ object LiveTools {
         .put(fn("run_goal", RUN_GOAL_HELP, listOf(Arg("goal", "The phone job they asked you to finish, in their words.")), listOf("goal")))
         .put(fn("answer_job", "Pass their answer to the job that asked a question. Only after a JOB ASK. Put their words in answer.", listOf(Arg("answer", "What they said, in their words.")), listOf("answer")))
         .put(fn("cancel_job", "Stop the job that is on the screen. Only when they asked to stop, cancel, or never mind that job.", emptyList()))
+        .put(fn("search_web", SEARCH_HELP, listOf(Arg("query", "What to look up, in a short search.")), listOf("query")))
         .put(fn("point_to", "Fly the cursor to a listed control to show it, without pressing. Use when they asked where or show me. Copy the id exactly from SCREEN.", listOf(Arg("element_id", ID_HELP)), listOf("element_id")))
         .put(fn("fly_to", "Move the buddy itself to a named place — a corner, side, or middle. Not for “up” or “down”; that is nudge.", listOf(Arg("place", "Where the buddy should go.", CursorLanding.PLACES)), listOf("place")))
         .put(fn("nudge", "Slide the buddy a bit up, down, left, or right. Only when they asked the buddy itself to move that way.", listOf(Arg("direction", "Which way to slide.", DIRS)), listOf("direction")))
@@ -46,6 +48,7 @@ object LiveTools {
             "run_goal" -> a.optString("goal").ifBlank { null }?.let { LiveIntent.RunGoal(it) } ?: LiveIntent.Unknown(call.name)
             "answer_job" -> a.optString("answer").ifBlank { null }?.let { LiveIntent.AnswerJob(it) } ?: LiveIntent.Unknown(call.name)
             "cancel_job" -> LiveIntent.CancelJob
+            "search_web" -> a.optString("query").ifBlank { a.optString("text") }.ifBlank { null }?.let { LiveIntent.SearchWeb(it) } ?: LiveIntent.Unknown(call.name)
             "point_to" -> id?.let { LiveIntent.Act(AgentAction.Point(it)) } ?: LiveIntent.Unknown(call.name)
             "fly_to" -> fly(a.optString("place"))
             "nudge" -> Direction.parse(a.optString("direction"))?.let { LiveIntent.Act(AgentAction.NudgeCursor(it.dx * AgentAction.NUDGE, it.dy * AgentAction.NUDGE)) } ?: LiveIntent.Unknown(call.name)
@@ -89,6 +92,7 @@ object LiveTools {
     private data class Arg(val name: String, val help: String, val enumValues: List<String>? = null)
 
     private const val ID_HELP = "Exact id from the SCREEN line whose label they meant, copied character for character."
-    private const val RUN_GOAL_HELP = "Only for a multi-step phone job they asked you to finish — find a setting, log out, set up Wi-Fi, free storage. Invocation: they want the phone changed or something found that is not on this SCREEN. This talk stays open. Do not call for hi, how are you, what do you see, what’s on the screen, moving the buddy, or any one-shot. Put their job in goal. Say a short on-it first, then keep talking."
+    private const val SEARCH_HELP = "Look something up on the web. Invocation: a current fact, weather, a score, news, or how this phone maker names a setting — anything SCREEN does not already answer. Put the search in query. Speak the answer. Do not call run_goal for this. Fine while a job has the screen."
+    private const val RUN_GOAL_HELP = "Only for a multi-step phone job they asked you to finish — find a setting, log out, set up Wi-Fi, free storage. Invocation: they want the phone changed or something found on the phone that is not on this SCREEN. This talk stays open. Do not call for hi, how are you, what do you see, what’s on the screen, moving the buddy, a one-shot, or a fact — that is search_web. Put their job in goal. Say a short on-it first, then keep talking."
     private val DIRS = listOf("up", "down", "left", "right")
 }

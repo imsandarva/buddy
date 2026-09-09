@@ -37,7 +37,7 @@ object LiveMessages {
 
     /** realtimeInput text is the Live path for mid-session context — clientContent holds the turn open. */
     fun catalog(text: String): String = JSONObject()
-        .put("realtimeInput", JSONObject().put("text", "CONTEXT only — not a request. Do not tap.\nSCREEN:\n$text"))
+        .put("realtimeInput", JSONObject().put("text", "SCREEN NOW — this is the only screen. Ignore every earlier SCREEN. Not a request. Do not tap.\nSCREEN:\n$text"))
         .toString()
 
     fun toolResponse(id: String, name: String, result: String, screen: String): String = JSONObject()

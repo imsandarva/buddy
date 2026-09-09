@@ -25,16 +25,16 @@ The ask sheet is closed before eyes or hands run (a voice tap used to land on th
 
 ## Voice
 
-Live talk is Gemini Live (`gemini-3.1-flash-live-preview`): raw mic PCM in, voice PCM out, no speech-to-text, no captions. SCREEN goes to Live as `realtimeInput` text whenever their screen changes (not while a job has the hands). Typed asks use the sheet and Android TTS. Mid-run questions on Live stay in the talk. See `docs/live.md` and `docs/live-jobs.md`.
+Live talk is Gemini Live (`gemini-3.1-flash-live-preview`): raw mic PCM in, voice PCM out, no speech-to-text, no captions. SCREEN goes to Live as `realtimeInput` text whenever their screen changes (including while a job is walking the phone) and again when they start speaking. Typed asks use the sheet and Android TTS. Mid-run questions on Live stay in the talk. See `docs/live.md` and `docs/live-jobs.md`.
 
 ## How we instruct the model
 
 Two prompts, one action vocabulary:
 
-- `brain/agent/AgentPrompt.kt` — the runner. Role, objective, what it receives, **how this phone works** (Settings search, maker names, scrolling, switches, dialogs), actions, how to decide, asking, showing vs doing, finishing, talking, rules. The step message carries GOAL, PROGRESS, RECENT STEPS, THEY SAID, NOTE, SCREEN NOW.
-- `brain/live/LivePrompt.kt` — the talk. Greet, wait, talk first, one quick tool when asked, `run_goal` on this same session.
+- `brain/agent/AgentPrompt.kt` — the runner. Role, objective, what it receives, **how this phone works** (Settings search, maker names, scrolling, switches, dialogs), actions including `search_web`, how to decide, asking, showing vs doing, finishing, talking, rules. The step message carries GOAL, PROGRESS, RECENT STEPS, THEY SAID, NOTE, SCREEN NOW.
+- `brain/live/LivePrompt.kt` — the talk. Greet, wait, talk first, search the web when SCREEN is not enough, one quick tool when asked, `run_goal` on this same session.
 
-Both repeat the matching rule: the name they say is the quoted label; the value you pass is that line's id, copied character for character.
+Both repeat the matching rule: the name they say is the quoted label; the value you pass is that line's id, copied character for character. Both are told to search the web when a fact or path is missing. See `docs/search.md`.
 
 The API key is `gemini.api.key` in `local.properties` (gitignored) → `BuildConfig.GEMINI_API_KEY`. Never commit it.
 
@@ -48,6 +48,7 @@ Models: runner `gemini-3.5-flash-lite` with `thinkingLevel: high` (for now, both
 | `brain/agent/` | The runner and its parts — see `docs/agent.md` |
 | `brain/live/` | Gemini Live socket, audio, listen gate, talk/job router, same-session jobs — see `docs/live.md` |
 | `brain/GeminiClient.kt` | `generateContent` HTTP |
+| `brain/agent/WebSearch.kt` | Grounded Google Search for the runner |
 | `brain/BuddyMoveIntent.kt` | On-device “move up” / “top left” |
 | `brain/BuddyHandIntent.kt` | On-device “tap / hold / swipe left” at the tip |
 | `brain/BuddyTypeIntent.kt` | On-device “type hello” / “search for pizza” |
@@ -62,9 +63,9 @@ Models: runner `gemini-3.5-flash-lite` with `thinkingLevel: high` (for now, both
 ## Try it
 
 1. Start the buddy, turn on **Buddy Assistant**, allow the microphone once via **Ask buddy**.
-2. Double-tap the cursor from any screen. Say “how are you?” or “what are you seeing?” — Live just talks. Say “move up” — the buddy slides, still in Live. Say “open Calculator” — Live taps. Say “how much storage do I have left?” — Live stays with you while the cursor works Settings; then Live tells you the number.
-3. Type the same things in the sheet — same runner, spoken result.
+2. Double-tap the cursor from any screen. Say “how are you?” or “what are you seeing?” — Live just talks. Say “what’s the weather?” — Live searches and answers. Say “move up” — the buddy slides, still in Live. Say “open Calculator” — Live taps. Say “how much storage do I have left?” — Live stays with you while the cursor works Settings; then Live tells you the number.
+3. Type the same things in the sheet — same runner, spoken result. A typed fact still uses `search_web`.
 4. “Move up”, “tap”, “type hello” work with no internet.
 5. Say “delete this photo” — Buddy asks before the delete. Say “show me where the font size is” — it points instead of pressing.
 
-See `docs/agent.md`, `docs/eyes.md`, `docs/hands.md`, `docs/type.md`, `docs/live.md`, and `docs/live-jobs.md`.
+See `docs/agent.md`, `docs/eyes.md`, `docs/hands.md`, `docs/type.md`, `docs/live.md`, `docs/search.md`, and `docs/live-jobs.md`.

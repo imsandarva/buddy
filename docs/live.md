@@ -8,7 +8,7 @@ Live is a **brain adapter**. Eyes and hands do not change.
 
 ## What Live is
 
-A stateful WebSocket (`BidiGenerateContent`) to the Gemini Developer API. **Mic PCM goes straight to Gemini; Gemini PCM comes straight back.** There is no Android speech-to-text step, no chat REST hop, and no captions. Talk is the default. For one quick thing they asked for on the screen it calls a tool — `tap`, `hold`, `scroll`, `swipe`, `drag`, `type`, `back`, `home`, `open_app`, `point_to`, `fly_to`, `nudge` — which `LiveTools` maps onto the shared `AgentAction` space and `AgentExecutor` performs. A real multi-step job is `run_goal` after `LiveRouter` agrees — Live **acks and stays on the same socket**, the runner works the screen in silence, and Live tells them when `JOB DONE` arrives. Greetings, “what do you see”, and moving the buddy stay in the talk. There is no `say` tool — the model’s own voice is the speech. See `docs/live-jobs.md`.
+A stateful WebSocket (`BidiGenerateContent`) to the Gemini Developer API. **Mic PCM goes straight to Gemini; Gemini PCM comes straight back.** There is no Android speech-to-text step, no chat REST hop, and no captions. Talk is the default. For a fact that is not on SCREEN, Live calls `search_web` and we look it up over REST (`docs/search.md`) — we do **not** attach Live’s built-in `googleSearch`, which has closed this socket on setup (quota) and mid-turn (1007). For one quick thing they asked for on the screen it calls a tool — `tap`, `hold`, `scroll`, `swipe`, `drag`, `type`, `back`, `home`, `open_app`, `point_to`, `fly_to`, `nudge` — which `LiveTools` maps onto the shared `AgentAction` space and `AgentExecutor` performs. A real multi-step job is `run_goal` after `LiveRouter` agrees — Live **acks and stays on the same socket**, the runner works the screen in silence, and Live tells them when `JOB DONE` arrives. Greetings, “what do you see”, and moving the buddy stay in the talk. There is no `say` tool — the model’s own voice is the speech. See `docs/live-jobs.md`.
 
 | | Agent runner (typed) | Live |
 |--|-----------|------|
@@ -17,7 +17,7 @@ A stateful WebSocket (`BidiGenerateContent`) to the Gemini Developer API. **Mic 
 | Voice in | Android `SpeechRecognizer` | 16 kHz PCM mic stream (no STT) |
 | Voice out | Android TTS | 24 kHz PCM from Gemini (no captions) |
 | Screen | SCREEN block in each step message | SCREEN block as `realtimeInput` text after mic is open |
-| Tools | Full action space, many steps; silent when Live is talking | One-shot tools; `run_goal` on the same session (`docs/live-jobs.md`) |
+| Tools | Full action space including `search_web`; silent when Live is talking | One-shot tools; `search_web` via [WebSearch]; `run_goal` on the same session (`docs/live-jobs.md`) |
 
 Not Computer Use. Not video Live. Not ElevenLabs. Not ChatGPT.
 
@@ -35,6 +35,8 @@ Two things used to make the model describe the Buddy app while you were on the h
 
 1. **A frozen first look.** SCREEN was sent once at `setupComplete`. If talk started in Buddy, then you pressed Home, the model still had the Buddy buttons. Industry voice agents (TalkBack-style window follow, Gemini Live `realtimeInput` text) push a new scene when the foreground app changes.
 2. **Our chrome in the tree.** Eyes skip overlay chrome (cursor, ask sheet) and still read the **Buddy activity** when it is in front. Skipping the whole package made opening Buddy look like the previous app drawer. Scene follow also listens to our package’s window events, so the SCREEN list updates when they come home to Buddy.
+
+A third freeze showed up after a **job**: Live stopped sending SCREEN while the runner had the hands, so after “stop” it still described Wi‑Fi even though they were on Home or in a browser. SCREEN now follows every window change **during** a job too (hands stay blocked). Each time they start speaking, we push **SCREEN NOW** from a live snapshot so an old Wi‑Fi dump cannot linger. Eyes also drop leftover covering windows (paused Settings after Home) the same way they already drop leftover Buddy. See `docs/eyes.md`.
 
 After you install this, toggle **Buddy Assistant** off and on once so the new window events are registered.
 
@@ -57,7 +59,7 @@ Long pauses after “tap Wi‑Fi” can still be a tree walk or a tool, not the 
 
 1. Start the buddy, turn on **Buddy Assistant**, allow the microphone once.
 2. Double-tap the cursor (or **Ask buddy**). Buddy says a short hello and waits. It must not tap or move until you ask.
-3. Talk. You will not see your words or Buddy’s words as text — you only hear each other. Say hello, ask what it sees, or ask it to move — it stays with you. Ask it to open Calculator, tap, hold, scroll, drag, or type. Ask for a real job — “how much storage do I have left?” — Live stays with you while the runner works the screen, then Live tells you when it’s done.
+3. Talk. You will not see your words or Buddy’s words as text — you only hear each other. Say hello, ask what it sees, or ask it to move — it stays with you. Ask a fact that is not on the screen — weather, a score — it looks it up and tells you. Ask it to open Calculator, tap, hold, scroll, drag, or type. Ask for a real job — “how much storage do I have left?” — Live stays with you while the runner works the screen, then Live tells you when it’s done.
 
 ## Not speech-to-text, then chat
 
@@ -71,6 +73,15 @@ The full ask sheet covers the screen, so Live never uses it. That was the bug wh
 Gemini Live answers on **binary WebSocket frames that still hold JSON** (`{"setupComplete":{}}`, audio, tool calls). OkHttp only delivers those to `onMessage(WebSocket, ByteString)`. A text-only listener never sees `setupComplete`, the 12s safety timer fires (`Live.stop user=false`), and the type sheet opens. Industry clients (Google’s JS GenAI SDK, Elixir `gemini_ex`) decode both text and binary as UTF-8 JSON. `LiveSocket` now does the same, and a server `error` object fails the session immediately instead of hanging.
 
 Look for `Live.socket setupComplete` then `Live.mic start` in logcat (`Buddy===TRACE`). If live cannot start, the type sheet still opens so they can ask another way.
+
+## Why live died with “quota” right after setup
+
+Google closed the socket with **1011** `You exceeded your current quota` before `setupComplete`. Two real causes, same symptom:
+
+1. **Built-in `googleSearch` on Live setup.** That tool has a separate quota bucket and has also killed sessions with 1007 when invoked. We no longer declare it. Live calls our `search_web` function; [WebSearch] looks it up over REST. See `docs/search.md`.
+2. **The Live audio model itself.** `gemini-3.1-flash-live-preview` can return the same 1011 on a free-tier key even with no extra tools. Google’s forum says that model wants a billed project for audio. Typed ask still works (`generateContent` + flash-lite).
+
+`LiveSocket` now keeps the close reason. `LiveFail` turns quota/billing into a warm “type instead” note on the sheet instead of a generic “talk ended.”
 
 ## Why speech scratched and sped up
 
@@ -103,8 +114,9 @@ After a tool, the tool response carries the new SCREEN taken after the event str
 | `brain/live/LiveRouter.kt` | Talk / Act / Goal — does not trust `run_goal` blindly |
 | `brain/live/LiveDesk.kt` | JOB ASK / JOB DONE back into this talk |
 | `brain/live/LiveSpeech.kt` | Hangover energy on mic PCM (AEC-safe) |
-| `brain/live/LiveTools.kt` | Function declarations; call → `AgentAction` / `RunGoal` / `AnswerJob` |
-| `brain/live/LivePrompt.kt` | The talk contract — talk first, same session for jobs |
+| `brain/live/LiveTools.kt` | Function declarations; call → `AgentAction` / `SearchWeb` / `RunGoal` / `AnswerJob` |
+| `brain/live/LivePrompt.kt` | The talk contract — talk first, `search_web` when SCREEN is not enough, same session for jobs |
+| `brain/live/LiveFail.kt` | Socket close reason → what they see on the type sheet |
 | `accessibility/ScreenSceneTracker.kt` | Debounced window follow while Live is on |
 | `accessibility/ScreenReady.kt` | Settled / readable snapshot after a tool |
 | `brain/live/LiveSocket.kt` | OkHttp WebSocket (text + binary JSON, decode off the reader) |
@@ -120,4 +132,4 @@ After a tool, the tool response carries the new SCREEN taken after the event str
 
 API key is still `gemini.api.key` in `local.properties`. The socket uses `?key=` on the Gemini Live URL.
 
-See `docs/live-routing.md`, `docs/live-jobs.md`, `docs/agent.md`, `docs/brain.md`, `docs/hands.md`, and `docs/type.md`.
+See `docs/live-routing.md`, `docs/live-jobs.md`, `docs/agent.md`, `docs/brain.md`, `docs/search.md`, `docs/hands.md`, and `docs/type.md`.

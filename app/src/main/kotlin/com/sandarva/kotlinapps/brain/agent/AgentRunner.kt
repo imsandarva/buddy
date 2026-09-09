@@ -49,7 +49,9 @@ object AgentRunner {
 
     class Session(private val app: Application) {
         private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-        private val decider = AgentDecider(GeminiClient(BuildConfig.GEMINI_API_KEY))
+        private val gemini = GeminiClient(BuildConfig.GEMINI_API_KEY)
+        private val decider = AgentDecider(gemini)
+        private val search = WebSearch(gemini)
         private val executor = AgentExecutor(AppLauncher(app))
         private var job: Job? = null
         private var wrap = 0
@@ -135,6 +137,13 @@ object AgentRunner {
                                 memory.recordAnswer(reply)
                                 scene = SceneDescriber.withoutEcho(awaitReadableSnapshot(), goal)
                                 hint = null
+                                continue
+                            }
+                            if (action is AgentAction.SearchWeb) {
+                                val outcome = search.lookup(action.query)
+                                memory.record(action, outcome, change = null)
+                                guard.observe(action, outcome, change = null)
+                                hint = if (outcome.ok) null else "Search did not help. Try a different query, or continue from SCREEN."
                                 continue
                             }
                             val outcome = executor.perform(action, scene)

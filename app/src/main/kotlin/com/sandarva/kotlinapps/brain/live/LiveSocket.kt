@@ -49,11 +49,12 @@ class LiveSocket(
             override fun onMessage(webSocket: WebSocket, bytes: ByteString) = postIn { handle(bytes.utf8()) }
             override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
                 BuddyLog.d("Live.socket", "closing code=$code reason=$reason")
+                fail(reason.ifBlank { "closed" })
                 webSocket.close(1000, null)
             }
             override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
                 BuddyLog.d("Live.socket", "closed code=$code reason=$reason")
-                fail("closed")
+                fail(reason.ifBlank { "closed" })
             }
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
                 BuddyLog.e("Live.socket", t.message ?: "fail", t)

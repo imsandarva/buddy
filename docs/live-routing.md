@@ -21,7 +21,7 @@ Google’s Live guidance matches this: put an **invocation condition** on each t
 
 ## What Buddy does
 
-The Live model already called `run_goal`. The router **vetoes** greetings and “what do you see”, and **fulfills** one-shots itself. Anything else is a Goal — we do not require a keyword list, because “open Pinterest and log me out” is a job even when it does not match `log out` as two words.
+The Live model already called `run_goal`. The router **vetoes** greetings and “what do you see”, and **fulfills** one-shots itself. Anything else is a Goal — we do not require a keyword list, because “open Pinterest and log me out” is a job even when it does not match `log out` as two words. A fact the web can answer should never have been `run_goal`; if it was, the tool response tells Live to search and speak instead (`docs/search.md`).
 
 ```
 they speak
@@ -37,6 +37,7 @@ they speak
 |----------|--------|
 | “hey how are you?” | Talk — answer with voice |
 | “what are you seeing on the screen?” | Talk — answer from SCREEN |
+| “what’s the weather?” | Talk — Live calls `search_web` (not a job) |
 | “move the buddy up” | Act — `nudge`, stay in Live |
 | “open Calculator” | Act — `open_app`, stay in Live |
 | “open Pinterest and log me out” | Goal — runner on this same talk |
@@ -49,9 +50,9 @@ Typed asks are unchanged: on-device verbs first, everything else is still a goal
 | File | Role |
 |------|------|
 | `brain/live/LiveRouter.kt` | Talk / Act / Goal — pattern-first, no network |
-| `brain/live/LivePrompt.kt` | Talk is the default; `run_goal` only for a multi-step job |
+| `brain/live/LivePrompt.kt` | Talk is the default; search the web for facts; `run_goal` only for a multi-step job |
 | `brain/live/LiveTools.kt` | Narrow `run_goal`; `nudge` for up / down / left / right |
 | `brain/live/BuddyLive.kt` | Runs the router; jobs stay on this socket |
 | `brain/BuddyMoveIntent.kt` | Shared “move up” / “top left” parse |
 
-See `docs/live.md`, `docs/live-jobs.md`, and `docs/brain.md`.
+See `docs/live.md`, `docs/live-jobs.md`, `docs/brain.md`, and `docs/search.md`.
