@@ -6,27 +6,24 @@ BuddyCursor is the on-screen pointer. After Start, it lives in a system overlay 
 
 | File | Role |
 |------|------|
-| `ui/cursor/CursorGeometry.kt` | Asset bounds, tip anchor — single source of truth |
-| `ui/cursor/CursorAsset.kt` | Loads `assets/buddycursor_icon.png` once |
-| `ui/cursor/BuddyCursor.kt` | Renders the PNG + summon ripples |
-| `ui/cursor/BuddyCursorHandle.kt` | Touch target, transforms pivot on the tip |
-| `ui/cursor/CursorGestures.kt` | Tap, summon, hold-lift, drag |
-| `ui/cursor/CursorMotion.kt` | Breathing idle, levitation, velocity tilt, summon ripples, landings |
-| `overlay/BuddyOverlayWindow.kt` | Maps tip pixels ↔ window origin using `CursorGeometry` |
+| `ui/cursor/Cursor.kt` | Bounds, tip hotspot, and the desktop arrow draw |
+| `ui/cursor/BuddyCursorHandle.kt` | Touch target — tap, double-tap, hold, drag |
+| `ui/cursor/CursorGestures.kt` | Gesture recognizer |
+| `overlay/BuddyOverlayWindow.kt` | Maps tip pixels ↔ window origin using `Cursor` |
 | `overlay/BuddyCursorController.kt` | Flight API — programmatic move |
 | `overlay/CursorLanding.kt` | Named spots for `fly_to` |
 
 ## Geometry
 
-The pointer is `assets/buddycursor_icon.png` (500×500, tip at pixel 155,50). `CursorGeometry` maps that tip to overlay coordinates so window placement and transforms pivot stay exact. Touch target = 56 dp icon + 8 dp pad on each side.
+The pointer is a plain desktop mouse arrow — white fill, black outline, drawn on Canvas. The tip sits at the top-left of the 24 dp glyph; `Cursor.tipOffsetPx` maps that tip to overlay coordinates so window placement stays exact. Touch target = 24 dp glyph + 16 dp pad on each side.
 
 ## Interaction
 
-1. Tap **Start your buddy** → grant appear-on-top if asked → cursor eases in with a gentle entrance.
-2. **Single tap** — a soft bloom pulse; the cursor acknowledges without starting talk.
-3. **Double-tap** — summon ripples outward, then live talk starts (or the type sheet if the mic is off). See `docs/live.md`.
-4. **Press and hold** (~110 ms) — the cursor lifts, then follows your finger.
-5. **Drag** — the pointer drifts with a slight velocity tilt; release lands with a soft spring.
+1. Tap **Start your buddy** → grant appear-on-top if asked → cursor appears.
+2. **Single tap** — a light haptic; the cursor acknowledges without starting talk.
+3. **Double-tap** — live talk starts (or the type sheet if the mic is off). See `docs/live.md`.
+4. **Press and hold** (~110 ms) — then the cursor follows your finger.
+5. **Drag** — the pointer tracks the finger; release leaves it there.
 6. Tap **Watch it move** → the cursor flies a short path (same API AI will call later).
 7. Tap **Ask buddy** → same as double-tap.
 8. Tap **Stop buddy** (or the notification action) → the overlay is removed.

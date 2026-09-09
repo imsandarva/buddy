@@ -13,7 +13,7 @@ import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.sandarva.kotlinapps.R
 import com.sandarva.kotlinapps.debug.BuddyLog
 import com.sandarva.kotlinapps.ui.cursor.BuddyCursorHandle
-import com.sandarva.kotlinapps.ui.cursor.CursorGeometry
+import com.sandarva.kotlinapps.ui.cursor.Cursor
 import com.sandarva.kotlinapps.ui.theme.BuddyTheme
 
 /** Small WRAP_CONTENT window. Drag or animateTo moves the same LayoutParams. */
@@ -174,7 +174,7 @@ class BuddyOverlayWindow(
         applyPixels(now.first + dx, now.second + dy)
     }
 
-    /** [x],[y] are tip pixels on screen; window origin is offset by [CursorGeometry]. */
+    /** [x],[y] are tip pixels on screen; window origin is offset by [Cursor]. */
     private fun applyPixels(tipX: Float, tipY: Float) {
         val (ox, oy) = tipOffsetPx()
         applyWindowPixels(tipX - ox, tipY - oy)
@@ -189,15 +189,15 @@ class BuddyOverlayWindow(
         val layout = params ?: return
         val screen = screenSize()
         val density = context.resources.displayMetrics.density
-        val w = host?.width?.takeIf { it > 0 } ?: (CursorGeometry.touchWidth.value * density).toInt()
-        val h = host?.height?.takeIf { it > 0 } ?: (CursorGeometry.touchHeight.value * density).toInt()
+        val w = host?.width?.takeIf { it > 0 } ?: (Cursor.touchWidth.value * density).toInt()
+        val h = host?.height?.takeIf { it > 0 } ?: (Cursor.touchHeight.value * density).toInt()
         layout.x = x.toInt().coerceIn(0, (screen.first - w).coerceAtLeast(0))
         layout.y = y.toInt().coerceIn(0, (screen.second - h).coerceAtLeast(0))
         host?.let { windowManager.updateViewLayout(it, layout) }
     }
 
     private fun tipOffsetPx(): Pair<Float, Float> =
-        CursorGeometry.tipOffsetPx(context.resources.displayMetrics.density)
+        Cursor.tipOffsetPx(context.resources.displayMetrics.density)
 
     private fun currentTipXY(): Pair<Float, Float> {
         val layout = params ?: return 0f to 0f

@@ -28,7 +28,7 @@ See `docs/overlay.md`, `docs/cursor.md`, `docs/eyes.md`, `docs/hands.md`, `docs/
 
 ## Design tokens
 
-Light only. Paper field (`#F7F6FB`), snow surfaces (`#FFFFFF`), ink (`#1C1730`), iris violet (`#635BFF`) for UI accents. The on-screen pointer uses `assets/buddycursor_icon.png`. No honey, no dusk, no dark theme.
+Light only. Paper field (`#F7F6FB`), snow surfaces (`#FFFFFF`), ink (`#1C1730`), iris violet (`#635BFF`) for UI accents. The on-screen pointer is a plain desktop mouse arrow (white fill, black outline). No honey, no dusk, no dark theme.
 
 - Eyebrow: wide-tracked sans, violet
 - Display: light serif, stacked two-line headlines

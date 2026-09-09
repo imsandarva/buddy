@@ -33,7 +33,7 @@ Android will not let a normal app keep a window after a force-stop. Minimize / l
 | `overlay/OverlayNotification.kt` | Ongoing notification — **Stop buddy**, live talk **End** / **Type instead**, agent run **I’m on it** with the current step and **End** (`buddy_live` channel) |
 | `overlay/OverlayNotifier.kt` | Pushes notification sync on live / run start and stop; the run's progress line updates in place |
 | `overlay/OverlayComposeOwner.kt` | Lifecycle for Compose without an Activity |
-| `ui/cursor/BuddyCursorHandle.kt` | Grab, jiggle, drag deltas |
+| `ui/cursor/BuddyCursorHandle.kt` | Grab, drag deltas |
 
 Touches outside the cursor pass through (`FLAG_NOT_FOCUSABLE` + `FLAG_NOT_TOUCH_MODAL` + `WRAP_CONTENT`). Double-tap the cursor to talk live — controls live in the notification shade; type-to-ask is a separate overlay. During a stroke, `OverlayChrome` makes every Buddy window pass through so the finger hits the app. Cursor and ask sheet hide from accessibility (`hideFromBuddyEyes`) so they are never “what is on screen.” The Buddy **activity** is the screen when they open this app. See `docs/live.md` and `docs/ask.md`.
 
@@ -46,4 +46,4 @@ Touches outside the cursor pass through (`FLAG_NOT_FOCUSABLE` + `FLAG_NOT_TOUCH_
 5. Tap **Let me see your screen**, then **Ask buddy** — or double-tap the cursor from any app.
 6. Tap **Stop buddy** in the app or in the notification to remove it.
 
-Taps, holds, scrolls, and drags go through `BuddyHands` — see `docs/hands.md`. Typing goes through `BuddyType` — see `docs/type.md`. While the agent decides its next step the cursor breathes a soft halo (`OverlaySession.thinking` → `CursorPhase.Thinking`); while it presses, the cursor lifts.
+Taps, holds, scrolls, and drags go through `BuddyHands` — see `docs/hands.md`. Typing goes through `BuddyType` — see `docs/type.md`.

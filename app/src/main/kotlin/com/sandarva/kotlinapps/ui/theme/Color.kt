@@ -17,12 +17,5 @@ object BuddyColors {
     val Glow = Color(0x3D635BFF)
     val GlowSoft = Color(0x18635BFF)
     val GlowLilac = Color(0x248B83F4)
-    val CursorBlue = Color(0xFF4A9EFF)      // vibrant medium-blue matching reference icon
-    val CursorOutline = Color(0xFF1A1A1A)   // near-black dark charcoal outline
-    val CursorBlueDeep = Color(0xFF2B72E8)
-    val CursorBlueLight = Color(0xFF7AB8FF)
-    val CursorGlow = Color(0x554A9EFF)
-    val CursorGlowBright = Color(0x884A9EFF)
-    val CursorRim = Color(0xE8FFFFFF)
     val Scrim = Color(0x3D1C1730)
 }
