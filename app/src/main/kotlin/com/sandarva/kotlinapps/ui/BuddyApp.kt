@@ -4,12 +4,17 @@ import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
@@ -24,10 +29,17 @@ import com.sandarva.kotlinapps.debug.BuddyLog
 import com.sandarva.kotlinapps.overlay.BuddyOverlayController
 import com.sandarva.kotlinapps.session.BuddySessionViewModel
 import com.sandarva.kotlinapps.ui.home.HomeScreen
+import com.sandarva.kotlinapps.ui.onboarding.OnboardingRouter
+import com.sandarva.kotlinapps.ui.settings.SettingsScreen
 import com.sandarva.kotlinapps.ui.theme.BuddyColors
+import com.sandarva.kotlinapps.ui.theme.BuddyMotion
 import com.sandarva.kotlinapps.ui.theme.BuddyTheme
 
-/** App root — wires theme, session, and home. The cursor itself lives in the overlay service. */
+/**
+ * App root — three destinations only: the one-time onboarding funnel, home, and settings. A
+ * thin composition layer: it wires state and callbacks, and owns none of the logic itself. The
+ * cursor lives in the overlay service, not here. See `docs/onboarding.md` and `docs/ui.md`.
+ */
 @Composable
 fun BuddyApp(session: BuddySessionViewModel = viewModel()) {
     val isRunning by session.isRunning.collectAsStateWithLifecycle()
@@ -35,8 +47,14 @@ fun BuddyApp(session: BuddySessionViewModel = viewModel()) {
     val canSeeScreen by session.canSeeScreen.collectAsStateWithLifecycle()
     val awaitingAccess by session.awaitingAccess.collectAsStateWithLifecycle()
     val brainPhase by session.brainPhase.collectAsStateWithLifecycle()
-    val askOpen by session.askOpen.collectAsStateWithLifecycle()
+    val hasKey by session.hasKey.collectAsStateWithLifecycle()
+    val keyInvalid by session.keyInvalid.collectAsStateWithLifecycle()
+    val introSeen by session.introSeen.collectAsStateWithLifecycle()
+    val activationDone by session.activationDone.collectAsStateWithLifecycle()
+    val sessionOpens by session.sessionOpens.collectAsStateWithLifecycle()
+    val recentActivity by session.recentActivity.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    var showSettings by remember { mutableStateOf(false) }
     val mic = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         BuddyLog.d("BuddyApp.mic", "granted=$granted")
         if (granted) session.listenToAsk()
@@ -44,27 +62,60 @@ fun BuddyApp(session: BuddySessionViewModel = viewModel()) {
     HostResumeHook()
     BuddyTheme {
         Box(Modifier.fillMaxSize().background(BuddyColors.Paper)) {
-            HomeScreen(
-                isRunning = isRunning,
-                awaitingPermission = awaitingPermission,
-                canSeeScreen = canSeeScreen,
-                awaitingAccess = awaitingAccess,
-                listening = brainPhase == BrainPhase.Listening || brainPhase == BrainPhase.Live,
-                thinking = brainPhase == BrainPhase.Thinking,
-                live = brainPhase == BrainPhase.Live,
-                working = brainPhase == BrainPhase.Working,
-                onStartBuddy = session::startBuddy,
-                onStopBuddy = session::stopBuddy,
-                onWatchMove = session::watchBuddyMove,
-                onRequestAccess = session::requestScreenAccess,
-                onPointAtControl = session::pointAtControl,
-                onAskBuddy = {
-                    BuddyLog.d("BuddyApp.askTap", "canSee=$canSeeScreen askOpen=$askOpen")
-                    if (!canSeeScreen) session.requestScreenAccess()
-                    else if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) session.listenToAsk()
-                    else mic.launch(Manifest.permission.RECORD_AUDIO)
+            Crossfade(!activationDone, animationSpec = BuddyMotion.crossfade(), label = "appStage") { onboarding ->
+                if (onboarding) {
+                    OnboardingRouter(
+                        introSeen = introSeen,
+                        hasKey = hasKey,
+                        onIntroSeen = session::markIntroSeen,
+                        onKeySaved = session::saveApiKey,
+                        onActivationDone = session::markActivationDone
+                    )
+                } else if (showSettings) {
+                    SettingsScreen(
+                        hasKey = hasKey,
+                        keyInvalid = keyInvalid,
+                        overlayGranted = isRunning,
+                        accessibilityGranted = canSeeScreen,
+                        isRunning = isRunning,
+                        onBack = { showSettings = false },
+                        onSaveKey = session::saveApiKey,
+                        onClearKeyInvalid = session::clearApiKeyInvalid,
+                        onFixOverlay = session::startBuddy,
+                        onFixAccessibility = session::requestScreenAccess,
+                        onStopBuddy = session::stopBuddy,
+                        onReset = session::resetBuddy
+                    )
+                } else {
+                    LaunchedEffect(Unit) { session.noteHomeOpened() }
+                    HomeScreen(
+                        isRunning = isRunning,
+                        awaitingPermission = awaitingPermission,
+                        canSeeScreen = canSeeScreen,
+                        awaitingAccess = awaitingAccess,
+                        listening = brainPhase == BrainPhase.Listening || brainPhase == BrainPhase.Live,
+                        thinking = brainPhase == BrainPhase.Thinking,
+                        live = brainPhase == BrainPhase.Live,
+                        working = brainPhase == BrainPhase.Working,
+                        keyInvalid = keyInvalid,
+                        sessionOpens = sessionOpens,
+                        recentActivity = recentActivity,
+                        onStartBuddy = session::startBuddy,
+                        onStopBuddy = session::stopBuddy,
+                        onWatchMove = session::watchBuddyMove,
+                        onRequestAccess = session::requestScreenAccess,
+                        onPointAtControl = session::pointAtControl,
+                        onAskText = session::askWithText,
+                        onOpenSettings = { showSettings = true },
+                        onAskBuddy = {
+                            BuddyLog.d("BuddyApp.askTap", "canSee=$canSeeScreen")
+                            if (!canSeeScreen) session.requestScreenAccess()
+                            else if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) session.listenToAsk()
+                            else mic.launch(Manifest.permission.RECORD_AUDIO)
+                        }
+                    )
                 }
-            )
+            }
         }
     }
 }

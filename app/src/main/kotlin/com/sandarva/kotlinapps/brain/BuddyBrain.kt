@@ -4,13 +4,14 @@ import android.Manifest
 import android.app.Application
 import android.content.pm.PackageManager
 import androidx.core.content.ContextCompat
-import com.sandarva.kotlinapps.BuildConfig
 import com.sandarva.kotlinapps.R
 import com.sandarva.kotlinapps.accessibility.BuddyHands
 import com.sandarva.kotlinapps.accessibility.BuddyType
 import com.sandarva.kotlinapps.brain.agent.AgentRunner
 import com.sandarva.kotlinapps.brain.agent.SpokenDesk
 import com.sandarva.kotlinapps.brain.live.BuddyLive
+import com.sandarva.kotlinapps.data.ActivityLog
+import com.sandarva.kotlinapps.data.ApiKeyStore
 import com.sandarva.kotlinapps.debug.BuddyLog
 import com.sandarva.kotlinapps.overlay.BuddyCursorController
 import com.sandarva.kotlinapps.overlay.CursorLanding
@@ -75,7 +76,7 @@ object BuddyBrain {
                 return
             }
             val mic = hasMic()
-            val live = mic && BuildConfig.GEMINI_API_KEY.isNotBlank()
+            val live = mic && ApiKeyStore.currentKey.isNotBlank()
             BuddyLog.d("Brain.openAsk", "mic=$mic live=$live askOpen=${BrainSession.askOpen.value}")
             cancelJob()
             voice.cancelListen()
@@ -129,6 +130,7 @@ object BuddyBrain {
                 AgentRunner.answer(trimmed)
                 return
             }
+            ActivityLog.record(trimmed)
             sessionActive = true
             think(trimmed)
         }

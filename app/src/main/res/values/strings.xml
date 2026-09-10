@@ -39,6 +39,7 @@
     <string name="home_footnote_permission">On the next screen, allow Buddy to appear on top — then come back here.</string>
     <string name="home_footnote_access">On the next screen, turn on Buddy Assistant — then come back here.</string>
     <string name="home_footnote_running">I’m on your screen. Double-tap me anywhere — we’ll talk.</string>
+    <string name="home_key_invalid">Your key stopped working — fix it in Settings.</string>
     <string name="buddy_cursor_label">Buddy cursor. Double-tap to talk.</string>
     <string name="buddy_dismiss_label">Drop here to stop Buddy</string>
     <string name="overlay_channel_name">Buddy on screen</string>

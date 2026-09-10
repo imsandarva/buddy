@@ -1,7 +1,6 @@
 package com.sandarva.kotlinapps.brain.agent
 
 import android.app.Application
-import com.sandarva.kotlinapps.BuildConfig
 import com.sandarva.kotlinapps.accessibility.BuddyHands
 import com.sandarva.kotlinapps.accessibility.BuddyScreenEyes
 import com.sandarva.kotlinapps.accessibility.ScreenSnapshot
@@ -11,6 +10,7 @@ import com.sandarva.kotlinapps.brain.BrainPhase
 import com.sandarva.kotlinapps.brain.BrainSession
 import com.sandarva.kotlinapps.brain.GeminiClient
 import com.sandarva.kotlinapps.brain.Reachability
+import com.sandarva.kotlinapps.data.ApiKeyStore
 import com.sandarva.kotlinapps.debug.BuddyLog
 import com.sandarva.kotlinapps.overlay.CursorMoodSignals
 import com.sandarva.kotlinapps.overlay.OverlayNotifier
@@ -49,7 +49,7 @@ object AgentRunner {
 
     class Session(private val app: Application) {
         private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-        private val gemini = GeminiClient(BuildConfig.GEMINI_API_KEY)
+        private val gemini = GeminiClient(ApiKeyStore::currentKey)
         private val decider = AgentDecider(gemini)
         private val search = WebSearch(gemini)
         private val executor = AgentExecutor(AppLauncher(app))
@@ -103,7 +103,7 @@ object AgentRunner {
 
         private suspend fun run(goal: String, desk: AgentDesk) {
             when {
-                BuildConfig.GEMINI_API_KEY.isBlank() -> return end("I don’t have a way to think yet.", desk)
+                ApiKeyStore.currentKey.isBlank() -> return end("I don’t have a way to think yet.", desk)
                 !Reachability.online(app) -> return end(OFFLINE, desk)
                 !BuddyScreenEyes.isReady() || !BuddyHands.isReady() -> return end(HANDS_OFF, desk)
             }
@@ -163,7 +163,16 @@ object AgentRunner {
                 throw error
             } catch (error: Exception) {
                 BuddyLog.e("Agent.fail", error.message ?: "unknown", error)
-                end(if (Reachability.isNetworkFailure(error)) OFFLINE else THINK_FAIL, desk)
+                val authFailed = error is GeminiClient.ApiException && error.isAuthError
+                if (authFailed) ApiKeyStore.markInvalid()
+                end(
+                    when {
+                        authFailed -> KEY_FAIL
+                        Reachability.isNetworkFailure(error) -> OFFLINE
+                        else -> THINK_FAIL
+                    },
+                    desk
+                )
             }
         }
 
@@ -228,6 +237,7 @@ object AgentRunner {
     private const val ASK_TIMEOUT_MS = 90_000L
     private const val OFFLINE = "I can’t reach the internet just now. Check the connection and try again."
     private const val THINK_FAIL = "I couldn’t think that through just now. Try once more in a moment."
+    private const val KEY_FAIL = "Your key stopped working. Add a new one in Settings and I’ll be right back."
     private const val HANDS_OFF = "Turn on Buddy Assistant so I can see and tap for you."
     private const val NO_ANSWER = "I didn’t catch an answer, so I’ve stopped for now. Ask me again whenever you like."
 }

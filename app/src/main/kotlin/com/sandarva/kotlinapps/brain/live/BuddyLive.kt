@@ -1,7 +1,6 @@
 package com.sandarva.kotlinapps.brain.live
 
 import android.app.Application
-import com.sandarva.kotlinapps.BuildConfig
 import com.sandarva.kotlinapps.accessibility.BuddyScreenEyes
 import com.sandarva.kotlinapps.accessibility.ScreenSnapshot
 import com.sandarva.kotlinapps.accessibility.awaitSettledSnapshot
@@ -16,6 +15,8 @@ import com.sandarva.kotlinapps.brain.agent.AgentRunner
 import com.sandarva.kotlinapps.brain.agent.AppLauncher
 import com.sandarva.kotlinapps.brain.agent.SceneDescriber
 import com.sandarva.kotlinapps.brain.agent.WebSearch
+import com.sandarva.kotlinapps.data.ActivityLog
+import com.sandarva.kotlinapps.data.ApiKeyStore
 import com.sandarva.kotlinapps.debug.BuddyLog
 import com.sandarva.kotlinapps.overlay.OverlayNotifier
 import kotlinx.coroutines.CoroutineScope
@@ -50,7 +51,7 @@ object BuddyLive {
         private var audio: LiveAudio? = null
         private val speaker = LiveSpeaker()
         private val executor = AgentExecutor(AppLauncher(app))
-        private val search = WebSearch(GeminiClient(BuildConfig.GEMINI_API_KEY))
+        private val search = WebSearch(GeminiClient(ApiKeyStore::currentKey))
         @Volatile var active = false
             private set
         private var gen = 0
@@ -60,7 +61,7 @@ object BuddyLive {
 
         fun start() {
             if (active) return
-            if (BuildConfig.GEMINI_API_KEY.isBlank()) {
+            if (ApiKeyStore.currentKey.isBlank()) {
                 fail("I don’t have a way to talk live yet.")
                 return
             }
@@ -79,7 +80,7 @@ object BuddyLive {
             listen.reset()
             BuddyScreenEyes.setWatching(true)
             BuddyLog.d("Live.start", "model=${LiveConfig.MODEL}")
-            val next = LiveSocket(BuildConfig.GEMINI_API_KEY, object : LiveSocket.Listener {
+            val next = LiveSocket(ApiKeyStore.currentKey, object : LiveSocket.Listener {
                 override fun onSetupComplete() {
                     if (id != gen) return
                     beginHello(id)
@@ -103,6 +104,7 @@ object BuddyLive {
                 override fun onClosed(reason: String) {
                     if (id != gen) return
                     BuddyLog.d("Live.closed", reason)
+                    if (LiveFail.isAuthError(reason)) ApiKeyStore.markInvalid()
                     if (active) fail(LiveFail.speak(reason))
                 }
             })
@@ -219,6 +221,7 @@ object BuddyLive {
                 return
             }
             BuddyLog.d("Live.job", "start=\"${goal.take(80)}\"")
+            ActivityLog.record(goal)
             socket?.send(LiveMessages.toolResponse(call.id, call.name, "started — keep this talk. Do not use screen tools. JOB DONE will arrive when it finishes.", describe(BuddyScreenEyes.snapshot())))
             AgentRunner.ensure(app).start(goal, LiveDesk(send = ::emit, onFinished = ::afterJob))
         }

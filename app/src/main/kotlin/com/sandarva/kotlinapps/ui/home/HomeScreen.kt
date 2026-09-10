@@ -25,6 +25,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.sandarva.kotlinapps.R
+import com.sandarva.kotlinapps.data.ActivityEntry
+import com.sandarva.kotlinapps.data.OnboardingPrefs
 import com.sandarva.kotlinapps.ui.components.AmbientBackdrop
 import com.sandarva.kotlinapps.ui.components.BuddyActionButton
 import com.sandarva.kotlinapps.ui.components.BuddyActionStyle
@@ -44,21 +46,27 @@ fun HomeScreen(
     thinking: Boolean,
     live: Boolean,
     working: Boolean,
+    keyInvalid: Boolean,
+    sessionOpens: Int,
+    recentActivity: List<ActivityEntry>,
     onStartBuddy: () -> Unit,
     onStopBuddy: () -> Unit,
     onWatchMove: () -> Unit,
     onRequestAccess: () -> Unit,
     onPointAtControl: () -> Unit,
     onAskBuddy: () -> Unit,
+    onAskText: (String) -> Unit,
+    onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Box(modifier.fillMaxSize()) {
         AmbientBackdrop(alive = isRunning, modifier = Modifier.fillMaxSize())
         HomeForeground(
-            isRunning, awaitingPermission, canSeeScreen, awaitingAccess, listening, thinking, live, working,
-            onStartBuddy, onStopBuddy, onWatchMove, onRequestAccess, onPointAtControl, onAskBuddy,
+            isRunning, awaitingPermission, canSeeScreen, awaitingAccess, listening, thinking, live, working, keyInvalid, sessionOpens, recentActivity,
+            onStartBuddy, onStopBuddy, onWatchMove, onRequestAccess, onPointAtControl, onAskBuddy, onAskText,
             Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)
         )
+        HomeTopBar(onOpenSettings, Modifier.align(Alignment.TopEnd).windowInsetsPadding(WindowInsets.safeDrawing))
     }
 }
 
@@ -72,12 +80,16 @@ private fun HomeForeground(
     thinking: Boolean,
     live: Boolean,
     working: Boolean,
+    keyInvalid: Boolean,
+    sessionOpens: Int,
+    recentActivity: List<ActivityEntry>,
     onStartBuddy: () -> Unit,
     onStopBuddy: () -> Unit,
     onWatchMove: () -> Unit,
     onRequestAccess: () -> Unit,
     onPointAtControl: () -> Unit,
     onAskBuddy: () -> Unit,
+    onAskText: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -85,17 +97,31 @@ private fun HomeForeground(
         verticalArrangement = Arrangement.SpaceBetween,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        HomeHero(isRunning, Modifier.fillMaxWidth().padding(top = 80.dp))
-        HomeCta(
-            isRunning, awaitingPermission, canSeeScreen, awaitingAccess, listening, thinking, live, working,
-            onStartBuddy, onStopBuddy, onWatchMove, onRequestAccess, onPointAtControl, onAskBuddy,
-            Modifier.fillMaxWidth().padding(bottom = 40.dp)
-        )
+        HomeHero(isRunning, keyInvalid, Modifier.fillMaxWidth().padding(top = 80.dp))
+        Column(Modifier.fillMaxWidth().padding(bottom = 40.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            HomeCta(
+                isRunning, awaitingPermission, canSeeScreen, awaitingAccess, listening, thinking, live, working,
+                onStartBuddy, onStopBuddy, onWatchMove, onRequestAccess, onPointAtControl, onAskBuddy
+            )
+            val showChips = isRunning && canSeeScreen && !listening && !thinking && !live && !working && sessionOpens < OnboardingPrefs.CHIP_SESSION_LIMIT
+            AnimatedVisibility(showChips, enter = fadeIn(BuddyMotion.crossfade()), exit = fadeOut(BuddyMotion.crossfade())) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Spacer(Modifier.height(26.dp))
+                    PromptChips(onAskText)
+                }
+            }
+            AnimatedVisibility(isRunning, enter = fadeIn(BuddyMotion.crossfade()), exit = fadeOut(BuddyMotion.crossfade())) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Spacer(Modifier.height(26.dp))
+                    RecentActivityStrip(recentActivity, onAskText)
+                }
+            }
+        }
     }
 }
 
 @Composable
-private fun HomeHero(isRunning: Boolean, modifier: Modifier = Modifier) {
+private fun HomeHero(isRunning: Boolean, keyInvalid: Boolean, modifier: Modifier = Modifier) {
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         FadeSlideIn(0) { BuddyMark(alive = isRunning) }
         Spacer(Modifier.height(40.dp))
@@ -130,6 +156,17 @@ private fun HomeHero(isRunning: Boolean, modifier: Modifier = Modifier) {
                         modifier = Modifier.padding(horizontal = 4.dp)
                     )
                 }
+            }
+        }
+        AnimatedVisibility(keyInvalid, enter = fadeIn(BuddyMotion.crossfade()), exit = fadeOut(BuddyMotion.crossfade())) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Spacer(Modifier.height(14.dp))
+                Text(
+                    stringResource(R.string.home_key_invalid),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = BuddyColors.DismissFillArmed,
+                    textAlign = TextAlign.Center
+                )
             }
         }
     }
