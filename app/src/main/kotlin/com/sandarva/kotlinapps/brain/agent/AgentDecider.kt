@@ -9,8 +9,8 @@ import org.json.JSONObject
 object AgentModels {
     class Tier(val id: String, val thinking: String)
 
-    val FAST = Tier("gemini-3.5-flash-lite", "high")
-    val STRONG = Tier("gemini-3.5-flash-lite", "high")
+    val FAST = Tier("gemini-3.5-flash-lite", "low")
+    val STRONG = Tier("gemini-3.5-flash-lite", "low")
 }
 
 /**

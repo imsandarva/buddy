@@ -49,6 +49,8 @@ fun BuddyApp(session: BuddySessionViewModel = viewModel()) {
     val brainPhase by session.brainPhase.collectAsStateWithLifecycle()
     val hasKey by session.hasKey.collectAsStateWithLifecycle()
     val keyInvalid by session.keyInvalid.collectAsStateWithLifecycle()
+    val hasLanguage by session.hasLanguage.collectAsStateWithLifecycle()
+    val languageCode by session.languageCode.collectAsStateWithLifecycle()
     val introSeen by session.introSeen.collectAsStateWithLifecycle()
     val activationDone by session.activationDone.collectAsStateWithLifecycle()
     val sessionOpens by session.sessionOpens.collectAsStateWithLifecycle()
@@ -67,8 +69,10 @@ fun BuddyApp(session: BuddySessionViewModel = viewModel()) {
                     OnboardingRouter(
                         introSeen = introSeen,
                         hasKey = hasKey,
+                        hasLanguage = hasLanguage,
                         onIntroSeen = session::markIntroSeen,
                         onKeySaved = session::saveApiKey,
+                        onLanguageSaved = session::saveLanguage,
                         onActivationDone = session::markActivationDone
                     )
                 } else if (showSettings) {
@@ -78,9 +82,11 @@ fun BuddyApp(session: BuddySessionViewModel = viewModel()) {
                         overlayGranted = isRunning,
                         accessibilityGranted = canSeeScreen,
                         isRunning = isRunning,
+                        languageCountryCode = languageCode,
                         onBack = { showSettings = false },
                         onSaveKey = session::saveApiKey,
                         onClearKeyInvalid = session::clearApiKeyInvalid,
+                        onSaveLanguage = session::saveLanguage,
                         onFixOverlay = session::startBuddy,
                         onFixAccessibility = session::requestScreenAccess,
                         onStopBuddy = session::stopBuddy,

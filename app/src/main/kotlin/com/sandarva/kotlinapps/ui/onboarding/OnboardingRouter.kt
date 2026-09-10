@@ -16,14 +16,24 @@ import com.sandarva.kotlinapps.ui.theme.BuddyMotion
  * funnel ends, so a returning user is never asked any of this again.
  */
 @Composable
-fun OnboardingRouter(introSeen: Boolean, hasKey: Boolean, onIntroSeen: () -> Unit, onKeySaved: (String) -> Unit, onActivationDone: () -> Unit, modifier: Modifier = Modifier) {
+fun OnboardingRouter(
+    introSeen: Boolean,
+    hasKey: Boolean,
+    hasLanguage: Boolean,
+    onIntroSeen: () -> Unit,
+    onKeySaved: (String) -> Unit,
+    onLanguageSaved: (String) -> Unit,
+    onActivationDone: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     var stage by remember { mutableStateOf(OnboardingStage.Launch) }
 
     Crossfade(stage, modifier = modifier, animationSpec = BuddyMotion.crossfade(), label = "onboardingStage") { current ->
         when (current) {
-            OnboardingStage.Launch -> LaunchScreen(onFinished = { stage = if (introSeen) afterIntro(hasKey) else OnboardingStage.Intro })
-            OnboardingStage.Intro -> IntroScreen(onFinished = { onIntroSeen(); stage = afterIntro(hasKey) })
-            OnboardingStage.ApiKey -> ApiKeyScreen(onSaved = { key -> onKeySaved(key); stage = OnboardingStage.Activation })
+            OnboardingStage.Launch -> LaunchScreen(onFinished = { stage = if (introSeen) afterIntro(hasKey, hasLanguage) else OnboardingStage.Intro })
+            OnboardingStage.Intro -> IntroScreen(onFinished = { onIntroSeen(); stage = afterIntro(hasKey, hasLanguage) })
+            OnboardingStage.ApiKey -> ApiKeyScreen(onSaved = { key -> onKeySaved(key); stage = if (hasLanguage) OnboardingStage.Activation else OnboardingStage.Language })
+            OnboardingStage.Language -> LanguageScreen(onSelected = { country -> onLanguageSaved(country.code); stage = OnboardingStage.Activation })
             OnboardingStage.Activation -> ActivationScreen(
                 onShowMe = { stage = OnboardingStage.OverlayPermission },
                 onMaybeLater = onActivationDone
@@ -41,4 +51,8 @@ fun OnboardingRouter(introSeen: Boolean, hasKey: Boolean, onIntroSeen: () -> Uni
     }
 }
 
-private fun afterIntro(hasKey: Boolean): OnboardingStage = if (hasKey) OnboardingStage.Activation else OnboardingStage.ApiKey
+private fun afterIntro(hasKey: Boolean, hasLanguage: Boolean): OnboardingStage = when {
+    !hasKey -> OnboardingStage.ApiKey
+    !hasLanguage -> OnboardingStage.Language
+    else -> OnboardingStage.Activation
+}

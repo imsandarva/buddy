@@ -1,5 +1,6 @@
 package com.sandarva.kotlinapps.ui.settings
 
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,10 +22,16 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.sandarva.kotlinapps.data.CountryData
 import com.sandarva.kotlinapps.ui.theme.BuddyColors
+import com.sandarva.kotlinapps.ui.theme.BuddyMotion
 
 /**
  * Deliberately boring, in contrast to onboarding's emotional beats — this is where things are
@@ -37,22 +44,38 @@ fun SettingsScreen(
     overlayGranted: Boolean,
     accessibilityGranted: Boolean,
     isRunning: Boolean,
+    languageCountryCode: String,
     onBack: () -> Unit,
     onSaveKey: (String) -> Unit,
     onClearKeyInvalid: () -> Unit,
+    onSaveLanguage: (String) -> Unit,
     onFixOverlay: () -> Unit,
     onFixAccessibility: () -> Unit,
     onStopBuddy: () -> Unit,
     onReset: () -> Unit
 ) {
+    var pickingLanguage by remember { mutableStateOf(false) }
+    val currentLanguage = remember(languageCountryCode) { CountryData.find(languageCountryCode) ?: CountryData.DEFAULT }
+
     Box(Modifier.fillMaxSize().background(BuddyColors.Paper)) {
-        Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
-            SettingsTopBar(onBack)
-            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 8.dp)) {
-                ApiKeySection(hasKey, keyInvalid, onSaved = { key -> onSaveKey(key); onClearKeyInvalid() }, onCleared = onClearKeyInvalid)
-                PermissionStatusSection(overlayGranted, accessibilityGranted, onFixOverlay, onFixAccessibility)
-                ResetSection(isRunning, onStopBuddy, onReset)
-                Spacer(Modifier.height(32.dp))
+        Crossfade(pickingLanguage, animationSpec = BuddyMotion.crossfade(), label = "settingsStage") { picking ->
+            if (picking) {
+                LanguagePickerScreen(
+                    selectedCode = currentLanguage.code,
+                    onSelected = { country -> onSaveLanguage(country.code); pickingLanguage = false },
+                    onBack = { pickingLanguage = false }
+                )
+            } else {
+                Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
+                    SettingsTopBar(onBack)
+                    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 8.dp)) {
+                        ApiKeySection(hasKey, keyInvalid, onSaved = { key -> onSaveKey(key); onClearKeyInvalid() }, onCleared = onClearKeyInvalid)
+                        LanguageSection(currentLanguage, onOpenPicker = { pickingLanguage = true })
+                        PermissionStatusSection(overlayGranted, accessibilityGranted, onFixOverlay, onFixAccessibility)
+                        ResetSection(isRunning, onStopBuddy, onReset)
+                        Spacer(Modifier.height(32.dp))
+                    }
+                }
             }
         }
     }

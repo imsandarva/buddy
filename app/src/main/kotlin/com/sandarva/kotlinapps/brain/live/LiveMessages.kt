@@ -1,6 +1,7 @@
 package com.sandarva.kotlinapps.brain.live
 
 import android.util.Base64
+import com.sandarva.kotlinapps.data.Country
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -8,16 +9,19 @@ data class LiveFunctionCall(val id: String, val name: String, val args: JSONObje
 
 /** JSON for BidiGenerateContent. The socket stays unaware of cursor meaning. */
 object LiveMessages {
-    fun setup(): String = envelope(LivePrompt.SYSTEM, tools = true, withVad = true)
+    /** [language] is the country the user picked to talk in — see [LiveLanguage]. */
+    fun setup(language: Country): String =
+        envelope(LivePrompt.SYSTEM + LiveLanguage.instruction(language), tools = true, withVad = true, speechCode = LiveLanguage.speechCode(language.language))
 
     /** First-meeting hello — same Live voice, no tools, no mic, one spoken line then hang up. */
-    fun setupHello(): String = envelope(MEET_SYSTEM, tools = false, withVad = false)
+    fun setupHello(language: Country): String =
+        envelope(MEET_SYSTEM + LiveLanguage.instruction(language), tools = false, withVad = false, speechCode = LiveLanguage.speechCode(language.language))
 
     /** One greeting turn. Tools are forbidden until they actually speak. */
-    fun hello(): String = turn(HELLO)
+    fun hello(language: Country): String = turn(HELLO + LiveLanguage.greetingNudge(language))
 
     /** Onboarding meet — speak once, then the session ends. */
-    fun meet(): String = turn(MEET)
+    fun meet(language: Country): String = turn(MEET + LiveLanguage.greetingNudge(language))
 
     private fun turn(text: String): String = JSONObject()
         .put("clientContent", JSONObject()
@@ -86,10 +90,10 @@ object LiveMessages {
     private const val JOB_ASK = "JOB ASK — not a screen request. The runner needs this from them. Ask in one short warm line. When they answer, call answer_job with their words. Do not tap or run_goal.\n"
     private const val JOB_DONE = "JOB DONE — same talk as before. Tell them this in your own voice, then wait. Do not call tools.\n"
 
-    private fun envelope(instruction: String, tools: Boolean, withVad: Boolean) = JSONObject()
+    private fun envelope(instruction: String, tools: Boolean, withVad: Boolean, speechCode: String?) = JSONObject()
         .put("setup", JSONObject()
             .put("model", "models/${LiveConfig.MODEL}")
-            .put("generationConfig", generation())
+            .put("generationConfig", generation(speechCode))
             .put("systemInstruction", JSONObject().put("parts", JSONArray().put(JSONObject().put("text", instruction))))
             .apply {
                 if (withVad) put("realtimeInputConfig", JSONObject().put("automaticActivityDetection", vad()))
@@ -97,9 +101,15 @@ object LiveMessages {
             })
         .toString()
 
-    private fun generation() = JSONObject()
+    /** [speechCode] is null when Live has no native voice for the chosen language — the system
+     *  instruction still asks for it in plain words, just without this explicit hint. */
+    private fun generation(speechCode: String?) = JSONObject()
         .put("responseModalities", JSONArray().put("AUDIO"))
-        .put("speechConfig", JSONObject().put("voiceConfig", JSONObject().put("prebuiltVoiceConfig", JSONObject().put("voiceName", LiveConfig.VOICE))))
+        .put(
+            "speechConfig", JSONObject()
+                .put("voiceConfig", JSONObject().put("prebuiltVoiceConfig", JSONObject().put("voiceName", LiveConfig.VOICE)))
+                .apply { if (speechCode != null) put("languageCode", speechCode) }
+        )
         .put("thinkingConfig", JSONObject().put("thinkingLevel", "minimal"))
 
     private fun vad() = JSONObject()

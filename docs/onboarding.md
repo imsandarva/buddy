@@ -15,7 +15,7 @@ a guess at what to build, only at how to build it well.
    **Wake buddy up**; with the keyboard up it lives above the field, so the field and the CTA sit
    a tight 12dp apart and hug the keys. The line under the title stays — we do not hide copy when
    they type. The action never hides. Keyboard Done still submits.
-4. **Activation** — buddy talks first with Gemini Live's own voice (`Fenrir`) — one short hello,
+4. **Activation** — buddy talks first with Gemini Live's own voice (`Orion`) — one short hello,
    then the socket hangs up. No Android TTS, no lingering live talk, no mic. Then it reveals the
    second ability in the same breath: it can act on the screen too.
 5. **Overlay permission** — the "easy yes," with a two-step how-to (Allow it → Appear on top for Buddy).
@@ -77,7 +77,7 @@ call that proves it works (`gemini-3.5-flash-lite`, 4 output tokens) — never a
 | `ui/onboarding/LaunchScreen.kt` | The orb, alone, breathing |
 | `ui/onboarding/IntroScreen.kt` | Swipeable cards + dots + skip |
 | `ui/onboarding/ApiKeyScreen.kt` | "Give buddy a brain" — field, live check, wake-up beat. Flex spacer so the field + Wake hug the keyboard |
-| `ui/onboarding/ActivationScreen.kt` | Live hello (one-shot Fenrir), then the capability reveal |
+| `ui/onboarding/ActivationScreen.kt` | Live hello (one-shot Orion), then the capability reveal |
 | `ui/onboarding/OverlayPermissionScreen.kt` | Priming + a short how-to for Appear on top + the real cursor settling on screen |
 | `ui/onboarding/AccessibilityPermissionScreen.kt` | Priming + a short how-to for Buddy Assistant, honest about what it is and isn't |
 | `ui/onboarding/PermissionHowTo.kt` | Shared why + numbered taps for the two permission screens |

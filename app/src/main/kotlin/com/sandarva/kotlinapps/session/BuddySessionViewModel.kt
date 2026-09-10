@@ -9,6 +9,7 @@ import com.sandarva.kotlinapps.brain.BrainSession
 import com.sandarva.kotlinapps.brain.BuddyBrain
 import com.sandarva.kotlinapps.data.ActivityLog
 import com.sandarva.kotlinapps.data.ApiKeyStore
+import com.sandarva.kotlinapps.data.LanguagePrefs
 import com.sandarva.kotlinapps.data.OnboardingPrefs
 import com.sandarva.kotlinapps.debug.BuddyLog
 import com.sandarva.kotlinapps.overlay.BuddyCursorController
@@ -26,6 +27,8 @@ class BuddySessionViewModel(app: Application) : AndroidViewModel(app) {
     val askOpen = BrainSession.askOpen
     val hasKey = ApiKeyStore.hasKey
     val keyInvalid = ApiKeyStore.invalid
+    val hasLanguage = LanguagePrefs.hasSelected
+    val languageCode = LanguagePrefs.selectedCode
     val introSeen = OnboardingPrefs.introSeen
     val activationDone = OnboardingPrefs.activationDone
     val sessionOpens = OnboardingPrefs.sessionOpens
@@ -33,6 +36,7 @@ class BuddySessionViewModel(app: Application) : AndroidViewModel(app) {
 
     init {
         ApiKeyStore.ensure(app)
+        LanguagePrefs.ensure(app)
         OnboardingPrefs.ensure(app)
         ActivityLog.ensure(app)
         AccessibilityController.refresh(app)
@@ -82,6 +86,10 @@ class BuddySessionViewModel(app: Application) : AndroidViewModel(app) {
         ApiKeyStore.clear()
     }
     fun clearApiKeyInvalid() = ApiKeyStore.clearInvalid()
+    fun saveLanguage(countryCode: String) {
+        BuddyLog.d("VM", "saveLanguage code=$countryCode")
+        LanguagePrefs.save(countryCode)
+    }
     fun markIntroSeen() = OnboardingPrefs.markIntroSeen()
     fun markActivationDone() = OnboardingPrefs.markActivationDone()
     fun noteHomeOpened() = OnboardingPrefs.noteHomeOpened()
@@ -89,6 +97,7 @@ class BuddySessionViewModel(app: Application) : AndroidViewModel(app) {
         BuddyLog.d("VM", "resetBuddy")
         stopBuddy()
         ApiKeyStore.clear()
+        LanguagePrefs.clear()
         OnboardingPrefs.clear()
         ActivityLog.clear()
     }

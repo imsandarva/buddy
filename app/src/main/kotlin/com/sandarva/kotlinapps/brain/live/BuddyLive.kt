@@ -17,6 +17,7 @@ import com.sandarva.kotlinapps.brain.agent.SceneDescriber
 import com.sandarva.kotlinapps.brain.agent.WebSearch
 import com.sandarva.kotlinapps.data.ActivityLog
 import com.sandarva.kotlinapps.data.ApiKeyStore
+import com.sandarva.kotlinapps.data.LanguagePrefs
 import com.sandarva.kotlinapps.debug.BuddyLog
 import com.sandarva.kotlinapps.overlay.OverlayNotifier
 import kotlinx.coroutines.CoroutineScope
@@ -58,6 +59,7 @@ object BuddyLive {
         @Volatile private var lastScene = ""
         private var followJob: Job? = null
         private val listen = LiveListen()
+        private var language = LanguagePrefs.current()
 
         fun start() {
             if (active) return
@@ -70,6 +72,7 @@ object BuddyLive {
                 return
             }
             val id = ++gen
+            language = LanguagePrefs.current()
             active = true
             BrainSession.setAskOpen(false)
             BrainSession.setLiveOpen(true)
@@ -79,7 +82,7 @@ object BuddyLive {
             lastScene = ""
             listen.reset()
             BuddyScreenEyes.setWatching(true)
-            BuddyLog.d("Live.start", "model=${LiveConfig.MODEL}")
+            BuddyLog.d("Live.start", "model=${LiveConfig.MODEL} lang=${language.language}")
             val next = LiveSocket(ApiKeyStore.currentKey, object : LiveSocket.Listener {
                 override fun onSetupComplete() {
                     if (id != gen) return
@@ -107,7 +110,7 @@ object BuddyLive {
                     if (LiveFail.isAuthError(reason)) ApiKeyStore.markInvalid()
                     if (active) fail(LiveFail.speak(reason))
                 }
-            })
+            }, setup = LiveMessages.setup(language))
             socket = next
             val links = LiveAudio(app)
             audio = links
@@ -143,7 +146,7 @@ object BuddyLive {
 
         private fun beginHello(id: Int) {
             listen.startHello()
-            socket?.send(LiveMessages.hello())
+            socket?.send(LiveMessages.hello(language))
             scope.launch {
                 delay(HELLO_WAIT_MS)
                 if (id == gen && active && listen.greeting) openEars(id)

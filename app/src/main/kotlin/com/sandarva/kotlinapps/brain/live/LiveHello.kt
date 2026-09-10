@@ -3,6 +3,7 @@ package com.sandarva.kotlinapps.brain.live
 import android.app.Application
 import com.sandarva.kotlinapps.brain.Reachability
 import com.sandarva.kotlinapps.data.ApiKeyStore
+import com.sandarva.kotlinapps.data.LanguagePrefs
 import com.sandarva.kotlinapps.debug.BuddyLog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -12,7 +13,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
- * One-shot Gemini Live hello — same Fenrir voice as a real talk, no mic, no overlay, no tools.
+ * One-shot Gemini Live hello — same Orion voice as a real talk, no mic, no overlay, no tools.
  * Speaks once, hangs up. Used for the first-meeting beat so onboarding never falls back to device TTS.
  */
 object LiveHello {
@@ -43,6 +44,7 @@ object LiveHello {
 
         fun start() {
             val id = ++gen
+            val language = LanguagePrefs.current()
             val links = LiveAudio(app)
             audio = links
             links.enterVoiceRoute()
@@ -50,7 +52,7 @@ object LiveHello {
             val next = LiveSocket(
                 apiKey = ApiKeyStore.currentKey,
                 listener = object : LiveSocket.Listener {
-                    override fun onSetupComplete() { if (id == gen) socket?.send(LiveMessages.meet()) }
+                    override fun onSetupComplete() { if (id == gen) socket?.send(LiveMessages.meet(language)) }
                     override fun onAudio(pcm: ByteArray) { if (id == gen) { heard = true; speaker.play(pcm) } }
                     override fun onInterrupted() { if (id == gen) speaker.interrupt() }
                     override fun onTurnComplete() {
@@ -60,7 +62,7 @@ object LiveHello {
                     override fun onToolCall(calls: List<LiveFunctionCall>) = Unit
                     override fun onClosed(reason: String) { if (id == gen) finish() }
                 },
-                setup = LiveMessages.setupHello()
+                setup = LiveMessages.setupHello(language)
             )
             socket = next
             next.connect()

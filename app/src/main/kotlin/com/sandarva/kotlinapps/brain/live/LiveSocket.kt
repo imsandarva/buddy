@@ -1,5 +1,6 @@
 package com.sandarva.kotlinapps.brain.live
 
+import com.sandarva.kotlinapps.data.LanguagePrefs
 import com.sandarva.kotlinapps.debug.BuddyLog
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -16,7 +17,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 class LiveSocket(
     private val apiKey: String,
     private val listener: Listener,
-    private val setup: String = LiveMessages.setup(),
+    private val setup: String = LiveMessages.setup(LanguagePrefs.current()),
     private val http: OkHttpClient = client()
 ) {
     interface Listener {
