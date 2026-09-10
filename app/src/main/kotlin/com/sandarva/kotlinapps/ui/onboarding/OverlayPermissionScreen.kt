@@ -66,3 +66,4 @@ fun OverlayPermissionScreen(onGranted: () -> Unit, onSkipped: () -> Unit) {
         }
     }
 }
+
