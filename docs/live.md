@@ -124,7 +124,7 @@ After a tool, the tool response carries the new SCREEN taken after the event str
 | `brain/live/LiveAudio.kt` | Shared session + AEC / NS / AGC |
 | `brain/live/LiveMic.kt` | 16 kHz capture + send queue |
 | `brain/live/LiveSpeaker.kt` | 24 kHz jitter-buffered playback |
-| `brain/live/LiveConfig.kt` | Model, rates, voice (`Aoede`) |
+| `brain/live/LiveConfig.kt` | Model, rates, voice (`Fenrir`, deep male) |
 | `brain/agent/AgentExecutor.kt` | Shared executor for the runner and Live |
 | `overlay/OverlayNotification.kt` | Live talk controls in the notification shade (`buddy_live` channel) |
 | `overlay/OverlayNotifier.kt` | Syncs notification when live starts or stops |

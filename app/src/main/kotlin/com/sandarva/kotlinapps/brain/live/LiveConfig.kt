@@ -4,7 +4,7 @@ package com.sandarva.kotlinapps.brain.live
 object LiveConfig {
     const val MODEL = "gemini-3.1-flash-live-preview"
     const val WS = "wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent"
-    const val VOICE = "Aoede"
+    const val VOICE = "Fenrir" // Gemini Live deep male (Aoede was the breezy female)
     const val IN_HZ = 16000
     const val OUT_HZ = 24000
     const val PCM = "audio/pcm"

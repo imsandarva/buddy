@@ -11,7 +11,10 @@ a guess at what to build, only at how to build it well.
 1. **Launch** — buddy's own mark, alone, breathing. No logo, no "Welcome" splash.
 2. **Intro** — 2–3 swipeable cards, one idea each, skip always honestly available.
 3. **API key** — "give buddy a brain." One field, live validation, the dormant mark visibly wakes
-   on success.
+   on success. Standard form layout: one flex spacer. At rest it lives between the field and
+   **Wake buddy up**; with the keyboard up it lives above the field, so the field and the CTA sit
+   a tight 12dp apart and hug the keys. The line under the title stays — we do not hide copy when
+   they type. The action never hides. Keyboard Done still submits.
 4. **Activation** — buddy talks first (Android TTS + on-screen captions, zero permission risk),
    then reveals the second ability in the same breath: it can act on the screen too.
 5. **Overlay permission** — the "easy yes." Granting it is rewarded immediately: the real overlay
@@ -68,10 +71,10 @@ call that proves it works (`gemini-3.5-flash-lite`, 4 output tokens) — never a
 | `ui/BuddyApp.kt` | Root router — onboarding funnel, Settings, or Home, and nothing else |
 | `ui/onboarding/OnboardingStage.kt` | The stage enum, front door to Home |
 | `ui/onboarding/OnboardingRouter.kt` | Owns funnel order and "yes"/"not now" transitions only |
-| `ui/onboarding/OnboardingScaffold.kt` | Shared paper-canvas layout every onboarding beat uses |
+| `ui/onboarding/OnboardingScaffold.kt` | Shared paper-canvas. IME shortens the column via `imePadding`; optional sticky action |
 | `ui/onboarding/LaunchScreen.kt` | The orb, alone, breathing |
 | `ui/onboarding/IntroScreen.kt` | Swipeable cards + dots + skip |
-| `ui/onboarding/ApiKeyScreen.kt` | "Give buddy a brain" — field, live check, wake-up beat |
+| `ui/onboarding/ApiKeyScreen.kt` | "Give buddy a brain" — field, live check, wake-up beat. Flex spacer so the field + Wake hug the keyboard |
 | `ui/onboarding/ActivationScreen.kt` | Scripted TTS greeting, then the capability reveal |
 | `ui/onboarding/OverlayPermissionScreen.kt` | Priming + the real cursor settling on screen |
 | `ui/onboarding/AccessibilityPermissionScreen.kt` | Priming, honest about what it is and isn't |

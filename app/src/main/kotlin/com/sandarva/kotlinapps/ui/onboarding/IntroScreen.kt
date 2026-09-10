@@ -34,9 +34,9 @@ import kotlinx.coroutines.launch
 private data class Beat(val headline: String, val body: String)
 
 private val BEATS = listOf(
-    Beat("I talk with you.", "Say what's on your mind — I'm always ready to listen."),
-    Beat("I can act on your\nscreen, too.", "A second pair of hands for the small, tedious stuff."),
-    Beat("You're always\nin control.", "One tap, anytime, and I stop right where I am.")
+    Beat("Hey, I'm Buddy!", "I live on your screen, talk with you, and can perform tasks in the screen using a buddycursor."),
+    Beat("I can do things for you.", "Like an expert assistant for things you don't know how to do on phone."),
+    Beat("I'm with you.", "I can be useful in lots ways, like explaining stuffs that you see on screen immediately, guide you through things you find difficult to do in phone, and even perform tasks for you.")
 )
 
 /** Two to three wordless-leaning cards, one idea each — never a screenshot of buddy's own UI. */

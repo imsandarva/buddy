@@ -25,7 +25,7 @@ The ask sheet is closed before eyes or hands run (a voice tap used to land on th
 
 ## Voice
 
-Live talk is Gemini Live (`gemini-3.1-flash-live-preview`): raw mic PCM in, voice PCM out, no speech-to-text, no captions. SCREEN goes to Live as `realtimeInput` text whenever their screen changes (including while a job is walking the phone) and again when they start speaking. Typed asks use the sheet and Android TTS. Mid-run questions on Live stay in the talk. See `docs/live.md` and `docs/live-jobs.md`.
+Live talk is Gemini Live (`gemini-3.1-flash-live-preview`): raw mic PCM in, `Fenrir` (deep male) PCM out, no speech-to-text, no captions. SCREEN goes to Live as `realtimeInput` text whenever their screen changes (including while a job is walking the phone) and again when they start speaking. Typed asks use the sheet and Android TTS. Mid-run questions on Live stay in the talk. See `docs/live.md` and `docs/live-jobs.md`.
 
 ## How we instruct the model
 
