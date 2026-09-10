@@ -16,6 +16,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 class LiveSocket(
     private val apiKey: String,
     private val listener: Listener,
+    private val setup: String = LiveMessages.setup(),
     private val http: OkHttpClient = client()
 ) {
     interface Listener {
@@ -40,7 +41,6 @@ class LiveSocket(
             override fun onOpen(webSocket: WebSocket, response: Response) {
                 BuddyLog.d("Live.socket", "open")
                 open.set(true)
-                val setup = LiveMessages.setup()
                 val sent = webSocket.send(setup)
                 BuddyLog.d("Live.socket", "setup sent=$sent chars=${setup.length}")
             }

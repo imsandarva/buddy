@@ -110,6 +110,7 @@ After a tool, the tool response carries the new SCREEN taken after the event str
 | File | Role |
 |------|------|
 | `brain/live/BuddyLive.kt` | Session facade — start / stop / tools / follow screen / jobs on the same socket |
+| `brain/live/LiveHello.kt` | One-shot Live hello for first meeting — same voice, no mic, hangs up after one line |
 | `brain/live/LiveListen.kt` | Greeting vs asked — when a tool may run |
 | `brain/live/LiveRouter.kt` | Talk / Act / Goal — does not trust `run_goal` blindly |
 | `brain/live/LiveDesk.kt` | JOB ASK / JOB DONE back into this talk |

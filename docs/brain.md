@@ -25,7 +25,7 @@ The ask sheet is closed before eyes or hands run (a voice tap used to land on th
 
 ## Voice
 
-Live talk is Gemini Live (`gemini-3.1-flash-live-preview`): raw mic PCM in, `Fenrir` (deep male) PCM out, no speech-to-text, no captions. SCREEN goes to Live as `realtimeInput` text whenever their screen changes (including while a job is walking the phone) and again when they start speaking. Typed asks use the sheet and Android TTS. Mid-run questions on Live stay in the talk. See `docs/live.md` and `docs/live-jobs.md`.
+Live talk is Gemini Live (`gemini-3.1-flash-live-preview`): raw mic PCM in, `Fenrir` (deep male) PCM out, no speech-to-text, no captions. SCREEN goes to Live as `realtimeInput` text whenever their screen changes (including while a job is walking the phone) and again when they start speaking. First meeting (onboarding activation) uses the same Live voice for one hello, then hangs up — never device TTS. Typed asks use the sheet and Android TTS. Mid-run questions on Live stay in the talk. See `docs/live.md` and `docs/live-jobs.md`.
 
 ## How we instruct the model
 
@@ -50,7 +50,7 @@ A 401/403 from `GeminiClient` (`ApiException.isAuthError`) or an auth-shaped Liv
 |------|------|
 | `brain/BuddyBrain.kt` | Typed door — on-device verbs, else the runner; answers routed to a waiting run |
 | `brain/agent/` | The runner and its parts — see `docs/agent.md` |
-| `brain/live/` | Gemini Live socket, audio, listen gate, talk/job router, same-session jobs — see `docs/live.md` |
+| `brain/live/` | Gemini Live socket, audio, one-shot first-meeting hello, listen gate, talk/job router, same-session jobs — see `docs/live.md` |
 | `brain/GeminiClient.kt` | `generateContent` HTTP |
 | `brain/agent/WebSearch.kt` | Grounded Google Search for the runner |
 | `brain/BuddyMoveIntent.kt` | On-device “move up” / “top left” |

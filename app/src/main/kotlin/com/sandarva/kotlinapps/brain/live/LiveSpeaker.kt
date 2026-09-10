@@ -19,6 +19,7 @@ class LiveSpeaker {
     @Volatile private var running = false
     @Volatile private var flush = false
     @Volatile private var drain = false
+    @Volatile private var onQuiet: (() -> Unit)? = null
 
     fun start(sessionId: Int = 0) {
         if (running) return
@@ -51,6 +52,7 @@ class LiveSpeaker {
 
     /** Barge-in — only the writer thread flushes the track. */
     fun interrupt() {
+        onQuiet = null
         queue.clear()
         flush = true
         drain = false
@@ -59,13 +61,15 @@ class LiveSpeaker {
         BuddyLog.d("Live.speaker", "interrupt")
     }
 
-    /** Play whatever is still prerolling when the model finishes a turn. */
-    fun endUtterance() {
+    /** Play whatever is still prerolling when the model finishes a turn. [then] runs once the buffer is empty. */
+    fun endUtterance(then: (() -> Unit)? = null) {
+        onQuiet = then
         drain = true
         queue.offer(WAKE)
     }
 
     fun stop() {
+        onQuiet = null
         running = false
         queue.clear()
         queue.offer(WAKE)
@@ -103,6 +107,9 @@ class LiveSpeaker {
                 }
                 drain = false
                 CursorMoodSignals.setVoiceAmplitude(0f) // utterance drained — buddy's mouth is quiet again
+                val quiet = onQuiet
+                onQuiet = null
+                quiet?.invoke()
                 continue
             }
             if (!primed) {

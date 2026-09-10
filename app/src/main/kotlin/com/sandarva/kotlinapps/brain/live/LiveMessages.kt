@@ -8,20 +8,16 @@ data class LiveFunctionCall(val id: String, val name: String, val args: JSONObje
 
 /** JSON for BidiGenerateContent. The socket stays unaware of cursor meaning. */
 object LiveMessages {
-    fun setup(): String = JSONObject()
-        .put("setup", JSONObject()
-            .put("model", "models/${LiveConfig.MODEL}")
-            .put("generationConfig", JSONObject()
-                .put("responseModalities", JSONArray().put("AUDIO"))
-                .put("speechConfig", JSONObject().put("voiceConfig", JSONObject().put("prebuiltVoiceConfig", JSONObject().put("voiceName", LiveConfig.VOICE))))
-                .put("thinkingConfig", JSONObject().put("thinkingLevel", "minimal")))
-            .put("realtimeInputConfig", JSONObject().put("automaticActivityDetection", vad()))
-            .put("systemInstruction", JSONObject().put("parts", JSONArray().put(JSONObject().put("text", LivePrompt.SYSTEM))))
-            .put("tools", JSONArray().put(JSONObject().put("functionDeclarations", LiveTools.declarations()))))
-        .toString()
+    fun setup(): String = envelope(LivePrompt.SYSTEM, tools = true, withVad = true)
+
+    /** First-meeting hello — same Live voice, no tools, no mic, one spoken line then hang up. */
+    fun setupHello(): String = envelope(MEET_SYSTEM, tools = false, withVad = false)
 
     /** One greeting turn. Tools are forbidden until they actually speak. */
     fun hello(): String = turn(HELLO)
+
+    /** Onboarding meet — speak once, then the session ends. */
+    fun meet(): String = turn(MEET)
 
     private fun turn(text: String): String = JSONObject()
         .put("clientContent", JSONObject()
@@ -85,8 +81,26 @@ object LiveMessages {
         .put("data", Base64.encodeToString(pcm, Base64.NO_WRAP))
 
     private const val HELLO = "The live talk just started. Greet them in one short, warm, casual line — like a friend who just sat down. Then wait. Do not call any tools. Do not tap, point, fly, nudge, type, swipe, drag, or run_goal. SCREEN is not a request. Talking is not a job."
+    private const val MEET_SYSTEM = "You are Buddy, a warm friend on their phone. Speak with your own voice. One short hello, then stop."
+    private const val MEET = "They just woke you for the first time. Greet them in one short, warm, casual line — like a friend who just sat down. Then stop. Do not wait. Do not ask a question. Do not mention screens, keys, or tools."
     private const val JOB_ASK = "JOB ASK — not a screen request. The runner needs this from them. Ask in one short warm line. When they answer, call answer_job with their words. Do not tap or run_goal.\n"
     private const val JOB_DONE = "JOB DONE — same talk as before. Tell them this in your own voice, then wait. Do not call tools.\n"
+
+    private fun envelope(instruction: String, tools: Boolean, withVad: Boolean) = JSONObject()
+        .put("setup", JSONObject()
+            .put("model", "models/${LiveConfig.MODEL}")
+            .put("generationConfig", generation())
+            .put("systemInstruction", JSONObject().put("parts", JSONArray().put(JSONObject().put("text", instruction))))
+            .apply {
+                if (withVad) put("realtimeInputConfig", JSONObject().put("automaticActivityDetection", vad()))
+                if (tools) put("tools", JSONArray().put(JSONObject().put("functionDeclarations", LiveTools.declarations())))
+            })
+        .toString()
+
+    private fun generation() = JSONObject()
+        .put("responseModalities", JSONArray().put("AUDIO"))
+        .put("speechConfig", JSONObject().put("voiceConfig", JSONObject().put("prebuiltVoiceConfig", JSONObject().put("voiceName", LiveConfig.VOICE))))
+        .put("thinkingConfig", JSONObject().put("thinkingLevel", "minimal"))
 
     private fun vad() = JSONObject()
         .put("disabled", false)
