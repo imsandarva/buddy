@@ -29,7 +29,7 @@ fun ResetSection(isRunning: Boolean, onStopBuddy: () -> Unit, onReset: () -> Uni
                 Spacer(Modifier.height(16.dp))
             }
             Text(
-                "This clears your key and forgets everything buddy has learned — you'll start again from the beginning.",
+                "This clears your key you'll start again from the beginning.",
                 style = MaterialTheme.typography.bodySmall,
                 color = BuddyColors.Mist
             )

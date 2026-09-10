@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.asStateFlow
 
 /**
  * The handful of one-way doors in first-run: has the wordless intro been seen, and has the
- * activation funnel (first talk → capability reveal → permissions → first task) been walked at
+ * activation funnel (first talk → capability reveal → permissions) been walked at
  * least once — either finished or honestly declined. Once true, that funnel never runs again;
  * a returning user always lands on the home screen, per the "respect a no" rule in the design spec.
  */

@@ -55,11 +55,13 @@ fun OverlayPermissionScreen(onGranted: () -> Unit, onSkipped: () -> Unit) {
         }
         Spacer(Modifier.height(14.dp))
         FadeSlideIn(110) {
-            Text(
-                "This lets me float above whatever you're doing, so I'm always one tap away. None of your data is sent to anyone. You can always remove me by holding and dragging me to 'X' icon that appears. To allow follow these steps: 1) Click on 'Allow it' button below.\n2) Your appear on top settings gets opened, turn that on for Buddyapp.",
-                style = MaterialTheme.typography.bodyLarge,
-                color = BuddyColors.InkMuted,
-                textAlign = TextAlign.Center
+            PermissionHowTo(
+                why = "This lets me float above whatever you're doing, so I'm a tap away.",
+                steps = listOf(
+                    "Tap Allow it below.",
+                    "You'll see Appear on top. Turn it on for Buddy."
+                ),
+                note = "To send me away later, hold me and drag to the X."
             )
         }
     }

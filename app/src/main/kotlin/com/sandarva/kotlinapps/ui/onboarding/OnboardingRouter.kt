@@ -33,10 +33,9 @@ fun OnboardingRouter(introSeen: Boolean, hasKey: Boolean, onIntroSeen: () -> Uni
                 onSkipped = onActivationDone
             )
             OnboardingStage.AccessibilityPermission -> AccessibilityPermissionScreen(
-                onGranted = { stage = OnboardingStage.FirstTask },
+                onGranted = onActivationDone,
                 onSkipped = onActivationDone
             )
-            OnboardingStage.FirstTask -> FirstTaskScreen(onFinished = onActivationDone)
             OnboardingStage.Home -> Unit // never reached — the caller switches away from this router entirely
         }
     }

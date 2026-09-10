@@ -49,20 +49,15 @@ fun AccessibilityPermissionScreen(onGranted: () -> Unit, onSkipped: () -> Unit) 
         }
         Spacer(Modifier.height(14.dp))
         FadeSlideIn(110) {
-            Text(
-                "This lets me see what's on your screen and press things, the same way your finger does — only when you ask. Steps to do this: 1) Click on 'Turn it on' button below.\n2) Your Accessibility settings opened, turn that on for Buddyapp.",
-                style = MaterialTheme.typography.bodyLarge,
-                color = BuddyColors.InkMuted,
-                textAlign = TextAlign.Center
-            )
-        }
-        Spacer(Modifier.height(10.dp))
-        FadeSlideIn(150) {
-            Text(
-                "I never record, store, or send your screen anywhere.",
-                style = MaterialTheme.typography.bodySmall,
-                color = BuddyColors.Mist,
-                textAlign = TextAlign.Center
+            PermissionHowTo(
+                why = "This lets me see what's on your screen and tap things, the way your finger would — only when you ask.",
+                steps = listOf(
+                    "Tap Turn it on below.",
+                    "Open Installed apps.",
+                    "Tap Buddy Assistant.",
+                    "Turn the switch on."
+                ),
+                note = "I don't record your screen, or send it anywhere."
             )
         }
     }

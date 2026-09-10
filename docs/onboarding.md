@@ -18,15 +18,16 @@ a guess at what to build, only at how to build it well.
 4. **Activation** — buddy talks first with Gemini Live's own voice (`Fenrir`) — one short hello,
    then the socket hangs up. No Android TTS, no lingering live talk, no mic. Then it reveals the
    second ability in the same breath: it can act on the screen too.
-5. **Overlay permission** — the "easy yes." Granting it is rewarded immediately: the real overlay
-   cursor settles onto the screen right there, behind the priming card.
-6. **Accessibility permission** — the highest-stakes screen in the app. Plain language for what it
-   enables and, just as plainly, what it never does, before Android's own generic dialog appears.
-7. **First guided task** — deliberately trivial: buddycursor's demo flight, then buddy opens the
-   calculator. Boring but flawless beats impressive but risky.
-8. **Home** — steady state.
+5. **Overlay permission** — the "easy yes," with a two-step how-to (Allow it → Appear on top for Buddy).
+   Granting it is rewarded immediately: the real overlay cursor settles onto the screen right there,
+   behind the priming card.
+6. **Accessibility permission** — the highest-stakes screen in the app. A short how-to (Installed
+   apps → Buddy Assistant → switch) and a plain line for what it never does, before Android's own
+   generic dialog appears. Granting it ends the funnel — buddy does not open an app or run a surprise
+   first task.
+7. **Home** — steady state.
 
-Any "not now" at steps 4–7 ends the funnel immediately (never a repeated nag) and lands on Home
+Any "not now" at steps 4–6 ends the funnel immediately (never a repeated nag) and lands on Home
 with full talking functionality; the same permissions stay reachable later from Settings. Steps
 1–3 are not skippable in that sense — talking needs the key, so there is nothing to defer to.
 
@@ -35,7 +36,7 @@ with full talking functionality; the same permissions stay reachable later from 
 `data/OnboardingPrefs.kt` persists exactly two flags:
 
 - `introSeen` — the wordless cards have been shown once.
-- `activationDone` — the post-key funnel (activation → permissions → first task) has been walked
+- `activationDone` — the post-key funnel (activation → permissions) has been walked
   once, however it ended. Once true, a returning user always lands straight on Home; the funnel
   never runs again. Finer-grained progress inside that funnel (which permission was granted) is
   intentionally not persisted — if the app is killed mid-funnel, it restarts from Activation next
@@ -77,9 +78,9 @@ call that proves it works (`gemini-3.5-flash-lite`, 4 output tokens) — never a
 | `ui/onboarding/IntroScreen.kt` | Swipeable cards + dots + skip |
 | `ui/onboarding/ApiKeyScreen.kt` | "Give buddy a brain" — field, live check, wake-up beat. Flex spacer so the field + Wake hug the keyboard |
 | `ui/onboarding/ActivationScreen.kt` | Live hello (one-shot Fenrir), then the capability reveal |
-| `ui/onboarding/OverlayPermissionScreen.kt` | Priming + the real cursor settling on screen |
-| `ui/onboarding/AccessibilityPermissionScreen.kt` | Priming, honest about what it is and isn't |
-| `ui/onboarding/FirstTaskScreen.kt` | Demo flight, then opens the calculator |
+| `ui/onboarding/OverlayPermissionScreen.kt` | Priming + a short how-to for Appear on top + the real cursor settling on screen |
+| `ui/onboarding/AccessibilityPermissionScreen.kt` | Priming + a short how-to for Buddy Assistant, honest about what it is and isn't |
+| `ui/onboarding/PermissionHowTo.kt` | Shared why + numbered taps for the two permission screens |
 | `ui/components/ApiKeyField.kt` | Shared field — monospace, show/hide — used here and in Settings |
 | `ui/components/PermissionGlyph.kt` | Custom line-art for the two priming screens |
 | `ui/settings/SettingsScreen.kt` | Composition root — key, permissions, reset |
