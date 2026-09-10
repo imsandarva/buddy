@@ -11,9 +11,9 @@ import com.sandarva.kotlinapps.ui.components.BuddyMark
 import kotlinx.coroutines.delay
 
 /**
- * The very first thing anyone sees — no logo, no "Welcome" text, just buddy's own mark, breathing,
- * alone. The identity is the orb; this beat lasts exactly as long as it takes to feel that, then
- * moves on (design spec §4).
+ * The very first thing anyone sees — just buddy's own mark, the held/drag orb, breathing
+ * alone on paper. The identity is the orb; this beat lasts exactly as long as it takes to feel
+ * that, then moves on (design spec §4).
  */
 @Composable
 fun LaunchScreen(onFinished: () -> Unit) {

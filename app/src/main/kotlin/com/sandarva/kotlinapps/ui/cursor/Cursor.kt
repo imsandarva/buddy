@@ -17,12 +17,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -31,7 +26,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp as lerpDp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sandarva.kotlinapps.overlay.CursorMoodSignals
-import com.sandarva.kotlinapps.ui.theme.BuddyColors
 import com.sandarva.kotlinapps.ui.theme.CursorMotion
 import kotlinx.coroutines.launch
 import kotlin.math.PI
@@ -126,39 +120,15 @@ fun BuddyCursor(modifier: Modifier = Modifier, mood: CursorMood, contentDescript
         val dragging = mood is CursorMood.Dragging
         val armed = (mood as? CursorMood.Dragging)?.armedToDismiss == true
 
-        with(CursorEffects) { drawGlow(radiusPx * 2.4f, glow) }
-        drawContactShadow(radiusPx)
-        drawSharedMaterial(radiusPx, morph)
+        with(CursorMaterial) {
+            drawGlow(radiusPx, glow)
+            drawContactShadow(radiusPx)
+            drawSharedMaterial(radiusPx, morph)
+        }
         with(VoiceForm) { draw(radiusPx, amplitude, ringPhase, sheenAngle, thinking = mood is CursorMood.Thinking, alpha = morph) }
         with(ActionForm) { draw(radiusPx, velocity, ripple.value, holdRing.value, dragging, armed, considering, sheenAngle, alpha = 1f - morph) }
-        drawLightRim(radiusPx)
+        with(CursorMaterial) { drawLightRim(radiusPx) }
     }
-}
-
-/** The one material both forms share — denser/focused core in Action, ambient/diffuse in Voice (§1, §3). */
-private fun DrawScope.drawSharedMaterial(radiusPx: Float, t: Float) {
-    val stops = arrayOf(
-        0f to lerp(BuddyColors.CursorFocus, BuddyColors.CursorCore, t),
-        0.5f to BuddyColors.CursorMid,
-        0.82f to lerp(BuddyColors.CursorRim.copy(alpha = 0.95f), BuddyColors.CursorRim.copy(alpha = 0.7f), t),
-        1f to BuddyColors.CursorRim.copy(alpha = 0f)
-    )
-    drawCircle(brush = Brush.radialGradient(*stops, radius = radiusPx), radius = radiusPx)
-}
-
-/** Neutral, soft, always-on — legible whether the host app underneath is pure white or pure black (§9). */
-private fun DrawScope.drawContactShadow(radiusPx: Float) {
-    val shadowCenter = center + Offset(0f, radiusPx * 0.18f)
-    drawCircle(
-        brush = Brush.radialGradient(0f to BuddyColors.CursorShadow, 1f to Color.Transparent, center = shadowCenter, radius = radiusPx * 1.35f),
-        radius = radiusPx * 1.35f,
-        center = shadowCenter
-    )
-}
-
-/** A thin soft outer light rim so the shape stays visible on a dark host app, without ever going "dark mode" (§9). */
-private fun DrawScope.drawLightRim(radiusPx: Float) {
-    drawCircle(color = BuddyColors.CursorLightRim, radius = radiusPx, style = Stroke(width = radiusPx * 0.035f))
 }
 
 private data class Presence(val scale: Float, val alpha: Float)
@@ -181,7 +151,7 @@ private fun glowIntensity(mood: CursorMood, amplitude: Float): Float = when (moo
     CursorMood.Targeting -> 0.58f
     CursorMood.Acting -> 0.7f
     is CursorMood.Holding -> 0.5f
-    is CursorMood.Dragging -> 0.45f
+    is CursorMood.Dragging -> CursorMaterial.HELD_GLOW
     CursorMood.Paused -> 0.2f
 }
 

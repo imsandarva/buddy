@@ -9,31 +9,31 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
-import com.sandarva.kotlinapps.ui.theme.BuddyColors
+import com.sandarva.kotlinapps.ui.cursor.CursorMaterial
 import com.sandarva.kotlinapps.ui.theme.BuddyMotion
 
-/** Quiet living point — a companion, not a mascot. */
+/**
+ * In-app brand mark — the same held/drag BuddyCursor body as the launcher icon, without the white
+ * plate. A quiet breathe is the only extra life; this is never Voice/live form. See docs/brand.md.
+ */
 @Composable
 fun BuddyMark(alive: Boolean = false, modifier: Modifier = Modifier) {
     val infinite = rememberInfiniteTransition(label = "mark")
-    val lo = if (alive) 0.96f else 0.92f
-    val hi = if (alive) 1.12f else 1.06f
+    val lo = if (alive) 0.98f else 0.96f
+    val hi = if (alive) 1.05f else 1.02f
     val breathe by infinite.animateFloat(lo, hi, infiniteRepeatable(BuddyMotion.breathe(), RepeatMode.Reverse), label = "breathe")
-    Canvas(modifier.size(76.dp)) {
-        val r = size.minDimension / 2f
-        val c = Offset(size.width / 2f, size.height / 2f)
-        drawCircle(
-            Brush.radialGradient(listOf(BuddyColors.Glow, BuddyColors.GlowSoft, BuddyColors.Paper.copy(alpha = 0f)), c, r * breathe),
-            r * breathe,
-            c
-        )
-        drawCircle(color = BuddyColors.Violet.copy(alpha = 0.28f), radius = r * 0.4f, center = c, style = Stroke(width = 1.1f * density, cap = StrokeCap.Round))
-        drawCircle(color = BuddyColors.Violet, radius = r * (if (alive) 0.18f else 0.15f) * breathe, center = c)
-        drawCircle(color = BuddyColors.Snow.copy(alpha = 0.85f), radius = r * 0.05f, center = c + Offset(-r * 0.045f, -r * 0.055f))
+    Canvas(modifier.size(76.dp).graphicsLayer { scaleX = breathe; scaleY = breathe }) {
+        val radiusPx = size.minDimension * ORB_FRACTION
+        with(CursorMaterial) {
+            drawGlow(radiusPx, CursorMaterial.HELD_GLOW, CursorMaterial.LOGO_GLOW_SPREAD)
+            drawContactShadow(radiusPx)
+            drawSharedMaterial(radiusPx, CursorMaterial.ACTION_MORPH)
+            drawLogoSheen(radiusPx)
+        }
     }
 }
+
+/** Orb radius as a fraction of the canvas — sized so glow still fits, close to the launcher glyph. */
+private const val ORB_FRACTION = 0.29f

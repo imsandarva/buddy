@@ -26,6 +26,7 @@ never a cross-fade between two separate assets.
 | `overlay/CursorMoodSignals.kt` | Raw facts (gesture in flight, traveling, targeting, user-drag, considering, paused, voice amplitude, velocity, uncertain pulses) — one flow per fact, written by whoever owns that fact |
 | `overlay/CursorMoodResolver.kt` | The *only* place priority between overlapping signals is decided; turns the raw facts into the single `CursorMood` to draw |
 | `ui/cursor/Cursor.kt` | Composition root — sizes/bounds, and `BuddyCursor()`, which wires every animated number (morph, breathe, sheen, ripple, hold-ring, wobble) and draws the shared material + contrast shadow/rim |
+| `ui/cursor/CursorMaterial.kt` | The one glassy body — glow, shadow, radial fill, rim. The launcher logo is this body at **Dragging** presence on white; see `docs/brand.md` |
 | `ui/cursor/VoiceForm.kt` / `ActionForm.kt` | Pure, stateless draw functions for each form's extra cues — take plain numbers, draw one cue each |
 | `ui/cursor/CursorEffects.kt` | Lowest-level Canvas primitives (glow, motion trail, contact ripple, hold ring, amplitude rings, sheen sweep, wobble) shared by both forms |
 | `ui/cursor/BuddyCursorHandle.kt` | Touch target — tap, double-tap, hold, drag |
@@ -52,6 +53,8 @@ raw signals overlap (highest priority first):
 8. **Thinking** — Voice form, a slow sheen turning inside the orb like light in a glass marble — composing a reply.
 9. **Considering** — Action form's version of the same sheen, at hand scale — the agent silently deciding its next on-screen move.
 10. **Idle** — dimmed, slightly smaller, recedes into peripheral vision.
+
+The **app logo** is Idle's opposite on the Action-form body: **Dragging** presence (full scale, full opacity, held glow) photographed on white — not Voice/live, not Ask buddy. See `docs/brand.md`.
 
 Separately, an **uncertain** wobble (`CursorMoodSignals.pulseUncertain()`) can play on top of any
 mood — buddy couldn't find the control it was looking for, so it says so honestly instead of

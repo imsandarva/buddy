@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Held/drag BuddyCursor on a transparent field — the adaptive-icon foreground. 108dp canvas,
+     orb 56dp (inside the 66dp safe zone). Colors match BuddyColors cursor tokens. docs/brand.md -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Bloom — Dragging glow (0.45 intensity) compressed so it stays inside the circular mask. -->
+    <path android:pathData="M54,54 m-46,0 a46,46 0 1,1 92,0 a46,46 0 1,1 -92,0">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="radial"
+                android:centerX="54"
+                android:centerY="54"
+                android:gradientRadius="46">
+                <item android:offset="0" android:color="#1F5850FF" />
+                <item android:offset="0.55" android:color="#0C5850FF" />
+                <item android:offset="1" android:color="#005850FF" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Contact shadow — the same soft sit as the live cursor, slightly below center. -->
+    <path android:pathData="M54,59 m-38,0 a38,38 0 1,1 76,0 a38,38 0 1,1 -76,0">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="radial"
+                android:centerX="54"
+                android:centerY="59"
+                android:gradientRadius="38">
+                <item android:offset="0" android:color="#332A1F55" />
+                <item android:offset="1" android:color="#002A1F55" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Action-form body at full presence (morph = 0). -->
+    <path android:pathData="M54,54 m-28,0 a28,28 0 1,1 56,0 a28,28 0 1,1 -56,0">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="radial"
+                android:centerX="54"
+                android:centerY="54"
+                android:gradientRadius="28">
+                <item android:offset="0" android:color="#FF5850FF" />
+                <item android:offset="0.5" android:color="#FF6C63F2" />
+                <item android:offset="0.82" android:color="#F2C9C3FB" />
+                <item android:offset="1" android:color="#00C9C3FB" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Still-frame glass catch — stands in for the live sheen the bitmap cannot play. -->
+    <path android:pathData="M54,54 m-28,0 a28,28 0 1,1 56,0 a28,28 0 1,1 -56,0">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="radial"
+                android:centerX="46"
+                android:centerY="45"
+                android:gradientRadius="12">
+                <item android:offset="0" android:color="#6BEFECFF" />
+                <item android:offset="1" android:color="#00EFECFF" />
+            </gradient>
+        </aapt:attr>
+    </path>
+</vector>

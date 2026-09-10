@@ -18,6 +18,7 @@ system overlay (`docs/overlay.md`).
 | `ui/home/PromptChips.kt` | First-run suggested asks — fades out after a few sessions |
 | `ui/home/RecentActivityStrip.kt` | Collapsed trail of the last few real requests, tap to repeat |
 | `ui/home/AskBuddySheet.kt` | Type-to-ask panel (typed REST path) |
+| `ui/components/BuddyMark.kt` | In-app brand mark — same held/drag orb as the launcher, without the white plate |
 | `ui/components/BuddyActionButton.kt` | Violet Start and quiet Rest |
 | `ui/components/ApiKeyField.kt` | Shared key input — onboarding and Settings both use it |
 | `ui/motion/PressScale.kt` | Shared press spring |
@@ -35,11 +36,11 @@ system overlay (`docs/overlay.md`).
 - **Point at something** — snapshots the active screen and flies to one real control.
 - **Prompt chips / recent activity** — both call the same typed door (`askWithText`) as the sheet.
 
-See `docs/overlay.md`, `docs/cursor.md`, `docs/eyes.md`, `docs/hands.md`, `docs/type.md`, `docs/brain.md`, and `docs/onboarding.md`.
+See `docs/overlay.md`, `docs/cursor.md`, `docs/brand.md`, `docs/eyes.md`, `docs/hands.md`, `docs/type.md`, `docs/brain.md`, and `docs/onboarding.md`.
 
 ## Design tokens
 
-Light only. Paper field (`#F7F6FB`), snow surfaces (`#FFFFFF`), ink (`#1C1730`), iris violet (`#635BFF`) for UI accents. The on-screen pointer is the BuddyCursor arrow (blue `#4A9EFF`, black outline). No honey, no dusk, no dark theme.
+Light only. Paper field (`#F7F6FB`), snow surfaces (`#FFFFFF`), ink (`#1C1730`), iris violet (`#635BFF`) for UI accents. The on-screen pointer is BuddyCursor — one glassy blue-violet being (`CursorFocus` `#5850FF`, `CursorMid` `#6C63F2`). The app logo is that being in its held/drag presence on white; see `docs/brand.md`. No honey, no dusk, no dark theme.
 
 - Eyebrow: wide-tracked sans, violet
 - Display: light serif, stacked two-line headlines
