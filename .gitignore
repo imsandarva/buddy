@@ -19,6 +19,7 @@ local.properties
 
 # Generated / compiled
 *.apk
+!buddy.apk
 *.aab
 *.ap_
 *.dex
