@@ -15,20 +15,22 @@ a guess at what to build, only at how to build it well.
    **Wake buddy up**; with the keyboard up it lives above the field, so the field and the CTA sit
    a tight 12dp apart and hug the keys. The line under the title stays — we do not hide copy when
    they type. The action never hides. Keyboard Done still submits.
-4. **Language** — "How should I talk?" A short stacked headline, one quiet line, then a thin
-   underline to type on (never a boxed search) and the country list. One tap chooses; a brief beat
-   lets the check land, then Activation greets in that language. Keyboard up collapses the subtitle
-   and shortens the title so the list stays the page. Same list later from Settings.
+4. **Language** — "How should I talk?" United States / English is already chosen: it sits in a
+   Suggested row at the top, already checked, and the violet **Talk in English** button names it.
+   No copy that says “the default is English” — the check and the button *are* the default. A tap
+   moves the check; Continue keeps whatever is selected. Search hides Suggested so the alphabet can
+   take the page. Same list later from Settings, without the Suggested pin.
 5. **Activation** — buddy talks first with Gemini Live's own voice (`Orion`) — one short hello,
    then the socket hangs up. No Android TTS, no lingering live talk, no mic. Then it reveals the
    second ability in the same breath: it can act on the screen too.
-6. **Overlay permission** — the "easy yes," with a two-step how-to (Allow it → Appear on top for Buddy).
-   Granting it is rewarded immediately: the real overlay cursor settles onto the screen right there,
-   behind the priming card.
-7. **Accessibility permission** — the highest-stakes screen in the app. A short how-to (Installed
-   apps → Buddy Assistant → switch) and a plain line for what it never does, before Android's own
-   generic dialog appears. Granting it ends the funnel — buddy does not open an app or run a surprise
-   first task.
+6. **Overlay permission** — the "easy yes." One headline, one why, two taps (Allow it → Appear on
+   top for Buddy), then the real overlay cursor settles onto the screen right there.
+7. **Accessibility permission** — the highest-stakes screen in the app. The why is one breath:
+   three concrete acts (tap, type, change settings), why the screen must be seen, and “only when
+   you ask” — not a list of examples, not a vague “I can see your screen.” Then a short how-to
+   (Installed apps → Buddy Assistant → switch) and a plain line for what it never does, before
+   Android's own generic dialog appears. Granting it ends the funnel — buddy does not open an app
+   or run a surprise first task.
 8. **Home** — steady state.
 
 Any "not now" at steps 5–7 ends the funnel immediately (never a repeated nag) and lands on Home
@@ -66,9 +68,11 @@ call that proves it works (`gemini-3.5-flash-lite`, 4 output tokens) — never a
 
 ## Recovery, not silent failure
 
-- **Key stops working** — `GeminiClient.ApiException.isAuthError` (401/403) and
-  `LiveFail.isAuthError` both flow into `ApiKeyStore.markInvalid()`. The home screen shows a quiet
-  line pointing at Settings; Settings' key section opens straight into edit mode.
+- **Key stops working** — `GeminiClient.ApiException.isAuthError` (401/403) flags
+  `ApiKeyStore.markInvalid()`. A Live close that *says* "leaked" does **not** — Google's Live
+  websocket has been returning that line for keys that still work on REST `generateContent`.
+  Live confirms on REST first; if REST still accepts the key, typed ask stays up and the sheet
+  says live talk is unavailable. Only a real REST reject opens Settings.
 - **Accessibility revoked** — unchanged from before onboarding existed: `BuddyBrain`'s
   `HANDS_OFF_NOTE` already says so calmly the next time an action needs it, instead of a raw
   system error.
@@ -84,14 +88,15 @@ call that proves it works (`gemini-3.5-flash-lite`, 4 output tokens) — never a
 | `ui/onboarding/LaunchScreen.kt` | The orb, alone, breathing |
 | `ui/onboarding/IntroScreen.kt` | Swipeable cards + dots + skip |
 | `ui/onboarding/ApiKeyScreen.kt` | "Give buddy a brain" — field, live check, wake-up beat. Flex spacer so the field + Wake hug the keyboard |
-| `ui/onboarding/LanguageScreen.kt` | "How should I talk?" — short ask, underline field, country list, one-tap pick |
+| `ui/onboarding/LanguageScreen.kt` | "How should I talk?" — US English pre-checked in Suggested, Continue confirms |
 | `ui/onboarding/ActivationScreen.kt` | Live hello (one-shot Orion), then the capability reveal |
-| `ui/onboarding/OverlayPermissionScreen.kt` | Priming + a short how-to for Appear on top + the real cursor settling on screen |
-| `ui/onboarding/AccessibilityPermissionScreen.kt` | Priming + a short how-to for Buddy Assistant, honest about what it is and isn't |
-| `ui/onboarding/PermissionHowTo.kt` | Shared why + numbered taps for the two permission screens |
+| `ui/onboarding/OverlayPermissionScreen.kt` | Overlay ask only — copy, grant, skip; layout is `PermissionPrimer` |
+| `ui/onboarding/AccessibilityPermissionScreen.kt` | Accessibility ask only — copy, grant, skip; same primer |
+| `ui/onboarding/PermissionPrimer.kt` | Shared paper: glyph, headline, how-to, action. Centers when short, scrolls when tall |
+| `ui/onboarding/PermissionHowTo.kt` | Why + numbered taps + note, in one column (never loose children into FadeSlideIn's Box) |
 | `ui/components/ApiKeyField.kt` | Shared field — monospace, show/hide — used here and in Settings |
 | `ui/components/UnderlineField.kt` | Thin underline to type on — no box; language search uses this |
-| `ui/components/LanguagePickerList.kt` | Shared country list + underline search — first-run and Settings |
+| `ui/components/LanguagePickerList.kt` | Shared country list + underline search; first-run pins [CountryData.DEFAULT] |
 | `ui/components/CountryLanguageRow.kt` | One country: flag, name, language, quiet check — no washed box |
 | `ui/components/PermissionGlyph.kt` | Custom line-art for the two priming screens |
 | `ui/settings/SettingsScreen.kt` | Composition root — key, permissions, reset |
@@ -103,6 +108,8 @@ call that proves it works (`gemini-3.5-flash-lite`, 4 output tokens) — never a
 | `data/ApiKeyStore.kt` | The key, on-device only, plus the "stopped working" flag |
 | `data/DevApiKeySeed.kt` | Temporary field prefill only — remove before real first-run |
 | `data/ApiKeyValidator.kt` | Turns a pasted key into a human yes/no |
+| `data/CountryData.kt` | Countries + languages; `DEFAULT` is United States / English |
+| `data/LanguagePrefs.kt` | The country they picked, on-device |
 | `data/OnboardingPrefs.kt` | `introSeen`, `activationDone`, and the chip-fade session counter |
 | `data/ActivityLog.kt` | Last few real requests, for the home screen's recent-activity strip |
 

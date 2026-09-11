@@ -1,25 +1,13 @@
 package com.sandarva.kotlinapps.ui.onboarding
 
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sandarva.kotlinapps.overlay.BuddyOverlayController
 import com.sandarva.kotlinapps.overlay.OverlaySession
-import com.sandarva.kotlinapps.ui.components.BuddyActionButton
-import com.sandarva.kotlinapps.ui.components.BuddyActionStyle
 import com.sandarva.kotlinapps.ui.components.OverlayGlyph
-import com.sandarva.kotlinapps.ui.components.QuietTextAction
-import com.sandarva.kotlinapps.ui.motion.FadeSlideIn
-import com.sandarva.kotlinapps.ui.theme.BuddyColors
 import kotlinx.coroutines.delay
 
 /**
@@ -39,31 +27,17 @@ fun OverlayPermissionScreen(onGranted: () -> Unit, onSkipped: () -> Unit) {
         }
     }
 
-    OnboardingScaffold(
-        bottom = {
-            FadeSlideIn(0) {
-                BuddyActionButton("Allow it", BuddyActionStyle.Start, onClick = { BuddyOverlayController.requestStart(context) })
-            }
-            Spacer(Modifier.height(18.dp))
-            QuietTextAction("Not now", onSkipped)
-        }
-    ) {
-        FadeSlideIn(0) { OverlayGlyph() }
-        Spacer(Modifier.height(32.dp))
-        FadeSlideIn(60) {
-            Text("Let me stay on\nyour screen.", style = MaterialTheme.typography.displayLarge, color = BuddyColors.Ink, textAlign = TextAlign.Center)
-        }
-        Spacer(Modifier.height(14.dp))
-        FadeSlideIn(110) {
-            PermissionHowTo(
-                why = "This lets me float above whatever you're doing, so I'm a tap away.",
-                steps = listOf(
-                    "Tap Allow it below.",
-                    "You'll see Appear on top. Turn it on for Buddy."
-                ),
-                note = "To send me away later, hold me and drag to the X."
-            )
-        }
-    }
+    PermissionPrimer(
+        glyph = { OverlayGlyph() },
+        title = "Let me stay on\nyour screen.",
+        why = "I'll float above whatever you're doing, so I'm always a tap away.",
+        steps = listOf(
+            "Tap Allow it below.",
+            "Turn on Appear on top for Buddy."
+        ),
+        note = "To send me away later, hold me and drag to the X.",
+        action = "Allow it",
+        onAllow = { BuddyOverlayController.requestStart(context) },
+        onSkip = onSkipped
+    )
 }
-

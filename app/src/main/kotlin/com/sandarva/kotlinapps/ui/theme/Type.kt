@@ -6,73 +6,40 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.LineHeightStyle
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.sp
 
 private val Trimmed = PlatformTextStyle(includeFontPadding = false)
-private val TightLines = LineHeightStyle(alignment = LineHeightStyle.Alignment.Center, trim = LineHeightStyle.Trim.Both)
+private val LineRhythm = LineHeightStyle(alignment = LineHeightStyle.Alignment.Center, trim = LineHeightStyle.Trim.None)
+
+/**
+ * Multi-word styles must leave [letterSpacing] unspecified. OEM generic fonts (Samsung One UI
+ * especially) collapse the space glyph once Compose writes a tracking value onto the paint —
+ * even a tiny `0.08.sp` — which is why "Allow it" rendered as "Allowit". Eyebrows stay tracked
+ * because they are single uppercase tokens.
+ */
+private fun buddyStyle(
+    family: FontFamily,
+    weight: FontWeight,
+    size: TextUnit,
+    line: TextUnit,
+    tracking: TextUnit = TextUnit.Unspecified
+) = TextStyle(
+    fontFamily = family,
+    fontWeight = weight,
+    fontSize = size,
+    lineHeight = line,
+    letterSpacing = tracking,
+    platformStyle = Trimmed,
+    lineHeightStyle = LineRhythm
+)
 
 val BuddyTypography = Typography(
-    labelSmall = TextStyle(
-        fontFamily = FontFamily.SansSerif,
-        fontWeight = FontWeight.Medium,
-        fontSize = 11.sp,
-        lineHeight = 14.sp,
-        letterSpacing = 3.2.sp,
-        platformStyle = Trimmed,
-        lineHeightStyle = TightLines
-    ),
-    displayLarge = TextStyle(
-        fontFamily = FontFamily.Serif,
-        fontWeight = FontWeight.Light,
-        fontSize = 40.sp,
-        lineHeight = 46.sp,
-        letterSpacing = (-0.9).sp,
-        platformStyle = Trimmed,
-        lineHeightStyle = TightLines
-    ),
-    titleLarge = TextStyle(
-        fontFamily = FontFamily.Serif,
-        fontWeight = FontWeight.Normal,
-        fontSize = 26.sp,
-        lineHeight = 32.sp,
-        letterSpacing = (-0.35).sp,
-        platformStyle = Trimmed,
-        lineHeightStyle = TightLines
-    ),
-    titleMedium = TextStyle(
-        fontFamily = FontFamily.Serif,
-        fontWeight = FontWeight.Normal,
-        fontSize = 17.sp,
-        lineHeight = 22.sp,
-        letterSpacing = (-0.25).sp,
-        platformStyle = Trimmed,
-        lineHeightStyle = TightLines
-    ),
-    bodyLarge = TextStyle(
-        fontFamily = FontFamily.SansSerif,
-        fontWeight = FontWeight.Normal,
-        fontSize = 17.sp,
-        lineHeight = 27.sp,
-        letterSpacing = 0.1.sp,
-        platformStyle = Trimmed,
-        lineHeightStyle = TightLines
-    ),
-    labelLarge = TextStyle(
-        fontFamily = FontFamily.SansSerif,
-        fontWeight = FontWeight.Medium,
-        fontSize = 16.sp,
-        lineHeight = 20.sp,
-        letterSpacing = 0.08.sp,
-        platformStyle = Trimmed,
-        lineHeightStyle = TightLines
-    ),
-    bodySmall = TextStyle(
-        fontFamily = FontFamily.SansSerif,
-        fontWeight = FontWeight.Normal,
-        fontSize = 13.sp,
-        lineHeight = 19.sp,
-        letterSpacing = 0.15.sp,
-        platformStyle = Trimmed,
-        lineHeightStyle = TightLines
-    )
+    labelSmall = buddyStyle(FontFamily.SansSerif, FontWeight.Medium, 11.sp, 14.sp, tracking = 2.8.sp),
+    displayLarge = buddyStyle(FontFamily.Serif, FontWeight.Light, 40.sp, 48.sp),
+    titleLarge = buddyStyle(FontFamily.Serif, FontWeight.Normal, 26.sp, 34.sp),
+    titleMedium = buddyStyle(FontFamily.Serif, FontWeight.Normal, 17.sp, 24.sp),
+    bodyLarge = buddyStyle(FontFamily.SansSerif, FontWeight.Normal, 17.sp, 26.sp),
+    labelLarge = buddyStyle(FontFamily.SansSerif, FontWeight.Medium, 16.sp, 22.sp),
+    bodySmall = buddyStyle(FontFamily.SansSerif, FontWeight.Normal, 13.sp, 20.sp)
 )

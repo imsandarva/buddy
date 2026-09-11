@@ -76,7 +76,7 @@ fun CountryLanguageRow(country: Country, selected: Boolean, enabled: Boolean, on
         Icon(
             Icons.Filled.Check,
             contentDescription = null,
-            tint = BuddyColors.Ink,
+            tint = BuddyColors.Violet,
             modifier = Modifier
                 .size(18.dp)
                 .alpha(check)

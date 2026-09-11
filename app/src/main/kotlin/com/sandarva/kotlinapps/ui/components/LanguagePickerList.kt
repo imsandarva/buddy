@@ -24,27 +24,36 @@ import com.sandarva.kotlinapps.data.CountryData
 import com.sandarva.kotlinapps.ui.theme.BuddyColors
 
 /**
- * Searchable country list shared by first-run language and Settings. The field is only a line;
- * the list is the page — one tap chooses, and filtering never rebuilds rows that did not change.
+ * Searchable country list. On first-run, [suggested] sits above the alphabet already checked —
+ * the Apple / Airbnb “this is the one” pattern — and drops away while they type.
  */
 @Composable
 fun LanguagePickerList(
     selectedCode: String?,
     enabled: Boolean = true,
+    suggested: Country? = null,
     modifier: Modifier = Modifier,
     onSelected: (Country) -> Unit
 ) {
     var query by remember { mutableStateOf("") }
-    val filtered = remember(query) { countriesMatching(query) }
+    val pinned = suggested.takeIf { query.isBlank() }
+    val filtered = remember(query, pinned?.code) { countriesMatching(query, pinned?.code) }
 
     Column(modifier.fillMaxSize()) {
         UnderlineField(query, { query = it }, placeholder = "Find a country", enabled = enabled, imeAction = ImeAction.Search)
-        if (filtered.isEmpty()) {
+        if (filtered.isEmpty() && pinned == null) {
             Box(Modifier.fillMaxWidth().padding(top = 36.dp), contentAlignment = Alignment.Center) {
                 Text("Nothing matches that.", style = MaterialTheme.typography.bodyLarge, color = BuddyColors.Mist)
             }
         } else {
-            LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(top = 8.dp, bottom = 28.dp)) {
+            LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(top = 4.dp, bottom = 16.dp)) {
+                if (pinned != null) {
+                    item(key = "label-suggested") { PickerLabel("Default") }
+                    item(key = "suggested-${pinned.code}") {
+                        CountryLanguageRow(pinned, selected = pinned.code == selectedCode, enabled = enabled, onTap = { onSelected(pinned) }, modifier = Modifier.animateItem())
+                    }
+                    if (filtered.isNotEmpty()) item(key = "label-all") { PickerLabel("All countries") }
+                }
                 items(filtered, key = { it.code }) { country ->
                     CountryLanguageRow(
                         country = country,
@@ -59,8 +68,19 @@ fun LanguagePickerList(
     }
 }
 
-private fun countriesMatching(raw: String): List<Country> {
+@Composable
+private fun PickerLabel(text: String) {
+    Text(
+        text.uppercase(),
+        style = MaterialTheme.typography.labelSmall,
+        color = BuddyColors.Mist,
+        modifier = Modifier.padding(top = 18.dp, bottom = 2.dp)
+    )
+}
+
+private fun countriesMatching(raw: String, except: String?): List<Country> {
     val q = raw.trim()
-    if (q.isBlank()) return CountryData.sortedByName
-    return CountryData.sortedByName.filter { it.name.contains(q, ignoreCase = true) || it.language.contains(q, ignoreCase = true) }
+    val base = if (q.isBlank()) CountryData.sortedByName
+    else CountryData.sortedByName.filter { it.name.contains(q, ignoreCase = true) || it.language.contains(q, ignoreCase = true) }
+    return if (except == null) base else base.filter { it.code != except }
 }

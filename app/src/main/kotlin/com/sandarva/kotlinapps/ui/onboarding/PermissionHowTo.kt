@@ -17,21 +17,53 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.sandarva.kotlinapps.ui.theme.BuddyColors
 
-/** Why this permission, then the few taps to turn it on — readable at a glance. */
+/**
+ * Why this permission, then the few taps to turn it on. Owns its own column so it can sit
+ * inside [com.sandarva.kotlinapps.ui.motion.FadeSlideIn] (a Box) without the why, steps, and
+ * note painting on top of each other.
+ */
 @Composable
 internal fun PermissionHowTo(why: String, steps: List<String>, note: String? = null) {
-    Text(why, style = MaterialTheme.typography.bodyLarge, color = BuddyColors.InkMuted, textAlign = TextAlign.Center)
-    Spacer(Modifier.height(20.dp))
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        steps.forEachIndexed { i, step ->
-            Row(verticalAlignment = Alignment.Top) {
-                Text("${i + 1}", style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium), color = BuddyColors.Violet, modifier = Modifier.width(22.dp))
-                Text(step, style = MaterialTheme.typography.bodyLarge, color = BuddyColors.Ink)
-            }
+    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            why,
+            style = MaterialTheme.typography.bodyLarge,
+            color = BuddyColors.InkMuted,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(Modifier.height(28.dp))
+        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            steps.forEachIndexed { i, step -> HowToStep(index = i + 1, text = step) }
+        }
+        if (note != null) {
+            Spacer(Modifier.height(22.dp))
+            Text(
+                note,
+                style = MaterialTheme.typography.bodySmall,
+                color = BuddyColors.Mist,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
         }
     }
-    if (note != null) {
-        Spacer(Modifier.height(16.dp))
-        Text(note, style = MaterialTheme.typography.bodySmall, color = BuddyColors.Mist, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+}
+
+@Composable
+private fun HowToStep(index: Int, text: String) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+        Text(
+            "$index",
+            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+            color = BuddyColors.Violet,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.width(28.dp)
+        )
+        Text(
+            text,
+            style = MaterialTheme.typography.bodyLarge,
+            color = BuddyColors.Ink,
+            modifier = Modifier.weight(1f)
+        )
     }
 }

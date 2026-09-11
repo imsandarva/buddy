@@ -22,7 +22,7 @@ system overlay (`docs/overlay.md`).
 | `ui/components/BuddyActionButton.kt` | Violet Start and quiet Rest |
 | `ui/components/ApiKeyField.kt` | Shared key input — onboarding and Settings both use it |
 | `ui/components/UnderlineField.kt` | Thin underline input — language search, no box |
-| `ui/components/LanguagePickerList.kt` | Country list + underline search — onboarding and Settings |
+| `ui/components/LanguagePickerList.kt` | Country list + underline search; Suggested pin for first-run US English |
 | `ui/motion/PressScale.kt` | Shared press spring |
 | `session/BuddySessionViewModel.kt` | Facade over hands, eyes, the Gemini brain, and onboarding/key state |
 | `data/` | On-device key, onboarding flags, activity log — see `docs/onboarding.md` |
@@ -44,7 +44,14 @@ See `docs/overlay.md`, `docs/cursor.md`, `docs/brand.md`, `docs/eyes.md`, `docs/
 
 Light only. Paper field (`#F7F6FB`), snow surfaces (`#FFFFFF`), ink (`#1C1730`), iris violet (`#635BFF`) for UI accents. The on-screen pointer is BuddyCursor — one glassy blue-violet being (`CursorFocus` `#5850FF`, `CursorMid` `#6C63F2`). The app logo is that being in its held/drag presence on white; see `docs/brand.md`. No honey, no dusk, no dark theme.
 
-- Eyebrow: wide-tracked sans, violet
-- Display: light serif, stacked two-line headlines
-- Body: 17 / 27 sans, muted ink
+- Eyebrow: wide-tracked sans, violet — the only style that sets `letterSpacing` (single uppercase tokens)
+- Display: light serif, stacked two-line headlines, 40 / 48, no tracking
+- Body: 17 / 26 sans, muted ink, no tracking
+- Labels / actions: 16 / 22 sans medium, no tracking
 - Motion: local only — ambient bloom, press scale, entrance, grab jiggle, hero crossfade, and the same soft no-overshoot crossfade between every onboarding/Settings/Home destination (`BuddyMotion.crossfade`)
+
+Do not add tracking to multi-word styles. OEM generic fonts (Samsung One UI in particular) collapse
+the space glyph once Compose writes a `letterSpacing` onto the paint, so "Allow it" becomes
+"Allowit" and stacked headlines read as one jammed word. Leave `letterSpacing` unspecified except
+on the eyebrow. `FadeSlideIn` is a Box — any block with more than one child (the permission how-to)
+must own its own column.

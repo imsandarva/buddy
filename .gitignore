@@ -9,7 +9,7 @@ build/
 **/build/
 
 # Local machine config (SDK path — different per developer)
-local.propertie
+local.properties
 # Android Studio / IntelliJ
 .idea/
 *.iml

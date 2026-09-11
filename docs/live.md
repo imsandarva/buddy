@@ -103,7 +103,16 @@ Playback is now a jitter buffer: preroll ~60 ms, never drop, blocking `AudioTrac
 
 Buddy’s own voice used to leak into the mic (USAGE_ASSISTANT vs VOICE_COMMUNICATION). The server then sent `interrupted` and we flushed mid-sentence. Mic and speaker now share one audio session with echo cancel.
 
-Setup JSON must stay on fields this `v1beta` socket actually knows. Extra keys such as `proactivity` get `1007 Invalid JSON payload` and the talk dies before you can speak.
+Setup JSON must stay on fields this `v1beta` socket actually knows. Extra keys such as `proactivity` get `1007 Invalid JSON payload` and the talk dies before you can speak. Live `generationConfig` also does not list `thinkingConfig` — that field stayed on REST only.
+
+## Why every key looked “leaked” overnight
+
+Google closed Live with **1008** `Your API key was reported as leaked` right after setup. That line is Google's, but it was a **false alarm on the key**:
+
+1. **The key was in the WebSocket URL** (`?key=`). Google's leak scanner treats keys that show up in URLs as public. Every key this app used for Live — including brand-new ones from other accounts — got the same close the next day. REST (`x-goog-api-key`) still accepted them. The socket now sends the same header and keeps the key out of the URL.
+2. **We believed the close.** `LiveFail.isAuthError` matched "api key" and `markInvalid()` killed typed ask too. Live now pings REST first; only a real 401/403 flags the store. If REST still works, the sheet says live talk is unavailable and they can type.
+
+Look for `Live.auth liveFail restOk=true` in logcat. That means the key is fine and Live is the one that failed.
 
 ## Why the cursor felt hung
 
@@ -139,6 +148,6 @@ After a tool, the tool response carries the new SCREEN taken after the event str
 | `overlay/OverlayNotifier.kt` | Syncs notification when live starts or stops |
 | `overlay/OverlayChrome.kt` | Cursor + ask pass through during a stroke |
 
-API key is still `gemini.api.key` in `local.properties`. The socket uses `?key=` on the Gemini Live URL.
+API key is the user's own, from `ApiKeyStore` — never `local.properties` on the Live socket. The socket sends it as `x-goog-api-key` (same header REST uses). Putting `?key=` on the WebSocket URL made Google's leak scanner flag every key used for Live, including fresh keys from other accounts, which then made us mark the store invalid even when REST still worked.
 
 See `docs/live-routing.md`, `docs/live-jobs.md`, `docs/agent.md`, `docs/brain.md`, `docs/search.md`, `docs/hands.md`, and `docs/type.md`.

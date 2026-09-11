@@ -42,7 +42,7 @@ Models: runner `gemini-3.5-flash-lite` with `thinkingLevel: high` (for now, both
 
 ## When the key stops working
 
-A 401/403 from `GeminiClient` (`ApiException.isAuthError`) or an auth-shaped Live close reason (`LiveFail.isAuthError`) both flag `ApiKeyStore.markInvalid()` — never a raw error surfaced to the person. The home screen then shows one quiet line pointing at Settings, and Settings opens its key section straight into edit mode.
+A 401/403 from `GeminiClient` (`ApiException.isAuthError`) flags `ApiKeyStore.markInvalid()`. A Live close that *says* the key was leaked does not, by itself — confirm on REST first. If `generateContent` still accepts the key, typed ask stays available and the sheet says live talk is unavailable. See `docs/live.md`.
 
 ## Composition
 

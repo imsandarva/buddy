@@ -13,7 +13,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import com.sandarva.kotlinapps.ui.theme.BuddyMotion
 import kotlinx.coroutines.delay
 
-/** One-shot fade + rise used for staged home entrance. */
+/** One-shot fade + rise. A Box — [content] must be a single layout root, not loose siblings. */
 @Composable
 fun FadeSlideIn(delayMillis: Int, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
     var shown by remember { mutableStateOf(false) }

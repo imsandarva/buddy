@@ -40,7 +40,9 @@ class LiveSocket(
 
     fun connect() {
         closed = false
-        val request = Request.Builder().url("${LiveConfig.WS}?key=$apiKey").build()
+        // Header only — same as REST. `?key=` on this URL is what Google's leak scanner
+        // flags: every key used here gets "reported as leaked" by morning, even fresh ones.
+        val request = Request.Builder().url(LiveConfig.WS).header("x-goog-api-key", apiKey).build()
         socket = http.newWebSocket(request, object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: Response) {
                 BuddyLog.d("Live.socket", "open")

@@ -110,7 +110,6 @@ object LiveMessages {
                 .put("voiceConfig", JSONObject().put("prebuiltVoiceConfig", JSONObject().put("voiceName", LiveConfig.VOICE)))
                 .apply { if (speechCode != null) put("languageCode", speechCode) }
         )
-        .put("thinkingConfig", JSONObject().put("thinkingLevel", "minimal"))
 
     private fun vad() = JSONObject()
         .put("disabled", false)

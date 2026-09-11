@@ -17,6 +17,7 @@ import com.sandarva.kotlinapps.brain.agent.SceneDescriber
 import com.sandarva.kotlinapps.brain.agent.WebSearch
 import com.sandarva.kotlinapps.data.ActivityLog
 import com.sandarva.kotlinapps.data.ApiKeyStore
+import com.sandarva.kotlinapps.data.ApiKeyValidator
 import com.sandarva.kotlinapps.data.LanguagePrefs
 import com.sandarva.kotlinapps.debug.BuddyLog
 import com.sandarva.kotlinapps.overlay.OverlayNotifier
@@ -82,7 +83,7 @@ object BuddyLive {
             lastScene = ""
             listen.reset()
             BuddyScreenEyes.setWatching(true)
-            BuddyLog.d("Live.start", "model=${LiveConfig.MODEL} lang=${language.language}")
+            BuddyLog.d("Live.start", "model=${LiveConfig.MODEL} lang=${language.language} key=${ApiKeyStore.masked()}")
             val next = LiveSocket(ApiKeyStore.currentKey, object : LiveSocket.Listener {
                 override fun onSetupComplete() {
                     if (id != gen) return
@@ -115,8 +116,12 @@ object BuddyLive {
                 override fun onClosed(reason: String) {
                     if (id != gen) return
                     BuddyLog.d("Live.closed", reason)
-                    if (LiveFail.isAuthError(reason)) ApiKeyStore.markInvalid()
-                    if (active) fail(LiveFail.speak(reason))
+                    if (!active) return
+                    if (!LiveFail.isAuthError(reason)) {
+                        fail(LiveFail.speak(reason))
+                        return
+                    }
+                    scope.launch { onLiveAuthClosed(id, reason) }
                 }
             }, setup = LiveMessages.setup(language))
             socket = next
@@ -320,6 +325,15 @@ object BuddyLive {
             BrainSession.setPhase(BrainPhase.Idle)
             BrainSession.setNote(message)
             BrainSession.setAskOpen(true)
+        }
+
+        /** Live often says "leaked" for a websocket auth problem — only kill the key if REST agrees. */
+        private suspend fun onLiveAuthClosed(id: Int, reason: String) {
+            if (id != gen || !active) return
+            val restOk = ApiKeyValidator.check(app, ApiKeyStore.currentKey) is ApiKeyValidator.Result.Valid
+            BuddyLog.d("Live.auth", "liveFail restOk=$restOk")
+            if (!restOk) ApiKeyStore.markInvalid()
+            if (id == gen && active) fail(if (restOk) LiveFail.LIVE_UNAVAILABLE else LiveFail.speak(reason))
         }
 
         fun release() {
