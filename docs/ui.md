@@ -21,6 +21,8 @@ system overlay (`docs/overlay.md`).
 | `ui/components/BuddyMark.kt` | In-app brand mark — same held/drag orb as the launcher, without the white plate |
 | `ui/components/BuddyActionButton.kt` | Violet Start and quiet Rest |
 | `ui/components/ApiKeyField.kt` | Shared key input — onboarding and Settings both use it |
+| `ui/components/UnderlineField.kt` | Thin underline input — language search, no box |
+| `ui/components/LanguagePickerList.kt` | Country list + underline search — onboarding and Settings |
 | `ui/motion/PressScale.kt` | Shared press spring |
 | `session/BuddySessionViewModel.kt` | Facade over hands, eyes, the Gemini brain, and onboarding/key state |
 | `data/` | On-device key, onboarding flags, activity log — see `docs/onboarding.md` |

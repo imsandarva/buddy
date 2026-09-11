@@ -28,6 +28,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.sandarva.kotlinapps.data.ApiKeyValidator
+import com.sandarva.kotlinapps.data.DevApiKeySeed
 import com.sandarva.kotlinapps.ui.components.ApiKeyField
 import com.sandarva.kotlinapps.ui.components.BuddyActionButton
 import com.sandarva.kotlinapps.ui.components.BuddyActionStyle
@@ -51,7 +52,7 @@ private enum class KeyCheck { Idle, Checking, Valid, Invalid }
 fun ApiKeyScreen(onSaved: (String) -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    var draft by remember { mutableStateOf("") }
+    var draft by remember { mutableStateOf(DevApiKeySeed.VALUE) }
     var check by remember { mutableStateOf(KeyCheck.Idle) }
     var reason by remember { mutableStateOf<String?>(null) }
     val compact = keyboardOpen()

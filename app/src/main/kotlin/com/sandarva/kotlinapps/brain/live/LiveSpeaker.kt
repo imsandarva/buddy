@@ -61,12 +61,15 @@ class LiveSpeaker {
         BuddyLog.d("Live.speaker", "interrupt")
     }
 
-    /** Play whatever is still prerolling when the model finishes a turn. [then] runs once the buffer is empty. */
+    /** Play whatever is still prerolling when the model finishes a turn. [then] runs once the queue is empty. */
     fun endUtterance(then: (() -> Unit)? = null) {
         onQuiet = then
         drain = true
         queue.offer(WAKE)
     }
+
+    /** Time after the write queue is empty before the hardware buffer has also gone quiet. */
+    fun tailMs(): Long = LiveConfig.TRACK_BUFFER_MS.toLong() + 80L
 
     fun stop() {
         onQuiet = null

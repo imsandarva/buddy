@@ -4,11 +4,14 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -24,20 +27,25 @@ import com.sandarva.kotlinapps.data.Country
 import com.sandarva.kotlinapps.ui.components.LanguagePickerList
 import com.sandarva.kotlinapps.ui.theme.BuddyColors
 
-/** Same searchable list as onboarding's [com.sandarva.kotlinapps.ui.onboarding.LanguageScreen], with a back arrow instead of auto-advance. */
+/** Same list as first-run language, reached from Settings — back instead of auto-advance. */
 @Composable
 fun LanguagePickerScreen(selectedCode: String, onSelected: (Country) -> Unit, onBack: () -> Unit) {
     Box(Modifier.fillMaxSize().background(BuddyColors.Paper)) {
         Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
-            Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                Modifier.fillMaxWidth().padding(start = 4.dp, end = 24.dp, top = 4.dp, bottom = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 IconButton(onClick = onBack) {
                     Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = BuddyColors.Ink)
                 }
-                Text("Language", style = MaterialTheme.typography.titleMedium, color = BuddyColors.Ink)
+                Spacer(Modifier.width(4.dp))
+                Text("Language", style = MaterialTheme.typography.titleLarge, color = BuddyColors.Ink)
             }
+            Spacer(Modifier.height(8.dp))
             LanguagePickerList(
                 selectedCode = selectedCode,
-                modifier = Modifier.fillMaxWidth().weight(1f).padding(horizontal = 24.dp),
+                modifier = Modifier.fillMaxWidth().weight(1f).padding(horizontal = 32.dp),
                 onSelected = onSelected
             )
         }

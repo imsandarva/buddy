@@ -15,21 +15,25 @@ a guess at what to build, only at how to build it well.
    **Wake buddy up**; with the keyboard up it lives above the field, so the field and the CTA sit
    a tight 12dp apart and hug the keys. The line under the title stays — we do not hide copy when
    they type. The action never hides. Keyboard Done still submits.
-4. **Activation** — buddy talks first with Gemini Live's own voice (`Orion`) — one short hello,
+4. **Language** — "How should I talk?" A short stacked headline, one quiet line, then a thin
+   underline to type on (never a boxed search) and the country list. One tap chooses; a brief beat
+   lets the check land, then Activation greets in that language. Keyboard up collapses the subtitle
+   and shortens the title so the list stays the page. Same list later from Settings.
+5. **Activation** — buddy talks first with Gemini Live's own voice (`Orion`) — one short hello,
    then the socket hangs up. No Android TTS, no lingering live talk, no mic. Then it reveals the
    second ability in the same breath: it can act on the screen too.
-5. **Overlay permission** — the "easy yes," with a two-step how-to (Allow it → Appear on top for Buddy).
+6. **Overlay permission** — the "easy yes," with a two-step how-to (Allow it → Appear on top for Buddy).
    Granting it is rewarded immediately: the real overlay cursor settles onto the screen right there,
    behind the priming card.
-6. **Accessibility permission** — the highest-stakes screen in the app. A short how-to (Installed
+7. **Accessibility permission** — the highest-stakes screen in the app. A short how-to (Installed
    apps → Buddy Assistant → switch) and a plain line for what it never does, before Android's own
    generic dialog appears. Granting it ends the funnel — buddy does not open an app or run a surprise
    first task.
-7. **Home** — steady state.
+8. **Home** — steady state.
 
-Any "not now" at steps 4–6 ends the funnel immediately (never a repeated nag) and lands on Home
+Any "not now" at steps 5–7 ends the funnel immediately (never a repeated nag) and lands on Home
 with full talking functionality; the same permissions stay reachable later from Settings. Steps
-1–3 are not skippable in that sense — talking needs the key, so there is nothing to defer to.
+1–4 are not skippable in that sense — talking needs the key and a language, so there is nothing to defer to.
 
 ## One-way doors
 
@@ -51,7 +55,10 @@ screen it shows is a self-contained file that receives plain callbacks (`onGrant
 
 `data/ApiKeyStore.kt` holds the user's own Gemini key in a private, app-scoped SharedPreferences
 file — never bundled at build time (the old `local.properties` → `BuildConfig.GEMINI_API_KEY`
-path is gone), never sent anywhere but straight to Google's API. `GeminiClient` now takes the key
+path is gone), never sent anywhere but straight to Google's API. For a short check, `data/DevApiKeySeed.kt`
+prefills the onboarding and Settings fields only — it does not save into the store; tap **Wake buddy up**
+(or Save) as usual. Delete that file and the two `remember` initializers before anyone else has to type
+their own key. `GeminiClient` now takes the key
 as a supplier (`() -> String`) rather than a fixed value, so every long-lived engine (the agent
 runner, Live's search) always uses whatever key is current, even if it was just replaced from
 Settings. `data/ApiKeyValidator.kt` turns a pasted key into a plain yes/no with the smallest real
@@ -77,17 +84,24 @@ call that proves it works (`gemini-3.5-flash-lite`, 4 output tokens) — never a
 | `ui/onboarding/LaunchScreen.kt` | The orb, alone, breathing |
 | `ui/onboarding/IntroScreen.kt` | Swipeable cards + dots + skip |
 | `ui/onboarding/ApiKeyScreen.kt` | "Give buddy a brain" — field, live check, wake-up beat. Flex spacer so the field + Wake hug the keyboard |
+| `ui/onboarding/LanguageScreen.kt` | "How should I talk?" — short ask, underline field, country list, one-tap pick |
 | `ui/onboarding/ActivationScreen.kt` | Live hello (one-shot Orion), then the capability reveal |
 | `ui/onboarding/OverlayPermissionScreen.kt` | Priming + a short how-to for Appear on top + the real cursor settling on screen |
 | `ui/onboarding/AccessibilityPermissionScreen.kt` | Priming + a short how-to for Buddy Assistant, honest about what it is and isn't |
 | `ui/onboarding/PermissionHowTo.kt` | Shared why + numbered taps for the two permission screens |
 | `ui/components/ApiKeyField.kt` | Shared field — monospace, show/hide — used here and in Settings |
+| `ui/components/UnderlineField.kt` | Thin underline to type on — no box; language search uses this |
+| `ui/components/LanguagePickerList.kt` | Shared country list + underline search — first-run and Settings |
+| `ui/components/CountryLanguageRow.kt` | One country: flag, name, language, quiet check — no washed box |
 | `ui/components/PermissionGlyph.kt` | Custom line-art for the two priming screens |
 | `ui/settings/SettingsScreen.kt` | Composition root — key, permissions, reset |
+| `ui/settings/LanguageSection.kt` | Current language, opens the same picker |
+| `ui/settings/LanguagePickerScreen.kt` | Settings path into the shared country list |
 | `ui/settings/ApiKeySection.kt` | View masked / replace, same live check as first setup |
 | `ui/settings/PermissionStatusSection.kt` | Plain on/off + one-tap re-grant |
 | `ui/settings/ResetSection.kt` | Stop buddy; destructive full reset behind a confirm |
 | `data/ApiKeyStore.kt` | The key, on-device only, plus the "stopped working" flag |
+| `data/DevApiKeySeed.kt` | Temporary field prefill only — remove before real first-run |
 | `data/ApiKeyValidator.kt` | Turns a pasted key into a human yes/no |
 | `data/OnboardingPrefs.kt` | `introSeen`, `activationDone`, and the chip-fade session counter |
 | `data/ActivityLog.kt` | Last few real requests, for the home screen's recent-activity strip |

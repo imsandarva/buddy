@@ -95,13 +95,21 @@ object BuddyLive {
                 }
                 override fun onInterrupted() {
                     if (id != gen) return
+                    if (!listen.honorInterrupt()) {
+                        BuddyLog.d("Live.interrupt", "ignored — still saying hello")
+                        return
+                    }
                     listen.onInterrupted()
                     speaker.interrupt()
                 }
-                override fun onTurnComplete() {
+                override fun onGenerationComplete() {
                     if (id != gen) return
                     speaker.endUtterance()
-                    if (listen.greeting) openEars(id)
+                }
+                override fun onTurnComplete() {
+                    if (id != gen) return
+                    if (listen.greeting) afterSpoken(id) { openEars(id) }
+                    else speaker.endUtterance()
                 }
                 override fun onToolCall(calls: List<LiveFunctionCall>) { if (id == gen) scope.launch { runTools(calls) } }
                 override fun onClosed(reason: String) {
@@ -149,12 +157,31 @@ object BuddyLive {
             socket?.send(LiveMessages.hello(language))
             scope.launch {
                 delay(HELLO_WAIT_MS)
-                if (id == gen && active && listen.greeting) openEars(id)
+                if (id == gen && active && listen.greeting && !listen.modelSpoke) {
+                    BuddyLog.d("Live.hello", "silent timeout — opening ears")
+                    openEars(id)
+                    return@launch
+                }
+                delay(HELLO_FORCE_MS - HELLO_WAIT_MS)
+                if (id == gen && active && listen.greeting) {
+                    BuddyLog.d("Live.hello", "force ears — turnComplete never arrived")
+                    openEars(id)
+                }
+            }
+        }
+
+        /** Same socket — wait until the hello has left the speaker, then open the mic. */
+        private fun afterSpoken(id: Int, then: () -> Unit) {
+            speaker.endUtterance {
+                scope.launch {
+                    delay(speaker.tailMs())
+                    if (id == gen && active) then()
+                }
             }
         }
 
         private fun openEars(id: Int) {
-            if (!active || id != gen) return
+            if (!active || id != gen || !listen.greeting) return
             listen.startListening()
             startMic()
             pushCatalog(BuddyScreenEyes.snapshot())
@@ -165,7 +192,7 @@ object BuddyLive {
         private fun startMic() {
             if (!active || mic != null) return
             val next = LiveMic { pcm ->
-                if (socket?.isReady != true) return@LiveMic
+                if (socket?.isReady != true || !listen.maySendMic()) return@LiveMic
                 if (listen.onMic(pcm)) pushCatalog(force = true)
                 socket?.send(LiveMessages.audio(pcm))
             }
@@ -303,6 +330,7 @@ object BuddyLive {
         companion object {
             private const val SETUP_WAIT_MS = 12_000L
             private const val HELLO_WAIT_MS = 2_800L
+            private const val HELLO_FORCE_MS = 8_000L
         }
     }
 }

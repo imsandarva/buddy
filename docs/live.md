@@ -63,10 +63,18 @@ Long pauses after “tap Wi‑Fi” can still be a tree walk or a tool, not the 
 
 ## Not speech-to-text, then chat
 
-Live is **audio in, audio out** on one socket — the same shape as the official Gemini app. We used to also ask Gemini for transcripts and paint them on the bar. That extra job is billed and delivered late, so it *looked* like we waited for STT before thinking. We do not request `inputAudioTranscription` / `outputAudioTranscription`. The mic opens after a short hello (not on `setupComplete`). SCREEN goes as context once the ears are open — it is not an order. Greeting-turn tools stay blocked. After that, tools run when the server has treated the turn as theirs: hangover mic energy (AEC on `VOICE_COMMUNICATION` punches holes in a consecutive-loud streak), model audio after a short hello-grace, barge-in, or a tool that already holds their words (`run_goal`, `open_app`, `type`). A raw energy gate alone used to block every `run_goal` after “On it.” `run_goal` still goes through `LiveRouter` — speaking is not a job. See `docs/live-routing.md`.
+Live is **audio in, audio out** on one socket — the same shape as the official Gemini app. We used to also ask Gemini for transcripts and paint them on the bar. That extra job is billed and delivered late, so it *looked* like we waited for STT before thinking. We do not request `inputAudioTranscription` / `outputAudioTranscription`. The mic opens after a short hello has **finished playing** (not on `setupComplete`, and not on `generationComplete`). SCREEN goes as context once the ears are open — it is not an order. Greeting-turn tools stay blocked. After that, tools run when the server has treated the turn as theirs: hangover mic energy (AEC on `VOICE_COMMUNICATION` punches holes in a consecutive-loud streak), model audio after a short hello-grace, barge-in, or a tool that already holds their words (`run_goal`, `open_app`, `type`). A raw energy gate alone used to block every `run_goal` after “On it.” `run_goal` still goes through `LiveRouter` — speaking is not a job. See `docs/live-routing.md`.
 4. **End** in the notification, or a second double-tap, ends the talk. **Type instead** opens the old sheet (REST).
 
 The full ask sheet covers the screen, so Live never uses it. That was the bug when a spoken tap hit the sheet.
+
+## Why the first hello used to cut off and start again
+
+This was not a new session. One socket, one hello turn — then a self-barge-in.
+
+Gemini generates PCM faster than we can play it. The server sends `generationComplete` when it is done *writing*, then waits a realtime beat before `turnComplete` (it assumes we are still playing). We treated those as the same signal and opened the mic at `generationComplete`. Buddy’s own “hey wh—” was still coming out of the speaker, server VAD heard it, sent `interrupted`, we flushed the track, and the model said the whole greeting again about a second later. Google’s own Live clients keep capture closed until playback drains; `gemini-3.1-flash-live-preview` is known to restart a greeting when VAD hears the caller (or the speaker) mid-hello.
+
+The ears now open only after `turnComplete` **and** the speaker has gone quiet. A server `interrupted` during the hello is ignored (it is echo, not them talking). Mic PCM is held for a short settle after that so AEC can catch up. The safety timer opens the mic only if Orion never spoke — it will not talk over a hello that is still playing.
 
 ## Why live used to die right after the socket opened
 
@@ -111,7 +119,7 @@ After a tool, the tool response carries the new SCREEN taken after the event str
 |------|------|
 | `brain/live/BuddyLive.kt` | Session facade — start / stop / tools / follow screen / jobs on the same socket |
 | `brain/live/LiveHello.kt` | One-shot Live hello for first meeting — same voice, no mic, hangs up after one line |
-| `brain/live/LiveListen.kt` | Greeting vs asked — when a tool may run |
+| `brain/live/LiveListen.kt` | Greeting vs asked — mic stays closed through the hello; when a tool may run |
 | `brain/live/LiveRouter.kt` | Talk / Act / Goal — does not trust `run_goal` blindly |
 | `brain/live/LiveDesk.kt` | JOB ASK / JOB DONE back into this talk |
 | `brain/live/LiveSpeech.kt` | Hangover energy on mic PCM (AEC-safe) |

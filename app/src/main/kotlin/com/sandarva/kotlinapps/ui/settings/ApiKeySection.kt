@@ -26,6 +26,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.sandarva.kotlinapps.data.ApiKeyStore
 import com.sandarva.kotlinapps.data.ApiKeyValidator
+import com.sandarva.kotlinapps.data.DevApiKeySeed
 import com.sandarva.kotlinapps.ui.components.ApiKeyField
 import com.sandarva.kotlinapps.ui.components.QuietTextAction
 import com.sandarva.kotlinapps.ui.theme.BuddyColors
@@ -40,7 +41,7 @@ fun ApiKeySection(hasKey: Boolean, keyInvalid: Boolean, onSaved: (String) -> Uni
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var mode by remember { mutableStateOf(if (hasKey && !keyInvalid) Mode.Summary else Mode.Editing) }
-    var draft by remember { mutableStateOf("") }
+    var draft by remember { mutableStateOf(DevApiKeySeed.VALUE) }
     var error by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(keyInvalid) { if (keyInvalid) mode = Mode.Editing }

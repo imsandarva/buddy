@@ -25,6 +25,9 @@ class LiveSocket(
         fun onAudio(pcm: ByteArray)
         fun onInterrupted()
         fun onToolCall(calls: List<LiveFunctionCall>)
+        /** Model finished generating — still playing locally; not permission to open the mic. */
+        fun onGenerationComplete()
+        /** Model's turn is over. Open ears only after local playback has drained. */
         fun onTurnComplete()
         fun onClosed(reason: String)
     }
@@ -120,9 +123,9 @@ class LiveSocket(
         val turn = content.optJSONObject("modelTurn") ?: content.optJSONObject("model_turn")
         val parts = turn?.optJSONArray("parts")
         LiveMessages.parseAudio(parts).forEach { listener.onAudio(it) }
-        if (content.optBoolean("turnComplete") || content.optBoolean("turn_complete") || content.optBoolean("generationComplete") || content.optBoolean("generation_complete")) {
-            listener.onTurnComplete()
-        }
+        // generationComplete is faster than realtime; turnComplete is the actual end of the turn.
+        if (content.optBoolean("generationComplete") || content.optBoolean("generation_complete")) listener.onGenerationComplete()
+        if (content.optBoolean("turnComplete") || content.optBoolean("turn_complete")) listener.onTurnComplete()
     }
 
     private fun fail(reason: String) {

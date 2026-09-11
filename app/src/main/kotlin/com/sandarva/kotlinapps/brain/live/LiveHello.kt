@@ -54,10 +54,11 @@ object LiveHello {
                 listener = object : LiveSocket.Listener {
                     override fun onSetupComplete() { if (id == gen) socket?.send(LiveMessages.meet(language)) }
                     override fun onAudio(pcm: ByteArray) { if (id == gen) { heard = true; speaker.play(pcm) } }
-                    override fun onInterrupted() { if (id == gen) speaker.interrupt() }
+                    override fun onInterrupted() { BuddyLog.d("Live.hello", "interrupt ignored — one-shot greeting") }
+                    override fun onGenerationComplete() { if (id == gen) speaker.endUtterance() }
                     override fun onTurnComplete() {
                         if (id != gen || !heard) return
-                        speaker.endUtterance { scope.launch { delay(LiveConfig.TRACK_BUFFER_MS.toLong() + 80); finish() } }
+                        speaker.endUtterance { scope.launch { delay(speaker.tailMs()); finish() } }
                     }
                     override fun onToolCall(calls: List<LiveFunctionCall>) = Unit
                     override fun onClosed(reason: String) { if (id == gen) finish() }

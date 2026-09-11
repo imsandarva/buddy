@@ -2,19 +2,13 @@ package com.sandarva.kotlinapps.ui.components
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -30,9 +24,8 @@ import com.sandarva.kotlinapps.data.CountryData
 import com.sandarva.kotlinapps.ui.theme.BuddyColors
 
 /**
- * Searchable flag + language list, shared between the onboarding language step and the settings
- * "change language" screen (same idea as a past Flutter nationality picker — full list, live
- * filter, one tap to choose).
+ * Searchable country list shared by first-run language and Settings. The field is only a line;
+ * the list is the page — one tap chooses, and filtering never rebuilds rows that did not change.
  */
 @Composable
 fun LanguagePickerList(
@@ -42,60 +35,32 @@ fun LanguagePickerList(
     onSelected: (Country) -> Unit
 ) {
     var query by remember { mutableStateOf("") }
-    val filtered = remember(query) {
-        val q = query.trim()
-        if (q.isBlank()) CountryData.sortedByName
-        else CountryData.sortedByName.filter { it.name.contains(q, ignoreCase = true) || it.language.contains(q, ignoreCase = true) }
-    }
+    val filtered = remember(query) { countriesMatching(query) }
 
     Column(modifier.fillMaxSize()) {
-        LanguageSearchField(query, { query = it }, enabled)
-        Spacer12()
+        UnderlineField(query, { query = it }, placeholder = "Find a country", enabled = enabled, imeAction = ImeAction.Search)
         if (filtered.isEmpty()) {
-            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                Text("No languages found", style = MaterialTheme.typography.bodyLarge, color = BuddyColors.Mist)
+            Box(Modifier.fillMaxWidth().padding(top = 36.dp), contentAlignment = Alignment.Center) {
+                Text("Nothing matches that.", style = MaterialTheme.typography.bodyLarge, color = BuddyColors.Mist)
             }
         } else {
-            LazyColumn(Modifier.fillMaxSize()) {
+            LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(top = 8.dp, bottom = 28.dp)) {
                 items(filtered, key = { it.code }) { country ->
                     CountryLanguageRow(
                         country = country,
                         selected = country.code == selectedCode,
                         enabled = enabled,
-                        onTap = { onSelected(country) }
+                        onTap = { onSelected(country) },
+                        modifier = Modifier.animateItem()
                     )
                 }
-                item { Spacer12() }
             }
         }
     }
 }
 
-@Composable
-private fun Spacer12() {
-    androidx.compose.foundation.layout.Spacer(Modifier.height(10.dp))
-}
-
-@Composable
-private fun LanguageSearchField(value: String, onValueChange: (String) -> Unit, enabled: Boolean) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        modifier = Modifier.fillMaxWidth(),
-        enabled = enabled,
-        singleLine = true,
-        placeholder = { Text("Search country or language", color = BuddyColors.Mist) },
-        leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null, tint = BuddyColors.Mist) },
-        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-        shape = RoundedCornerShape(22.dp),
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = BuddyColors.Violet,
-            unfocusedBorderColor = BuddyColors.Line,
-            focusedTextColor = BuddyColors.Ink,
-            unfocusedTextColor = BuddyColors.Ink,
-            focusedContainerColor = BuddyColors.Snow,
-            unfocusedContainerColor = BuddyColors.Snow,
-            cursorColor = BuddyColors.Violet
-        )
-    )
+private fun countriesMatching(raw: String): List<Country> {
+    val q = raw.trim()
+    if (q.isBlank()) return CountryData.sortedByName
+    return CountryData.sortedByName.filter { it.name.contains(q, ignoreCase = true) || it.language.contains(q, ignoreCase = true) }
 }
