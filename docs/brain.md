@@ -36,7 +36,7 @@ Two prompts, one action vocabulary:
 
 Both repeat the matching rule: the name they say is the quoted label; the value you pass is that line's id, copied character for character. Both are told to search the web when a fact or path is missing. See `docs/search.md`.
 
-The API key is the user's own, entered once during onboarding ("give buddy a brain") or replaced from Settings — never bundled at build time. A temporary `data/DevApiKeySeed.kt` only prefills those fields so we can check the funnel; it is not the store. `data/ApiKeyStore.kt` holds it in a private, on-device SharedPreferences file; `GeminiClient` takes it as a supplier (`ApiKeyStore::currentKey`), so a key replaced mid-session is picked up on the very next call, by the runner and by Live's search alike. See `docs/onboarding.md`.
+The API key is the user's own, entered once during onboarding ("give buddy a brain") or replaced from Settings — never bundled at build time, never prefilled. `data/ApiKeyStore.kt` holds it in a private, on-device SharedPreferences file; `GeminiClient` takes it as a supplier (`ApiKeyStore::currentKey`), so a key replaced mid-session is picked up on the very next call, by the runner and by Live's search alike. See `docs/onboarding.md`.
 
 Models: runner `gemini-3.5-flash-lite` with `thinkingLevel: high` (for now, both fast and strong). Live `gemini-3.1-flash-live-preview`, `thinkingLevel: minimal`, 220 ms VAD.
 

@@ -56,15 +56,13 @@ screen it shows is a self-contained file that receives plain callbacks (`onGrant
 ## The key lives on this device only
 
 `data/ApiKeyStore.kt` holds the user's own Gemini key in a private, app-scoped SharedPreferences
-file — never bundled at build time (the old `local.properties` → `BuildConfig.GEMINI_API_KEY`
-path is gone), never sent anywhere but straight to Google's API. For a short check, `data/DevApiKeySeed.kt`
-prefills the onboarding and Settings fields only — it does not save into the store; tap **Wake buddy up**
-(or Save) as usual. Delete that file and the two `remember` initializers before anyone else has to type
-their own key. `GeminiClient` now takes the key
-as a supplier (`() -> String`) rather than a fixed value, so every long-lived engine (the agent
-runner, Live's search) always uses whatever key is current, even if it was just replaced from
-Settings. `data/ApiKeyValidator.kt` turns a pasted key into a plain yes/no with the smallest real
-call that proves it works (`gemini-3.5-flash-lite`, 4 output tokens) — never a raw error code.
+file — never bundled at build time, never seeded in the field, never sent anywhere but straight
+to Google's API. The onboarding and Settings fields start empty; they paste their own key, then
+tap **Wake buddy up** (or Save). `GeminiClient` takes the key as a supplier (`() -> String`)
+rather than a fixed value, so every long-lived engine (the agent runner, Live's search) always
+uses whatever key is current, even if it was just replaced from Settings. `data/ApiKeyValidator.kt`
+turns a pasted key into a plain yes/no with the smallest real call that proves it works
+(`gemini-3.5-flash-lite`, 4 output tokens) — never a raw error code.
 
 ## Recovery, not silent failure
 
@@ -106,7 +104,6 @@ call that proves it works (`gemini-3.5-flash-lite`, 4 output tokens) — never a
 | `ui/settings/PermissionStatusSection.kt` | Plain on/off + one-tap re-grant |
 | `ui/settings/ResetSection.kt` | Stop buddy; destructive full reset behind a confirm |
 | `data/ApiKeyStore.kt` | The key, on-device only, plus the "stopped working" flag |
-| `data/DevApiKeySeed.kt` | Temporary field prefill only — remove before real first-run |
 | `data/ApiKeyValidator.kt` | Turns a pasted key into a human yes/no |
 | `data/CountryData.kt` | Countries + languages; `DEFAULT` is United States / English |
 | `data/LanguagePrefs.kt` | The country they picked, on-device |
